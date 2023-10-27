@@ -144,7 +144,8 @@ sequenceDiagram
 User ->> Github Page: go to "https://.../order/{id}"
 Github Page -->> Client: return website
 Client ->> App Script: get order by id
-App Script ->> App Script: check order state
+App Script ->> Google Sheet: check order state
+Google Sheet -->> App Script: order state
 App Script ->> Bên thứ 3: get payment QR
 Bên thứ 3 -->> App Script: return QR
 App Script-->>Client: return JSON
