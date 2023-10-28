@@ -204,7 +204,7 @@ Client ->> App Script: send user email
 App Script -->> User: send validate email (email with temporary JWT expires in 1 day)
 User ->> User: go to email
 User ->> App Script: validate email using temporary JWT
-App Script-->>Client: send JWT (expires in 7 days)
+App Script-->>Client: send JWT (expires in 1 month)
 Client ->> Client: save JWT to Local Storage
 User ->> Client: perform action
 Client ->> App Script: perform action using JWT
