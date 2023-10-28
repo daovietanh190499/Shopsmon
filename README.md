@@ -179,7 +179,7 @@ App Script ->> Bên thứ 3: get payment QR, Link
 Bên thứ 3 -->> App Script: return QR, Link
 App Script ->> App Script: send Mail
 App Script-->>Client: return JSON
-Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
+Note right of Client: Kết quả thành công được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
 
 ## Các tính năng khác
