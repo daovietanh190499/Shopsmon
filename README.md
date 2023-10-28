@@ -168,7 +168,7 @@ Bên thứ 3 -->> App Script: callback
 App Script->>Google Sheet: change order state
 ```
 
-> **Note**: Một luồng thanh toán khác là chỉ gửi mã QR, Link thanh toán qua mail kèm theo đơn hàng tránh việc lộ lọt Link thanh toán ra ngoài.
+### Một luồng thanh toán khác là chỉ gửi mã QR, Link thanh toán qua mail kèm theo đơn hàng tránh việc lộ lọt Link thanh toán ra ngoài.
 
 ```mermaid
 sequenceDiagram
