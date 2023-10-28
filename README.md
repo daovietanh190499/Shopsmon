@@ -132,7 +132,7 @@ Khi nhân viên nhập mã đơn hàng vào ô nhập (trong trường hợp nà
 * Thông tin người nhận công thức: ="Đến: "&INDEX(orders!B2:B996;  MATCH(B3;  orders!G2:G996;  0))&" "&INDEX(orders!E2:E996;  MATCH(B3;  orders!G2:G996;  0))&" SĐT: "&INDEX(orders!C2:C996;  MATCH(B3;  orders!G2:G996;  0))  Trong đó các cột B, C, E, G được lấy từ bảng **orders** là các thông tin tương ứng của người nhận được match với mã đơn tại ô **B3**
 * Mã QR URL đơn hàng công thức: =image("https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl="&encodeurl("https://shopsmon.com/cart/"&B3&""))
 * Mục nội dung đơn hàng công thức này chứa thuật toán để chuyển đổi thông tin dạng JSON string (do thông tin giỏ hàng được lưu dạng JSON) sang chuỗi mong muốn: =ARRAY_CONSTRAIN(ARRAYFORMULA(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(INDEX(orders!F2:F996;  MATCH(B3;  orders!G2:G996;  0));  J18;  "- ");  J19;  ", Số lượng: ");  J20;  " x ");  J21;  " - ");  J22;  ""));  1;  1) trong đó **J18** là {"list":[{"id":" **J19** là ","counter": **J20** là ,"name":" **J21** là "},{"id":" **J22** là "}]}      Ý tưởng của  thuật toán này là thay thế các pattern từ **J18** đến **J22** bởi các chuỗi khác có ý nghĩa.
-* Tiền thu người nhận: mục này có thể giữ cố định
+* Tiền thu người nhận: mục này có thể giữ cố định vì đơn hàng được gửi thường đã được thanh toán và xác minh khi khách hàng thương lượng trên chat
 > **Note**: Nguyên nhân sử dụng fomular thay vì các hàm của app script là do tốc độ thực thi của fomular nhanh hơn hàm của app script rất nhiều. Do đó hạn chế tối đa việc viết fomular sử dụng hàm của app script.
 
 ## Thay đổi trạng thái đơn hàng
