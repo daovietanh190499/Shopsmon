@@ -192,6 +192,22 @@ App Script->>Google Sheet: change order state
 Note right of Client: Kết quả thành công được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
 
+## Xác thực và Phân quyền người dùng theo mail
+
+```mermaid
+sequenceDiagram
+User ->> Github Page: go to "https://.../login"
+Github Page -->> Client: return website
+Client -->> User: show rendered HTML
+User -->> Client: provide email
+Client ->> App Script: send user email
+App Script ->> User: send validate email (email expires in 1 day)
+User -->> User: go to email
+User -->> App Script: validate email
+App Script->>Client: send JWT (expires in 7 days)
+User ->> Client: perform action using JWT
+```
+
 ## Các tính năng khác
 
 Ngoài các tính năng trên, Shopsmon còn có các tính năng xem các đơn hàng gần đây nhất, lọc các đơn hàng ảo theo xác xuất, thống kê các đơn hàng, một số tính năng sử dụng với ChatGPT, Xác thực và Phân quyền người dùng theo mail, người dùng đánh giá sản phẩm, ... Để biết thêm chi tiết vui lòng liên hệ. 
