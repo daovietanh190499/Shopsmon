@@ -180,6 +180,7 @@ App Script-->>Client: return JSON
 Client -->> User: show rendered HTML
 User ->> User: go to email
 User ->> App Script: validate email
+App Script ->> Google Sheet: change order state
 App Script ->> Bên thứ 3: get payment QR, Link
 Bên thứ 3 -->> App Script: return QR, Link
 App Script ->> User: send Payment Mail
