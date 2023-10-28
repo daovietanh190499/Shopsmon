@@ -199,12 +199,12 @@ sequenceDiagram
 User ->> Github Page: go to "https://.../login"
 Github Page -->> Client: return website
 Client -->> User: show rendered HTML
-User -->> Client: provide email
+User ->> Client: provide email
 Client ->> App Script: send user email
-App Script ->> User: send validate email (email expires in 1 day)
-User -->> User: go to email
-User -->> App Script: validate email
-App Script->>Client: send JWT (expires in 7 days)
+App Script -->> User: send validate email (email expires in 1 day)
+User ->> User: go to email
+User ->> App Script: validate email
+App Script-->>Client: send JWT (expires in 7 days)
 User ->> Client: perform action using JWT
 ```
 
