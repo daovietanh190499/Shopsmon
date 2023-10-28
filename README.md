@@ -156,8 +156,8 @@ Github Page -->> Client: return website
 Client ->> App Script: get order by id
 App Script ->> Google Sheet: check order state
 Google Sheet -->> App Script: order state
-App Script ->> Bên thứ 3: get payment QR
-Bên thứ 3 -->> App Script: return QR
+App Script ->> Bên thứ 3: get payment QR, Link
+Bên thứ 3 -->> App Script: return QR, Link
 App Script-->>Client: return JSON
 Client -->> User: show rendered HTML
 Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
