@@ -179,7 +179,7 @@ App Script ->> Bên thứ 3: get payment QR, Link
 Bên thứ 3 -->> App Script: return QR, Link
 App Script ->> User: send Mail
 App Script-->>Client: return JSON
-Client -->>: show rendered HTML
+Client -->> User: show rendered HTML
 User ->> User: go to email
 User ->> Bên thứ 3: pay
 Bên thứ 3 -->> User: return result
