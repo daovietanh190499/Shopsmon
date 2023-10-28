@@ -177,8 +177,11 @@ App Script ->> App Script: create order code
 App Script ->> Google Sheet: add order
 App Script ->> Bên thứ 3: get payment QR, Link
 Bên thứ 3 -->> App Script: return QR, Link
-App Script ->> App Script: send Mail
+App Script ->> User: send Mail
 App Script-->>Client: return JSON
+User ->> Bên thứ 3: pay
+Bên thứ 3 -->> User: return result
+Bên thứ 3 -->> App Script: callback
 Note right of Client: Kết quả thành công được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
 
