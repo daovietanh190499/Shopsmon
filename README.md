@@ -192,7 +192,7 @@ App Script->>Google Sheet: change order state
 Note right of Client: Kết quả thành công được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
 
-## Xác thực và Phân quyền người dùng theo mail
+## Xác thực và Phân quyền người dùng theo mail (chưa implement thực tế)
 
 ```mermaid
 sequenceDiagram
@@ -205,7 +205,9 @@ App Script -->> User: send validate email (email with temporary JWT expires in 1
 User ->> User: go to email
 User ->> App Script: validate email using temporary JWT
 App Script-->>Client: send JWT (expires in 7 days)
-User ->> Client: perform action using JWT
+Client ->> Client: save JWT to Local Storage
+User ->> Client: perform action
+Client ->> App Script: perform action using JWT
 ```
 
 ## Các tính năng khác
