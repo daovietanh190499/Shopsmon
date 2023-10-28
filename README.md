@@ -35,7 +35,7 @@ Client -->> User: show rendered HTML
 Note right of Client: Thông tin được gửi về <br/> từ Google Sheet dưới <br/> dạng trang web chia sẻ <br/> của trang tính.
 ```
 
-Phía client sẽ lấy dữ liệu từ web công khai của trang tính được chọn dưới dạng HTML sau đó sử dụng kỹ thuật crawl bằng Javascript, Ví dụ: Regex, Vanilla JS Scraper, Puppeteer, để chuyển dữ liệu sang dạng JSON và render ra HTML. Đối với dữ liệu dạng ảnh, dữ liệu trả về là một url có dạng "https://...." trong đó "" là kích thước ảnh trả về, ta có thể dựa vào thông số đó để hiển thị trên website tối ưu hơn (kích thước nhỏ cho các hình preview, kích thước gốc khi bấm phóng to). Dưới đây là quy trình tạo một website của trang tính:
+Phía client sẽ lấy dữ liệu từ web công khai của trang tính được chọn dưới dạng HTML sau đó sử dụng kỹ thuật crawl bằng Javascript, Ví dụ: Regex, Vanilla JS Scraper, Puppeteer, để chuyển dữ liệu sang dạng JSON và render ra HTML. Đối với dữ liệu dạng ảnh, dữ liệu trả về là một url có dạng "https://....=w202-h204" trong đó "=w202-h204" là kích thước ảnh trả về đã được nén, ta có thể dựa vào thông số đó để hiển thị trên website tối ưu hơn (kích thước nhỏ cho các hình preview, kích thước gốc khi bấm phóng to). Dưới đây là quy trình tạo một website của trang tính:
 * Vào mục **Tệp** &rarr; **Chia sẻ** &rarr; **Công bố lên web**
 * Chọn mục **Đường liên kết**. Trong đó chọn trang tính cần công bố, loại hình công bố (**Trang web**) và bấm vào **Xuất bản**
 * Lưu lại đường dẫn đến trang web.  
@@ -73,6 +73,8 @@ Client ->> Client: change Local Storage
 Client -->> User: show rendered HTML
 ```
 
+Tính năng này khởi tạo 1 biến Local Storage để lưu cart, mỗi lần thay đổi trên cart thì biến này cũng được đổi theo
+
 ## Tạo đơn hàng
 
 ```mermaid
@@ -87,6 +89,8 @@ Client -->> User: show rendered HTML
 Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
 
+Khi người dùng tạo đơn thì client sẽ gửi cart từ Local Storage lên API của App Script
+
 ## Tạo mã cho đơn hàng và gửi Mail
 
 ```mermaid
@@ -98,6 +102,9 @@ App Script ->> App Script: send Mail
 App Script-->>Client: return JSON
 Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
+
+Luồng của API tạo đơn của App Script
+
 > **Note:** Xem file "https://gist.github.com/daovietanh190499/e9d722071846e15afb66054246b0cfb4".
 
 ## Hiển thị đơn hàng theo mã đơn hàng
@@ -111,6 +118,9 @@ App Script-->>Client: return JSON
 Client -->> User: show rendered HTML
 Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
+
+Giống với hiển thị sản phẩm theo id thì Github Page nhận path parameter theo mã đơn hàng và render tương ứng.
+
 > **Note:** Xem file "https://gist.github.com/daovietanh190499/b77adaa3b643758afd24c4a90e1ba0bc".
 
 ## Cấu trúc phiếu giao hàng
