@@ -98,7 +98,7 @@ sequenceDiagram
 Client ->> App Script: send cart information
 App Script ->> App Script: create order code
 App Script ->> Google Sheet: add order
-App Script ->> App Script: send Mail
+App Script ->> User: send Mail
 App Script-->>Client: return JSON
 Note right of Client: Thông tin được gửi về <br/> từ App Script API dưới <br/> dạng JSON.
 ```
