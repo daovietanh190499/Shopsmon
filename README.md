@@ -212,4 +212,4 @@ Client ->> App Script: perform action using JWT
 
 ## Các tính năng khác
 
-Ngoài các tính năng trên, Shopsmon còn có các tính năng xem các đơn hàng gần đây nhất, lọc các đơn hàng ảo theo xác xuất, thống kê các đơn hàng, một số tính năng sử dụng với ChatGPT, Xác thực và Phân quyền người dùng theo mail, người dùng đánh giá sản phẩm, ... Để biết thêm chi tiết vui lòng liên hệ. 
+Ngoài các tính năng trên, Shopsmon còn có các tính năng Xem các đơn hàng gần đây nhất, Xem các đơn hàng được xác thực mới nhất, lọc các đơn hàng ảo theo xác xuất, thống kê các đơn hàng, một số tính năng sử dụng với ChatGPT, Chuyển đổi trạng thái kho vận, người dùng đánh giá sản phẩm, ... Để biết thêm chi tiết vui lòng liên hệ. 
