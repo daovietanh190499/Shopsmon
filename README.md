@@ -201,9 +201,9 @@ Github Page -->> Client: return website
 Client -->> User: show rendered HTML
 User ->> Client: provide email
 Client ->> App Script: send user email
-App Script -->> User: send validate email (email expires in 1 day)
+App Script -->> User: send validate email (email with temporary JWT expires in 1 day)
 User ->> User: go to email
-User ->> App Script: validate email
+User ->> App Script: validate email using temporary JWT
 App Script-->>Client: send JWT (expires in 7 days)
 User ->> Client: perform action using JWT
 ```
