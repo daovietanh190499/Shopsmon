@@ -15,7 +15,7 @@ Phần này cung cấp một số thông tin về hệ thống thương mại đ
 
 ## Một số hình thức và tính chất của hệ thống thương mại điện tử
 
-Các hệ thống thương mại điện tử có thể chia thành các hình thức: C2B, B2C, B2B, C2C, B2E, B2G, G2B, G2G, G2C. Trong đó, hình thức B2C, TMĐT doanh nghiệp bán trực tiếp hàng hóa tới người tiêu dùng, là hình thức dễ nhận thấy và phổ biến trong các lĩnh vực bán lẻ như Amazone, Shopee, Alibaba. Hình thức C2C, người  tiêu  dùng  bán  trực  tiếp HH/DV tới  người  tiêu  dùng, đang là hình thức mới nổi như Ebay, các chợ bán đồ cũ. Ngoài ra còn có một số hình thức khác như Dropshipping, Print on demand. Một trong những tính chất quan trọng của hệ thống TMĐT là tính riêng tư (Privacy).
+Các hệ thống thương mại điện tử có thể chia thành các hình thức: C2B, B2C, B2B, C2C, B2E, B2G, G2B, G2G, G2C. Trong đó, hình thức B2C, TMĐT doanh nghiệp bán trực tiếp hàng hóa tới người tiêu dùng, là hình thức dễ nhận thấy và phổ biến trong các lĩnh vực bán lẻ như Amazone, Shopee, Alibaba. Hình thức C2C, người  tiêu  dùng  bán  trực  tiếp HH/DV tới  người  tiêu  dùng, đang là hình thức mới nổi như Ebay, Shopee, Lazada, các chợ bán đồ cũ. Ngoài ra còn có một số hình thức khác như Dropshipping, Print on demand. Một trong những tính chất quan trọng của hệ thống TMĐT là tính riêng tư (Privacy).
 
 
 # Các thành phần của Shopsmon
