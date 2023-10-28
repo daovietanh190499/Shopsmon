@@ -124,7 +124,7 @@ Giống với hiển thị sản phẩm theo id thì Github Page nhận path par
 > **Note:** Xem file "https://gist.github.com/daovietanh190499/b77adaa3b643758afd24c4a90e1ba0bc".
 
 ## Cấu trúc phiếu giao hàng
-
+Khi nhân viên nhập mã đơn hàng vào ô nhập (trong trường hợp này là **B3**) thì phiếu giao hàng thay đổi thông tin theo mã theo cơ chế sau:
 * Logo trang web: có thể đặt cố định
 * Barcode mã đơn hàng công thức : ="*"&B3&"*" Trong đó **B3** là ô chứa mã đơn hàng do nhân viên nhập
 * Tên mã đơn hàng công thức: =" Mã đơn hàng: "&B3
