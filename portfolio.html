@@ -40,6 +40,9 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <div class="card"><span class="tag">Tái tạo 3D &middot; mã nguồn mở</span><h3>Thí nghiệm tam giác hoá hai góc nhìn (DLT)</h3>
 <p>Bản cài đặt NumPy của tam giác hoá tuyến tính và phương pháp điểm giữa, cùng thí nghiệm tái lập được về ảnh hưởng của baseline camera đến độ chính xác 3D. Có kiểm tra tính đúng đắn với dữ liệu không nhiễu.</p>
 <p><a href="/blog/triangulation-dlt.html">Đọc bài viết</a> &middot; <a href="/blog/code/triangulation_dlt.py">Tải mã nguồn</a></p></div>
+<div class="card"><span class="tag">Tái tạo 3D &middot; mã nguồn mở</span><h3>Hiệu chuẩn camera Zhang từ mẫu phẳng</h3>
+<p>Cài đặt NumPy giai đoạn công thức đóng (homography, ràng buộc trên B, SVD) và thí nghiệm Monte-Carlo 3600 lần chạy về ảnh hưởng của nhiễu và số góc nhìn lên tiêu cự và điểm chính, kể cả tỉ lệ thất bại thực tế.</p>
+<p><a href="/blog/zhang-calibration.html">Đọc bài viết</a> &middot; <a href="/blog/code/zhang_calibration.py">Tải mã nguồn</a></p></div>
 <div class="card"><span class="tag">Tái tạo 3D &middot; mã nguồn mở</span><h3>Thuật toán 8 điểm: thô so với chuẩn hoá Hartley</h3>
 <p>Ước lượng ma trận cơ bản bằng SVD, kèm thí nghiệm tái lập được cho thấy chuẩn hoá giảm số điều kiện từ 4.6e5 xuống 18 và giảm sai số epipolar đáng kể khi có nhiễu.</p>
 <p><a href="/blog/eight-point-normalization.html">Đọc bài viết</a> &middot; <a href="/blog/code/eight_point.py">Tải mã nguồn</a></p></div>
@@ -54,7 +57,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 </main>
 <footer class="site"><div class="wrap">
 <div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
-<div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
 </div></footer>
 <script>
 (function(){var d=document.documentElement,b=document.getElementById('themeBtn');

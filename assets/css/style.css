@@ -90,3 +90,41 @@ article.post th{background:var(--bg2)}
 }
 
 .newslist .card{display:flex;flex-direction:column}.newsitem .src{font-size:13px;margin-top:auto;margin-bottom:0}.newsitem h3{font-size:18px}a.pill{text-decoration:none;margin-right:6px}a.pill:hover{border-color:var(--brand)}
+
+/* ---- news as blog (2026-11-04 phiên 4) ---- */
+.newsgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.ncard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;color:var(--text);transition:transform .15s,border-color .15s,box-shadow .15s}
+.ncard:hover{text-decoration:none;border-color:var(--brand);transform:translateY(-2px);box-shadow:0 10px 28px rgba(20,32,58,.12)}
+.ncard img{display:block;width:100%;aspect-ratio:1200/630;object-fit:cover;background:var(--bg2)}
+.ncard .nbody{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1}
+.ncard .tag,.featured .tag{font-size:12px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:block}
+.ncard h3{margin:0 0 8px;font-size:18px;line-height:1.35}
+.ncard p{margin:0 0 12px;color:var(--muted);font-size:15px}
+.ncard .more,.featured .more{margin-top:auto;color:var(--brand);font-weight:600;font-size:14px}
+.ncard .more small,.featured .more small{color:var(--muted);font-weight:400;margin-left:6px}
+.featured{display:grid;grid-template-columns:1.25fr 1fr;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;color:var(--text);margin-bottom:28px}
+.featured:hover{text-decoration:none;border-color:var(--brand)}
+.featured img{display:block;width:100%;height:100%;object-fit:cover;min-height:260px}
+.featured .nbody{padding:28px 30px;display:flex;flex-direction:column;justify-content:center}
+.featured h2{font-size:clamp(22px,3vw,30px);line-height:1.25;margin:0 0 12px;letter-spacing:-.01em}
+.featured p{color:var(--muted);margin:0 0 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+button.chip{cursor:pointer;font:inherit;font-size:13px;margin:0}
+button.chip.on{background:var(--brand);color:var(--btn-text);border-color:var(--brand)}
+.newspost .crumbs{font-size:14px;color:var(--muted);margin:0 0 14px}
+.newspost .standfirst{font-size:19px;line-height:1.7;color:var(--post-text)}
+.newspost figure.cover{padding:0;overflow:hidden;background:var(--card)}
+.newspost figure.cover img{display:block;width:100%;aspect-ratio:1200/630;object-fit:cover}
+.newspost figure.cover figcaption{padding:8px 12px;color:var(--muted)}
+.newspost .tag{font-size:12px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:8px}
+.newspost h2{margin-top:36px}
+.newspost .newsgrid.related{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.newspost .related .ncard h3{font-size:15px}
+.aff-box{background:var(--bg2);border:1px dashed var(--brand);border-radius:var(--radius);padding:20px 22px;margin:36px 0}
+.aff-box h3{margin:0 0 6px;font-size:18px}
+.aff-box p{margin:0 0 10px;color:var(--post-text);font-size:15px}
+.aff-box ul{margin:0 0 12px;padding-left:20px}
+.aff-box li{margin-bottom:6px}
+.aff-box .price{color:var(--muted);font-size:13px;margin-left:6px;white-space:nowrap}
+.aff-box .disc{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin:8px 0 0}
+@media(max-width:760px){.featured{grid-template-columns:1fr}.featured img{min-height:0;aspect-ratio:1200/630}}

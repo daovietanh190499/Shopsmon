@@ -40,6 +40,9 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Two-view triangulation (DLT) experiment</h3>
 <p>A NumPy implementation of linear triangulation and the midpoint method, with a reproducible experiment on how camera baseline affects 3D accuracy. Includes an exact noise-free sanity check.</p>
 <p><a href="/en/blog/triangulation-dlt.html">Read the article</a> &middot; <a href="/blog/code/triangulation_dlt.py">Download the code</a></p></div>
+<div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Zhang camera calibration from a planar pattern</h3>
+<p>A NumPy implementation of the closed-form stage (homography, constraints on B, SVD) and a 3,600-run Monte-Carlo experiment on how noise and the number of views affect focal length and principal point, including the actual failure rate.</p>
+<p><a href="/en/blog/zhang-calibration.html">Read the article</a> &middot; <a href="/blog/code/zhang_calibration.py">Download the code</a></p></div>
 <div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Eight-point algorithm: raw vs. Hartley-normalised</h3>
 <p>Fundamental-matrix estimation with an SVD, plus a reproducible experiment showing that normalisation cuts the condition number from 4.6e5 to 18 and reduces epipolar error substantially under noise.</p>
 <p><a href="/en/blog/eight-point-normalization.html">Read the article</a> &middot; <a href="/blog/code/eight_point.py">Download the code</a></p></div>
@@ -54,7 +57,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 </main>
 <footer class="site"><div class="wrap">
 <div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
-<div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
 </div></footer>
 <script>
 (function(){var d=document.documentElement,b=document.getElementById('themeBtn');

@@ -3,6 +3,7 @@ Run: python _src/build.py
 - Vietnamese (default) lives at the site root; English lives under /en/.
 - Blog posts are stored as _src/content/<slug>.<lang>.html with placeholders @@EMAIL@@ and @@L@@ (language URL prefix).
 """
+import html
 import os
 import sys
 
@@ -29,7 +30,7 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
-    dict(slug="zhang-calibration", date="2026-11-04", min=15,
+    dict(slug="zhang-calibration", date="2026-11-04", min=15, aff="calib",
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
          title={"vi": "Hiệu chuẩn camera bằng bàn cờ: phương pháp Zhang",
                 "en": "Camera calibration from a chessboard: Zhang's method"},
@@ -118,7 +119,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){{var a=document.qu
 </main>
 <footer class="site"><div class="wrap">
 <div>&copy; 2026 Shopsmon &middot; {t('Freelance AI &amp; kỹ thuật 3D', 'Freelance AI &amp; 3D engineering')} &middot; <a href="{pth(L, '/privacy.html')}">{t('Chính sách bảo mật', 'Privacy Policy')}</a></div>
-<div><a href="mailto:{EMAIL}">{EMAIL}</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:{EMAIL}">{EMAIL}</a></div>
 </div></footer>
 <script>
 (function(){{var d=document.documentElement,b=document.getElementById('themeBtn');
@@ -155,8 +156,83 @@ def post_cards(L, limit=None):
     return out
 
 
-def news_cards(L, limit=None, cat=None):
-    items = sorted(NEWS, key=lambda n: n["date"], reverse=True)
+SHOPEE_NOTE = {"vi": "Giá tham khảo ngày 04/11/2026, có thể thay đổi.", "en": "Reference prices as of 2026-11-04; they may change."}
+
+# Shopee Affiliate links (owner's account; collected 2026-11-04, see states/affiliate.md). `price` is the listing price seen that day.
+AFF = {
+    "agent-combo": dict(link="https://s.shopee.vn/LoX19EmMH", price="₫249.000",
+                        vi="Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng", en="2-book combo (Vietnamese): AI Agent in practice &amp; Applied AI Agents"),
+    "ml-systems": dict(link="https://s.shopee.vn/LoX0mfWy1", price="₫371.250",
+                       vi="Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)", en="Designing Machine Learning Systems (Vietnamese edition)"),
+    "python-adv": dict(link="https://s.shopee.vn/8fTew5J4vr", price="₫289.000",
+                       vi="Đường vào lập trình Python nâng cao", en="Advanced Python programming (Vietnamese book)"),
+    "agent-book": dict(link="https://s.shopee.vn/7puXwtWBxq", price="₫179.000",
+                       vi="Thiết lập cỗ máy xây kênh tự động 24/24 từ trợ lý AI và AI Agent", en="Setting up a 24/7 automated channel with AI assistants and AI agents (Vietnamese book)"),
+    "esp32-ai": dict(link="https://s.shopee.vn/AUvJ7Ugukh", price="₫105.000",
+                     vi="Bo mạch ESP32-S3 MINI Xiaozhi AI &ndash; robot thoại, màn hình OLED 0,96 inch", en="ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED"),
+    "esp32-n16r8": dict(link="https://s.shopee.vn/3B8iO1zd11", price="₫190.000",
+                        vi="ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, Flash 16 MB + PSRAM 8 MB (board AI/IoT)", en="ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)"),
+    "sht40": dict(link="https://s.shopee.vn/4qGwN7QQYU", price="₫123.640",
+                  vi="Mô-đun cảm biến nhiệt độ &amp; độ ẩm SHT40/SHT41/SHT45", en="SHT40/SHT41/SHT45 temperature &amp; humidity sensor module"),
+    "lora": dict(link="https://s.shopee.vn/1W0UP1IIvG", price="₫322.300",
+                 vi="Mô-đun LoRa SX1262 giao tiếp UART (DX-LR30)", en="LoRa SX1262 UART module (DX-LR30)"),
+    "sonoff-zb": dict(link="https://s.shopee.vn/7fb7kNXg67", price="₫504.900",
+                      vi="SONOFF ZB Bridge-P &ndash; cầu nối Zigbee 3.0 cho smart home", en="SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge"),
+    "webcam-fhd": dict(link="https://s.shopee.vn/8VAEjvGDOM", price="₫178.000",
+                       vi="Webcam Full HD có mic cho PC/laptop", en="Full HD webcam with mic for PC/laptop"),
+    "webcam-4k": dict(link="https://s.shopee.vn/40hpNfO0O7", price="₫164.000",
+                      vi="Webcam 4K/2K có mic cho PC/laptop", en="4K/2K webcam with mic for PC/laptop"),
+}
+
+AFF_BOXES = {
+    "agents": dict(
+        title={"vi": "Đọc thêm: sách về agent LLM và hệ thống ML", "en": "Further reading: books on LLM agents and ML systems"},
+        intro={"vi": "Nếu bạn muốn tự xây agent hoặc đưa mô hình vào sản phẩm, đây là vài đầu sách tiếng Việt liên quan trực tiếp tới chủ đề.",
+               "en": "If you want to build agents yourself or ship models in a product, these Vietnamese-language books relate directly to the topic."},
+        items=["agent-combo", "ml-systems", "python-adv", "agent-book"]),
+    "iot": dict(
+        title={"vi": "Muốn tự thử IoT / AIoT? Một vài linh kiện phổ biến", "en": "Want to try IoT / AIoT yourself? A few common parts"},
+        intro={"vi": "Các board và cảm biến dưới đây thường dùng để làm nguyên mẫu (ESP32-S3 chạy được mô hình nhỏ; Zigbee/LoRa cho mạng cảm biến). Chúng không phải sản phẩm được nhắc trong bản tin.",
+               "en": "These boards and sensors are commonly used for prototyping (ESP32-S3 can run small models; Zigbee/LoRa for sensor networks). They are not the products mentioned in the news item. Shopee Vietnam only."},
+        items=["esp32-ai", "esp32-n16r8", "sht40", "lora", "sonoff-zb"]),
+    "calib": dict(
+        title={"vi": "Muốn tự hiệu chuẩn camera? Thiết bị để thử", "en": "Want to calibrate your own camera? Hardware to try"},
+        intro={"vi": "Webcam USB đủ để làm lại thí nghiệm trong bài (in bàn cờ trên giấy phẳng). Mẹo: tắt lấy nét tự động hoặc cố định tiêu cự khi chụp, vì tiêu cự thay đổi theo lấy nét sẽ làm ma trận nội tại thay đổi.",
+               "en": "A USB webcam is enough to repeat the experiment in this post (print a chessboard on flat paper). Tip: disable autofocus or lock the focus while capturing, because focal length changes with focus and so does the intrinsic matrix. Shopee Vietnam only."},
+        items=["webcam-fhd", "webcam-4k"]),
+}
+
+
+def aff_box(L, key):
+    t = lambda vi, en: vi if L == "vi" else en
+    b = AFF_BOXES[key]
+    lis = "".join(
+        f'<li><a href="{AFF[i]["link"]}" rel="sponsored nofollow noopener" target="_blank">{AFF[i][L]}</a> '
+        f'<span class="price">{AFF[i]["price"]}</span></li>' for i in b["items"])
+    return (f'<aside class="aff-box"><h3>{b["title"][L]}</h3><p>{b["intro"][L]}</p><ul>{lis}</ul>'
+            f'<p class="disc"><strong>{t("Công khai liên kết affiliate", "Affiliate disclosure")}:</strong> '
+            f'{t("bài viết có chứa liên kết affiliate Shopee. Nếu bạn mua qua liên kết, Shopsmon có thể nhận hoa hồng, giá của bạn không đổi. Chúng tôi chỉ gợi ý sản phẩm liên quan tới nội dung và chưa kiểm tra trực tiếp từng sản phẩm.", "this page contains Shopee affiliate links. If you buy through them Shopsmon may earn a commission at no extra cost to you. We only suggest products related to the content and have not tested each one ourselves.")} '
+            f'{SHOPEE_NOTE[L]}</p></aside>')
+
+
+def sorted_news():
+    return sorted(NEWS, key=lambda n: n["date"], reverse=True)
+
+
+def news_url(L, n):
+    return pth(L, "/news/" + n["slug"] + ".html")
+
+
+def excerpt(text, limit=190):
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0]
+    return cut.rstrip(",;:&") + "&hellip;"
+
+
+def news_cards(L, limit=None, cat=None, featured_first=False):
+    """Image cards linking to the article pages."""
+    items = sorted_news()
     if cat:
         items = [n for n in items if n["cat"] == cat]
     if limit:
@@ -164,10 +240,52 @@ def news_cards(L, limit=None, cat=None):
     t = lambda vi, en: vi if L == "vi" else en
     out = ""
     for n in items:
-        out += (f'<article class="card newsitem"><span class="tag">{CATS[n["cat"]][L]} &middot; {n["date"]}</span>'
-                f'<h3>{n["title"][L]}</h3><p>{n["body"][L]}</p>'
-                f'<p class="src">{t("Nguồn", "Source")}: <a href="{n["url"]}" rel="noopener nofollow" target="_blank">{n["src"]}</a></p></article>')
+        out += (f'<a class="ncard" href="{news_url(L, n)}" data-cat="{n["cat"]}">'
+                f'<img src="/assets/img/news/{n["slug"]}.jpg" width="1200" height="630" loading="lazy" alt="">'
+                f'<div class="nbody"><span class="tag">{CATS[n["cat"]][L]} &middot; {n["date"]}</span>'
+                f'<h3>{n["title"][L]}</h3><p>{excerpt(n["body"][L])}</p>'
+                f'<span class="more">{t("Đọc tiếp", "Read more")} &rarr; <small>{n["src"]}</small></span></div></a>')
     return out
+
+
+def news_article(L, n):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    related = [m for m in sorted_news() if m["cat"] == n["cat"] and m["slug"] != n["slug"]][:3]
+    if len(related) < 3:
+        related += [m for m in sorted_news() if m["cat"] != n["cat"] and m["slug"] != n["slug"]][: 3 - len(related)]
+    rel_html = "".join(
+        f'<a class="ncard" href="{news_url(L, m)}"><img src="/assets/img/news/{m["slug"]}.jpg" width="1200" height="630" loading="lazy" alt="">'
+        f'<div class="nbody"><span class="tag">{CATS[m["cat"]][L]} &middot; {m["date"]}</span><h3>{m["title"][L]}</h3></div></a>' for m in related)
+    svc = {
+        "ai": ("/solutions/llm-chatbot-agent.html", t("Cần chatbot hoặc agent LLM cho doanh nghiệp?", "Need an LLM chatbot or agent for your business?")),
+        "iot": ("/solutions/custom-ai-tools.html", t("Cần công cụ AI / tự động hoá theo yêu cầu cho dự án IoT-AIoT?", "Need a custom AI / automation tool for an IoT-AIoT project?")),
+        "cs": ("/solutions/custom-ai-tools.html", t("Cần công cụ AI theo yêu cầu?", "Need a custom AI tool?")),
+        "hw": ("/solutions/custom-ai-tools.html", t("Cần công cụ AI theo yêu cầu?", "Need a custom AI tool?")),
+        "mobile": ("/solutions/custom-ai-tools.html", t("Cần ứng dụng hoặc công cụ AI theo yêu cầu?", "Need a custom app or AI tool?")),
+    }[n["cat"]]
+    box = aff_box(L, n["aff"]) if n.get("aff") else ""
+    art = f"""<article class="post newspost">
+<p class="crumbs"><a href="{P('/news/')}">{t('Tin tức', 'News')}</a> &rsaquo; <a href="{P('/news/')}#{n['cat']}">{CATS[n['cat']][L]}</a></p>
+<span class="tag cat-{n['cat']}">{CATS[n['cat']][L]}</span>
+<h1>{n['title'][L]}</h1>
+<p class="meta">{n['date']} &middot; {t('Tóm tắt bởi Shopsmon', 'Summarised by Shopsmon')} &middot; {t('Nguồn', 'Source')}: <a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a></p>
+<figure class="cover"><img src="/assets/img/news/{n['slug']}.jpg" width="1200" height="630" alt="{t('Hình minh hoạ cho bản tin', 'Illustration for the news item')}"><figcaption>{t('Hình minh hoạ do Shopsmon tự vẽ, không phải ảnh từ nguồn tin.', 'Illustration drawn by Shopsmon, not a photo from the source.')}</figcaption></figure>
+<p class="standfirst">{n['body'][L]}</p>
+<h2>{t('Vì sao đáng chú ý', 'Why it matters')}</h2>
+<div class="callout"><p>{n['why'][L]}</p><p class="meta" style="margin:8px 0 0">{t('Nhận định của Shopsmon, không phải của nguồn tin.', 'Shopsmon&rsquo;s own take, not the source&rsquo;s.')}</p></div>
+<h2>{t('Nguồn gốc', 'Original source')}</h2>
+<p><a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a> &mdash; {t('đọc bản gốc để xem đầy đủ phương pháp, điều kiện và giới hạn. Các con số hiệu năng do hãng/tác giả công bố là tuyên bố của họ; Shopsmon không tự kiểm chứng độc lập.', 'read the original for the full method, conditions and limits. Performance figures published by companies/authors are their own claims; Shopsmon does not verify them independently.')}</p>
+{box}
+<div class="cta-box"><h3 style="margin-top:0">{svc[1]}</h3><p>{t('Mô tả ngắn yêu cầu của bạn; bạn sẽ nhận câu hỏi làm rõ và đề xuất phạm vi trước khi bắt đầu.', 'Describe your need briefly; you will get clarifying questions and a scoped proposal before any work starts.')}</p>
+<p><a class="btn primary" href="mailto:{EMAIL}?subject=Project%20inquiry%20-%20Shopsmon">{t('Gửi yêu cầu', 'Send a request')}</a> <a class="btn ghost" href="{P(svc[0])}">{t('Xem dịch vụ', 'See the service')}</a></p></div>
+<h2>{t('Tin liên quan', 'Related news')}</h2>
+<div class="newsgrid related">{rel_html}</div>
+</article>"""
+    layout(L, "/news/" + n["slug"] + ".html",
+           f"{n['title'][L]} | Shopsmon",
+           html.escape(html.unescape(excerpt(n["body"][L], 155)), quote=True),
+           art, active="/news/", og_image=f"/assets/img/news/{n['slug']}.jpg")
 
 
 # =============================================================== PAGES
@@ -209,7 +327,7 @@ def home(L):
 <section><div class="wrap">
 <h2>{t('Tin công nghệ mới', 'Latest tech news')}</h2>
 <p class="sub">{t('Điểm tin AI, LLM, chip, điện thoại&hellip; có dẫn nguồn.', 'AI, LLM, chip and smartphone headlines, with sources.')} <a href="{P('/news/')}">{t('Xem tất cả', 'See all')} &rarr;</a></p>
-<div class="grid g2 newslist">{news_cards(L, 4)}</div>
+<div class="newsgrid">{news_cards(L, 3)}</div>
 </div></section>
 
 <section class="band"><div class="wrap" style="text-align:center">
@@ -476,26 +594,44 @@ def contact(L):
 
 def news_index(L):
     t = lambda vi, en: vi if L == "vi" else en
-    sections = ""
-    for key in CATS:
-        cards = news_cards(L, cat=key)
-        if cards:
-            sections += f'<h2 id="{key}" style="margin-top:40px">{CATS[key][L]}</h2><div class="grid g2 newslist">{cards}</div>'
-    chips = "".join(f'<a class="pill" href="#{k}">{v[L]}</a> ' for k, v in CATS.items())
+    items = sorted_news()
+    top = items[0]
+    rest = "".join(
+        f'<a class="ncard" href="{news_url(L, n)}" data-cat="{n["cat"]}">'
+        f'<img src="/assets/img/news/{n["slug"]}.jpg" width="1200" height="630" loading="lazy" alt="">'
+        f'<div class="nbody"><span class="tag">{CATS[n["cat"]][L]} &middot; {n["date"]}</span>'
+        f'<h3>{n["title"][L]}</h3><p>{excerpt(n["body"][L])}</p>'
+        f'<span class="more">{t("Đọc tiếp", "Read more")} &rarr; <small>{n["src"]}</small></span></div></a>' for n in items[1:])
+    feat = (f'<a class="featured" href="{news_url(L, top)}" data-cat="{top["cat"]}"><img src="/assets/img/news/{top["slug"]}.jpg" width="1200" height="630" alt="">'
+            f'<div class="nbody"><span class="tag">{t("Nổi bật", "Top story")} &middot; {CATS[top["cat"]][L]} &middot; {top["date"]}</span>'
+            f'<h2>{top["title"][L]}</h2><p>{excerpt(top["body"][L], 260)}</p><span class="more">{t("Đọc tiếp", "Read more")} &rarr; <small>{top["src"]}</small></span></div></a>')
+    chips = (f'<button type="button" class="pill chip on" data-f="all">{t("Tất cả", "All")}</button> ' +
+             "".join(f'<button type="button" class="pill chip" data-f="{k}">{v[L]}</button> ' for k, v in CATS.items()))
     body = f"""
-<div class="hero" style="padding:64px 0 24px"><div class="wrap">
+<div class="hero" style="padding:56px 0 20px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">{t('Tin tức công nghệ', 'Tech news')}</h1>
-<p class="lead">{t('Điểm tin mới nhất về AI, LLM, hệ thống máy tính, khoa học máy tính &amp; dữ liệu, điện thoại thông minh và công nghệ mới. Mỗi mục được tóm tắt lại bằng lời của chúng tôi, kèm liên kết tới nguồn gốc.', 'The latest on AI, LLMs, computer systems, computer science &amp; data, smartphones and emerging tech. Each item is summarised in our own words with a link to the original source.')}</p>
-<p>{chips}</p>
-<p class="meta">{t('Cập nhật', 'Updated')}: {TODAY}. {t('Các con số do công ty/tác giả công bố được ghi rõ là tuyên bố của họ; chúng tôi không tự kiểm chứng độc lập các benchmark.', 'Figures published by companies/authors are marked as their own claims; we do not independently verify benchmarks.')}</p>
+<p class="lead">{t('Điểm tin về AI, LLM, IoT &amp; AIoT, hệ thống máy tính, khoa học máy tính &amp; dữ liệu, điện thoại thông minh. Mỗi tin có trang riêng: tóm tắt bằng lời của chúng tôi, nhận định &ldquo;vì sao đáng chú ý&rdquo; và liên kết tới nguồn gốc.', 'News on AI, LLMs, IoT &amp; AIoT, computer systems, computer science &amp; data, and smartphones. Every item has its own page: a summary in our own words, a &ldquo;why it matters&rdquo; take and a link to the original source.')}</p>
+<p class="meta">{t('Cập nhật', 'Updated')}: {TODAY}. {t('Hình ảnh là minh hoạ do Shopsmon tự vẽ. Các con số do công ty/tác giả công bố được ghi rõ là tuyên bố của họ; chúng tôi không tự kiểm chứng độc lập các benchmark.', 'Images are illustrations drawn by Shopsmon. Figures published by companies/authors are marked as their own claims; we do not independently verify benchmarks.')}</p>
 </div></div>
-<section><div class="wrap">{sections}</div></section>
+<section style="padding-top:20px"><div class="wrap">
+{feat}
+<div class="chips" role="group" aria-label="{t('Lọc theo chủ đề', 'Filter by topic')}">{chips}</div>
+<div class="newsgrid" id="newsgrid">{rest}</div>
+</div></section>
+<script>
+(function(){{var chips=document.querySelectorAll('.chip'),cards=document.querySelectorAll('#newsgrid .ncard'),feat=document.querySelector('.featured');
+function apply(f){{chips.forEach(function(c){{c.classList.toggle('on',c.getAttribute('data-f')===f)}});
+cards.forEach(function(c){{c.style.display=(f==='all'||c.getAttribute('data-cat')===f)?'':'none'}});
+if(feat){{feat.style.display=(f==='all'||feat.getAttribute('data-cat')===f)?'':'none'}}}}
+chips.forEach(function(c){{c.addEventListener('click',function(){{apply(c.getAttribute('data-f'));}})}});
+var h=(location.hash||'').slice(1);if(h&&document.querySelector('.chip[data-f="'+h+'"]'))apply(h);}})();
+</script>
 """
     layout(L, "/news/",
-           t("Tin tức công nghệ: AI, LLM, chip, điện thoại | Shopsmon", "Tech news: AI, LLM, chips, smartphones | Shopsmon"),
-           t("Điểm tin công nghệ mới nhất về AI, LLM, hệ thống máy tính, khoa học máy tính, dữ liệu và điện thoại thông minh, kèm nguồn gốc.",
-             "Latest tech news on AI, LLMs, computer systems, computer science, data and smartphones, with original sources."),
-           body, active="/news/")
+           t("Tin tức công nghệ: AI, LLM, IoT, chip, điện thoại | Shopsmon", "Tech news: AI, LLM, IoT, chips, smartphones | Shopsmon"),
+           t("Điểm tin công nghệ mới nhất về AI, LLM, IoT/AIoT, hệ thống máy tính, khoa học máy tính, dữ liệu và điện thoại thông minh, kèm nguồn gốc và hình minh hoạ.",
+             "Latest tech news on AI, LLMs, IoT/AIoT, computer systems, computer science, data and smartphones, with original sources and illustrations."),
+           body, active="/news/", og_image=f"/assets/img/news/{top['slug']}.jpg")
 
 
 def blog_index(L):
@@ -531,6 +667,9 @@ def blog_post(L, p):
     with open(os.path.join(CONTENT, f"{p['slug']}.{L}.html"), encoding="utf-8") as f:
         art = f.read()
     art = art.replace("@@EMAIL@@", EMAIL).replace("@@L@@", "" if L == "vi" else "/en")
+    if p.get("aff"):
+        i = art.rfind("</article>")
+        art = art[:i] + aff_box(L, p["aff"]) + art[i:]
     layout(L, "/blog/" + p["slug"] + ".html", p["seo_title"][L], p["seo_desc"][L], art,
            active="/blog/", extra_head=KATEX_HEAD, extra_body=KATEX_BODY)
 
@@ -558,6 +697,7 @@ def privacy(L):
 <li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
 <li><strong>Google (Gmail)</strong>: trao đổi qua email.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: nếu bạn tương tác với Facebook Page của Shopsmon, Meta xử lý dữ liệu theo chính sách của Meta.</li>
+<li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết affiliate tới Shopee Việt Nam và được ghi chú rõ. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>
 <li><strong>PayPal</strong>: thanh toán và hoá đơn.</li>
 </ul>
 <p>Mỗi bên có chính sách bảo mật riêng; chúng tôi khuyến khích bạn đọc chúng. Chúng tôi không bán hay cho thuê thông tin cá nhân của bạn.</p>
@@ -612,6 +752,7 @@ def privacy(L):
 <li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, which then receive your IP address and browser details.</li>
 <li><strong>Google (Gmail)</strong>: email correspondence.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: if you interact with the Shopsmon Facebook Page, Meta processes your data under its own policy.</li>
+<li><strong>Shopee (affiliate links)</strong>: some pages contain clearly labelled affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>
 <li><strong>PayPal</strong>: payments and invoices.</li>
 </ul>
 <p>Each of these has its own privacy policy, which we encourage you to read. We do not sell or rent your personal information.</p>
@@ -654,6 +795,9 @@ def privacy(L):
 
 
 # =============================================================== BUILD
+import make_covers  # noqa: E402
+make_covers.main()  # draws any missing news cover (deterministic per slug)
+
 for L in LANGS:
     home(L)
     services(L)
@@ -664,6 +808,8 @@ for L in LANGS:
     contact(L)
     blog_index(L)
     news_index(L)
+    for n in NEWS:
+        news_article(L, n)
     privacy(L)
     for p in POSTS:
         blog_post(L, p)

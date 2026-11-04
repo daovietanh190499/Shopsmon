@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zyphra ZHA: hierarchical sparse attention with subquadratic complexity for long context | Shopsmon</title>
+<meta name="description" content="Zyphra introduced Hierarchical Attention (ZHA), which builds a hierarchical tree and searches it to select the relevant tokens for each query, reaching…">
+<link rel="canonical" href="https://shopsmon.com/en/news/zyphra-hierarchical-attention.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/news/zyphra-hierarchical-attention.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/news/zyphra-hierarchical-attention.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/news/zyphra-hierarchical-attention.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Zyphra ZHA: hierarchical sparse attention with subquadratic complexity for long context | Shopsmon">
+<meta property="og:description" content="Zyphra introduced Hierarchical Attention (ZHA), which builds a hierarchical tree and searches it to select the relevant tokens for each query, reaching…">
+<meta property="og:url" content="https://shopsmon.com/en/news/zyphra-hierarchical-attention.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/news/zyphra-hierarchical-attention.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/blog/">Blog</a><a href="/en/news/" class=active>News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/news/zyphra-hierarchical-attention.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post newspost">
+<p class="crumbs"><a href="/en/news/">News</a> &rsaquo; <a href="/en/news/#ai">AI & LLM</a></p>
+<span class="tag cat-ai">AI & LLM</span>
+<h1>Zyphra ZHA: hierarchical sparse attention with subquadratic complexity for long context</h1>
+<p class="meta">2026-11-02 &middot; Summarised by Shopsmon &middot; Source: <a href="https://www.zyphra.com/our-work/zyphra-hierarchical-attention" rel="noopener nofollow" target="_blank">Zyphra</a></p>
+<figure class="cover"><img src="/assets/img/news/zyphra-hierarchical-attention.jpg" width="1200" height="630" alt="Illustration for the news item"><figcaption>Illustration drawn by Shopsmon, not a photo from the source.</figcaption></figure>
+<p class="standfirst">Zyphra introduced Hierarchical Attention (ZHA), which builds a hierarchical tree and searches it to select the relevant tokens for each query, reaching subquadratic complexity. Existing pretrained models are adapted with a distillation phase of only a few billion tokens. Per Zyphra, on RULER-13 at 256K tokens the wide-tree model scores 96.2% (96.0% for the original dense model); on LongBench v2 the deep-tree model scores 63.4% vs 58.0% for dense attention while attending to ~1.1% of the KV cache during decoding. These are the authors' own reported results.</p>
+<h2>Why it matters</h2>
+<div class="callout"><p>Quadratic attention cost is the main barrier to long context. Hierarchical sparse methods like this aim to keep quality while sharply reducing the KV cache read during decoding &mdash; the factor that drives serving cost.</p><p class="meta" style="margin:8px 0 0">Shopsmon&rsquo;s own take, not the source&rsquo;s.</p></div>
+<h2>Original source</h2>
+<p><a href="https://www.zyphra.com/our-work/zyphra-hierarchical-attention" rel="noopener nofollow" target="_blank">Zyphra</a> &mdash; read the original for the full method, conditions and limits. Performance figures published by companies/authors are their own claims; Shopsmon does not verify them independently.</p>
+
+<div class="cta-box"><h3 style="margin-top:0">Need an LLM chatbot or agent for your business?</h3><p>Describe your need briefly; you will get clarifying questions and a scoped proposal before any work starts.</p>
+<p><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Send a request</a> <a class="btn ghost" href="/en/solutions/llm-chatbot-agent.html">See the service</a></p></div>
+<h2>Related news</h2>
+<div class="newsgrid related"><a class="ncard" href="/en/news/leanguard-verified-agent-guardrails.html"><img src="/assets/img/news/leanguard-verified-agent-guardrails.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-03</span><h3>LeanGuard: checking every tool call of an LLM agent against a policy written in Lean 4</h3></div></a><a class="ncard" href="/en/news/strategist-evolving-inference-strategies.html"><img src="/assets/img/news/strategist-evolving-inference-strategies.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-03</span><h3>Strategist: a meta-agent that evolves inference strategies as code, with 39% lower inference cost</h3></div></a><a class="ncard" href="/en/news/deepmind-agentic-cheminformatics.html"><img src="/assets/img/news/deepmind-agentic-cheminformatics.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-03</span><h3>DeepMind: an AI agent compresses a drug-design iteration to about an hour</h3></div></a></div>
+</article>
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>
