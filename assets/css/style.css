@@ -88,3 +88,5 @@ article.post th{background:var(--bg2)}
   nav a{margin-left:0;margin-right:14px;font-size:14px}
   .hero{padding:56px 0 40px}
 }
+
+.newslist .card{display:flex;flex-direction:column}.newsitem .src{font-size:13px;margin-top:auto;margin-bottom:0}.newsitem h3{font-size:18px}a.pill{text-decoration:none;margin-right:6px}a.pill:hover{border-color:var(--brand)}

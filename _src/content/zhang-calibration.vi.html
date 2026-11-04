@@ -1,0 +1,115 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; Tái tạo 3D &middot; ~15 phút đọc</p>
+<h1>Hiệu chuẩn camera bằng bàn cờ: phương pháp Zhang</h1>
+<p class="meta">Vài bức ảnh chụp một mẫu phẳng cho ra ma trận nội tại của camera theo công thức đóng như thế nào, vì sao ba góc nhìn là mức tối thiểu thực tế, và một thí nghiệm Monte-Carlo về ảnh hưởng của nhiễu và số góc nhìn.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Hai bài trước trên blog này &mdash; <a href="@@L@@/blog/triangulation-dlt.html">tam giác hoá</a> và <a href="@@L@@/blog/eight-point-normalization.html">thuật toán 8 điểm</a> &mdash; đều bắt đầu từ toạ độ pixel và một mô hình camera. Tái tạo 3D theo đơn vị đo thực cần <strong>ma trận nội tại</strong> \(K\) của camera: tiêu cự, điểm chính và (trong mô hình tổng quát) độ xiên. Ước lượng \(K\) chính là <em>hiệu chuẩn camera</em>.</p>
+<p>Hiệu chuẩn cổ điển cần một vật chuẩn 3D gia công chính xác. Zhang (2000) chỉ ra rằng chỉ cần chụp một mẫu <em>phẳng</em> &mdash; ví dụ bàn cờ in ra dán lên tấm cứng &mdash; ở vài hướng khác nhau, không cần biết mẫu đã chuyển động ra sao. Quy trình của ông có giai đoạn đầu cho <strong>nghiệm công thức đóng</strong>, sau đó là tinh chỉnh phi tuyến theo cực đại hoá hợp lý và mô hình hoá méo xuyên tâm của ống kính. Bài này dẫn xuất và cài đặt riêng giai đoạn công thức đóng, rồi đo xem nó hoạt động tốt đến đâu trên dữ liệu tổng hợp.</p>
+
+<h2>2. Một mặt phẳng cho ta một homography</h2>
+<p>Dùng mô hình lỗ kim \(s\,\tilde{\mathbf m}=K[R\mid\mathbf t]\,\tilde{\mathbf M}\) với
+$$K=\begin{pmatrix}\alpha&\gamma&u_0\\0&\beta&v_0\\0&0&1\end{pmatrix},$$
+trong đó \(\alpha,\beta\) là tiêu cự tính bằng pixel, \((u_0,v_0)\) là điểm chính và \(\gamma\) là độ xiên. Đặt hệ toạ độ thế giới lên mẫu, nên mọi điểm của mẫu có \(Z=0\). Cột thứ ba của \(R\) biến mất; viết \(R=[\mathbf r_1\ \mathbf r_2\ \mathbf r_3]\):</p>
+$$s\begin{pmatrix}u\\v\\1\end{pmatrix}=K[\mathbf r_1\ \mathbf r_2\ \mathbf t]\begin{pmatrix}X\\Y\\1\end{pmatrix}\ \Longrightarrow\ H=[\mathbf h_1\ \mathbf h_2\ \mathbf h_3]=\lambda K[\mathbf r_1\ \mathbf r_2\ \mathbf t],$$
+<p>với một hệ số \(\lambda\) chưa biết. \(H\) là homography 3&times;3 giữa mặt phẳng mẫu và ảnh. Có thể ước lượng nó từ các góc đã phát hiện bằng chính DLT chuẩn hoá của các bài trước (homography có 8 bậc tự do nên 4 cặp điểm là đủ; lưới 9&times;6 cho 54 điểm).</p>
+<figure><img src="/assets/img/blog/zhang-views.svg" alt="Trái: lưới 9 x 6 điểm của mẫu trên mặt phẳng Z=0. Phải: ảnh của lưới đó trong bốn góc nhìn ngẫu nhiên." width="640" height="270">
+<figcaption>Hình 1. Thiết lập tổng hợp dùng bên dưới. Trái: lưới góc 9&times;6, ô vuông 25 mm. Phải: bốn góc nhìn ngẫu nhiên của lưới. (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
+
+<h2>3. Hai ràng buộc cho mỗi góc nhìn</h2>
+<p>Từ \(H=\lambda K[\mathbf r_1\ \mathbf r_2\ \mathbf t]\) ta có \(\mathbf r_1=\lambda^{-1}K^{-1}\mathbf h_1\) và \(\mathbf r_2=\lambda^{-1}K^{-1}\mathbf h_2\). Vì \(R\) là ma trận quay, \(\mathbf r_1\) và \(\mathbf r_2\) trực chuẩn: \(\mathbf r_1^\top\mathbf r_2=0\) và \(\|\mathbf r_1\|=\|\mathbf r_2\|\). Thay vào, với mỗi góc nhìn ta được</p>
+$$\mathbf h_1^\top B\,\mathbf h_2=0,\qquad \mathbf h_1^\top B\,\mathbf h_1=\mathbf h_2^\top B\,\mathbf h_2,\qquad B=K^{-\top}K^{-1}.$$
+<p>\(B\) đối xứng nên được mô tả bằng vector \(\mathbf b=(B_{11},B_{12},B_{22},B_{13},B_{23},B_{33})^\top\). Với \(\mathbf h_i=(h_{i1},h_{i2},h_{i3})^\top\), định nghĩa</p>
+$$\mathbf v_{ij}=\big(h_{i1}h_{j1},\ h_{i1}h_{j2}+h_{i2}h_{j1},\ h_{i2}h_{j2},\ h_{i3}h_{j1}+h_{i1}h_{j3},\ h_{i3}h_{j2}+h_{i2}h_{j3},\ h_{i3}h_{j3}\big)^\top,$$
+<p>để \(\mathbf h_i^\top B\mathbf h_j=\mathbf v_{ij}^\top\mathbf b\). Hai ràng buộc của một góc nhìn trở thành hai phương trình tuyến tính theo \(\mathbf b\), và \(n\) góc nhìn xếp chồng thành</p>
+$$V\mathbf b=\mathbf 0,\qquad V=\begin{pmatrix}\mathbf v_{12}^\top\\(\mathbf v_{11}-\mathbf v_{22})^\top\\\vdots\end{pmatrix}\in\mathbb R^{2n\times 6}.$$
+
+<h2>4. Cần bao nhiêu góc nhìn?</h2>
+<p>\(B\) chỉ xác định sai khác một hệ số tỉ lệ nên có 5 bậc tự do &mdash; bằng số ẩn của \(K\). Mỗi góc nhìn cho 2 phương trình, vì vậy:</p>
+<ul>
+<li><strong>\(n\ge 3\) góc nhìn</strong> nói chung xác định được \(\mathbf b\) (và do đó cả năm tham số nội tại, kể cả độ xiên).</li>
+<li><strong>\(n=2\) góc nhìn</strong> đủ nếu giả sử độ xiên bằng không (\(\gamma=0\), tức \(B_{12}=0\)), việc này thêm một phương trình. (Zhang cũng lưu ý các mặt phẳng mẫu ở những góc nhìn khác nhau không được song song với nhau, nếu không các ràng buộc bị suy biến.)</li>
+</ul>
+<p>Như các bài trước, với dữ liệu nhiễu ta giải \(\min_{\|\mathbf b\|=1}\|V\mathbf b\|^2\): \(\mathbf b\) là vector kỳ dị phải của \(V\) ứng với giá trị kỳ dị nhỏ nhất. Các tham số nội tại sau đó suy ra từ \(B\) bằng công thức đóng (Zhang, Phụ lục B):</p>
+$$v_0=\frac{B_{12}B_{13}-B_{11}B_{23}}{B_{11}B_{22}-B_{12}^2},\quad \lambda'=B_{33}-\frac{B_{13}^2+v_0(B_{12}B_{13}-B_{11}B_{23})}{B_{11}},$$
+$$\alpha=\sqrt{\lambda'/B_{11}},\quad \beta=\sqrt{\frac{\lambda' B_{11}}{B_{11}B_{22}-B_{12}^2}},\quad \gamma=-\frac{B_{12}\,\alpha^2\beta}{\lambda'},\quad u_0=\frac{\gamma v_0}{\beta}-\frac{B_{13}\,\alpha^2}{\lambda'}.$$
+<p>Hãy chú ý các căn bậc hai. Với camera thật \(B\) xác định dương, nhưng ước lượng từ dữ liệu nhiễu có thể rơi ra ngoài miền đó, và khi ấy không có nghiệm thực. Ta sẽ thấy điều này xảy ra thật trong thí nghiệm. Khi đã biết \(K\), tư thế của mỗi góc nhìn suy ra từ \(\mathbf r_1=\lambda K^{-1}\mathbf h_1\), \(\mathbf r_2=\lambda K^{-1}\mathbf h_2\), \(\mathbf r_3=\mathbf r_1\times\mathbf r_2\), \(\mathbf t=\lambda K^{-1}\mathbf h_3\) với \(\lambda=1/\|K^{-1}\mathbf h_1\|\) (rồi chiếu về ma trận quay gần nhất).</p>
+
+<h2>5. Cài đặt</h2>
+<p>Phần lõi của giai đoạn công thức đóng (NumPy). <a href="/blog/code/zhang_calibration.py">Script đầy đủ</a>, gồm bộ sinh dữ liệu tổng hợp, thí nghiệm và cả hai hình, có thể tải về.</p>
+<pre><code class="language-python">import numpy as np
+
+def vij(H, i, j):
+    h_i, h_j = H[:, i], H[:, j]
+    return np.array([h_i[0]*h_j[0], h_i[0]*h_j[1] + h_i[1]*h_j[0], h_i[1]*h_j[1],
+                     h_i[2]*h_j[0] + h_i[0]*h_j[2], h_i[2]*h_j[1] + h_i[1]*h_j[2], h_i[2]*h_j[2]])
+
+def calibrate(Hs, N):
+    """Hs: list of 3x3 homographies (pattern plane -> pixels).
+    N: a similarity that shifts/scales pixel coordinates (conditioning), K = inv(N) @ K_normalised."""
+    rows = []
+    for H in Hs:
+        Hn = N @ H
+        rows += [vij(Hn, 0, 1), vij(Hn, 0, 0) - vij(Hn, 1, 1)]
+    _, _, Vt = np.linalg.svd(np.array(rows))
+    b = Vt[-1] if Vt[-1][0] > 0 else -Vt[-1]
+    B11, B12, B22, B13, B23, B33 = b
+    den = B11*B22 - B12**2
+    v0 = (B12*B13 - B11*B23) / den
+    lam = B33 - (B13**2 + v0*(B12*B13 - B11*B23)) / B11
+    if den &lt;= 0 or lam/B11 &lt;= 0 or lam*B11/den &lt;= 0:
+        raise ValueError("estimated B is not positive definite")
+    alpha = np.sqrt(lam / B11)
+    beta = np.sqrt(lam * B11 / den)
+    gamma = -B12 * alpha**2 * beta / lam
+    u0 = gamma * v0 / beta - B13 * alpha**2 / lam
+    return np.linalg.inv(N) @ np.array([[alpha, gamma, u0], [0, beta, v0], [0, 0, 1.0]])
+</code></pre>
+<p>Toạ độ pixel được dời về tâm ảnh và chia cho 280 (ma trận <code>N</code>) trước khi dựng \(V\), vì cùng lý do điều kiện số như bài 8 điểm; ở đây tôi không đo riêng ảnh hưởng của bước này.</p>
+
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Với các góc không nhiễu từ 5 góc nhìn ngẫu nhiên, ước lượng bằng đúng \(K\) thật đến sai số làm tròn: \(\max|K-K_{\text{true}}|=2{,}3\times10^{-13}\). Với chỉ 2 góc nhìn và phương trình độ xiên bằng 0, sai số là \(3{,}2\times10^{-8}\) (vẫn đúng trên thực tế, nhưng hệ có điều kiện số kém hơn).</p>
+
+<h2>6. Thí nghiệm: nhiễu và số góc nhìn</h2>
+<p><strong>Thiết lập (tổng hợp, tái lập hoàn toàn).</strong> Tham số nội tại thật \(\alpha=820\), \(\beta=810\), \((u_0,v_0)=(322,238)\), \(\gamma=0\), kích thước ảnh 640&times;480. Lưới góc 9&times;6, ô vuông 25 mm. Mỗi góc nhìn có tư thế ngẫu nhiên: góc quay 15&ndash;50&deg; quanh một trục ngẫu nhiên, tâm mẫu cách camera 0,45&ndash;0,75 m; tư thế nào có góc ra khỏi ảnh thì bị loại. Nhiễu Gaussian độc lập độ lệch chuẩn \(\sigma\) được cộng vào mọi góc, mỗi góc nhìn ước lượng một homography, và \(K\) tính bằng công thức đóng với độ xiên tự do. Với mỗi trong 12 tổ hợp \(\sigma\in\{0{,}1;0{,}5;1{,}0\}\) px và \(n\in\{3,5,10,20\}\) góc nhìn, tôi chạy 300 lần (NumPy seed 2026) và báo cáo <em>trung vị</em> trên các lần thành công của: sai số tương đối trung bình của \(\alpha\) và \(\beta\) (%), và khoảng cách giữa điểm chính ước lượng và điểm chính thật (px). Không mô phỏng méo ống kính và <strong>không có tinh chỉnh phi tuyến</strong>.</p>
+<table>
+<thead><tr><th>&sigma; (px)</th><th>3 góc nhìn</th><th>5 góc nhìn</th><th>10 góc nhìn</th><th>20 góc nhìn</th></tr></thead>
+<tbody>
+<tr><td>0,1</td><td>0,327 % / 1,86 px</td><td>0,190 % / 1,23 px</td><td>0,105 % / 0,85 px</td><td>0,086 % / 0,62 px</td></tr>
+<tr><td>0,5</td><td>1,576 % / 9,83 px</td><td>0,836 % / 6,22 px</td><td>0,548 % / 4,51 px</td><td>0,459 % / 3,03 px</td></tr>
+<tr><td>1,0</td><td>3,550 % / 20,98 px <sup>*</sup></td><td>1,782 % / 12,66 px</td><td>1,090 % / 8,56 px</td><td>0,901 % / 6,48 px</td></tr>
+</tbody></table>
+<p class="meta">Mỗi ô: trung vị sai số tiêu cự / trung vị sai số điểm chính. <sup>*</sup> Trong 0,7 % của 300 lần chạy (3 góc nhìn, &sigma;=1 px), \(B\) ước lượng không xác định dương và công thức đóng thất bại; các ô khác có 0 % thất bại, và trung vị đã loại các lần thất bại.</p>
+<figure><img src="/assets/img/blog/zhang-error.svg" alt="Đồ thị log-log sai số tiêu cự và sai số điểm chính theo số góc nhìn cho ba mức nhiễu" width="640" height="270">
+<figcaption>Hình 2. Trung vị sai số tiêu cự (trái) và sai số điểm chính (phải) theo số góc nhìn, mỗi đường một mức nhiễu. Đầu ra của script trong bài. (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
+
+<h3>Các con số cho thấy gì</h3>
+<ul>
+<li><strong>Sai số tỉ lệ xấp xỉ với nhiễu.</strong> Với 10 góc nhìn, sai số tiêu cự là 0,105 %, 0,548 % và 1,090 % cho \(\sigma=0{,}1;0{,}5;1{,}0\) px &mdash; tỉ số khoảng 5,2&times; và 2,0&times; ứng với tỉ số nhiễu 5&times; và 2&times;.</li>
+<li><strong>Thêm góc nhìn giúp ích nhưng lợi ích giảm dần.</strong> Ở \(\sigma=0{,}5\) px, từ 3 lên 5 góc nhìn làm sai số tiêu cự giảm từ 1,58 % còn 0,84 % (&minus;47 %), còn từ 10 lên 20 góc nhìn chỉ giảm từ 0,55 % còn 0,46 % (&minus;16 %).</li>
+<li><strong>Điểm chính là tham số khó hơn.</strong> Với 10 góc nhìn và \(\sigma=0{,}5\) px, sai số trung vị của nó là 4,5 px, cùng cỡ với sai số tiêu cự quy ra pixel (0,548 % của khoảng 815 px &asymp; 4,5 px); nhiễu góc 0,5 px biến thành độ bất định vài pixel về nơi trục quang học chạm cảm biến.</li>
+<li><strong>Số góc nhìn tối thiểu rất mong manh.</strong> Với 3 góc nhìn và nhiễu 1 px, sai số là 3,6 % và công thức đóng thỉnh thoảng thất bại hẳn.</li>
+<li><strong>Từng lần chạy riêng lẻ dao động.</strong> Một lần chạy minh hoạ (\(\sigma=0{,}5\) px, 10 góc nhìn, seed 3) cho \(\alpha=810{,}2\), \(\beta=802{,}0\), \((u_0,v_0)=(325{,}6;241{,}2)\), độ xiên \(-0{,}62\): sai số tiêu cự 1,2 % và 1,0 %, gần gấp đôi trung vị. Một lần hiệu chuẩn thực tế không nên dựa vào một bộ ảnh may mắn hay xui xẻo.</li>
+</ul>
+<p><strong>Hạn chế.</strong> Dữ liệu tổng hợp, nhiễu Gaussian đẳng hướng với cùng \(\sigma\) cho mọi góc, không có méo ống kính và không có góc ngoại lai, phân bố tư thế chỉ là một lựa chọn cụ thể, và tôi chỉ đánh giá giai đoạn công thức đóng. Hiệu chuẩn thực thêm bước ước lượng méo xuyên tâm và tinh chỉnh phi tuyến cực tiểu hoá sai số chiếu lại của mọi góc trên mọi tham số &mdash; Zhang báo cáo đây là một phần của quy trình; ở đây tôi không định lượng mức cải thiện so với công thức đóng. Kết quả trên camera thật còn phụ thuộc chất lượng bộ phát hiện góc.</p>
+
+<h2>7. Bài học thực hành</h2>
+<ol>
+<li>Dùng ít nhất 5 góc nhìn, tốt nhất từ 10 trở lên, với mẫu <em>nghiêng</em> ở nhiều mức và nhiều hướng khác nhau &mdash; không phải 3 góc gần như song song.</li>
+<li>Để mẫu lớn trong ảnh và trải khắp trường nhìn; nhiễu vị trí góc chuyển thẳng thành sai số của \(K\).</li>
+<li>Coi nghiệm công thức đóng là giá trị khởi tạo. Khi làm thật, hãy tinh chỉnh toàn bộ tham số (và méo) bằng cách cực tiểu hoá sai số chiếu lại, đồng thời kiểm tra RMS sai số chiếu lại cuối cùng và độ lệch giữa các lần hiệu chuẩn độc lập.</li>
+<li>Nếu \(B\) không xác định dương, dữ liệu không nhất quán với mô hình (quá ít hoặc quá giống nhau góc nhìn, lỗi phát hiện góc): hãy chụp thêm thay vì ép ra nghiệm.</li>
+<li>Khi đã biết \(K\), bạn có thể khử méo ảnh, ước lượng ma trận cốt yếu thay vì \(F\) như trong <a href="@@L@@/blog/eight-point-normalization.html">bài 8 điểm</a>, và tam giác hoá theo đơn vị đo thực như trong <a href="@@L@@/blog/triangulation-dlt.html">bài tam giác hoá</a>.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần tái tạo 3D, chatbot agent hay công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này theo dạng freelance. Mô tả dự án của bạn trong vài câu, tôi sẽ phản hồi với câu hỏi và báo giá phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20t%C3%A1i%20t%E1%BA%A1o%203D">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/solutions/3d-reconstruction.html">Dịch vụ tái tạo 3D</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>Z. Zhang. &ldquo;A flexible new technique for camera calibration.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 22(11):1330&ndash;1334, tháng 11/2000. <a href="https://doi.org/10.1109/34.888718">doi:10.1109/34.888718</a>. (Cũng là báo cáo kỹ thuật Microsoft Research MSR-TR-98-71, <a href="https://www.microsoft.com/en-us/research/publication/a-flexible-new-technique-for-camera-calibration/">trang công bố</a>.)</li>
+<li>R. Hartley và A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, tái bản lần 2. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. <a href="https://www.cambridge.org/9780521540513">Trang nhà xuất bản</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/zhang_calibration.py">zhang_calibration.py</a> (Python 3.12, NumPy, Matplotlib). Mọi con số ở mục 5&ndash;6 là đầu ra của script này.</p>
+</article>

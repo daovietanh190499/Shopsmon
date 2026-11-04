@@ -4,6 +4,10 @@ Run: python _src/build.py
 - Blog posts are stored as _src/content/<slug>.<lang>.html with placeholders @@EMAIL@@ and @@L@@ (language URL prefix).
 """
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from news_data import NEWS, CATS  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
@@ -19,11 +23,22 @@ NAV = [
     ("/services.html", {"vi": "Dịch vụ", "en": "Services"}),
     ("/portfolio.html", {"vi": "Portfolio", "en": "Portfolio"}),
     ("/blog/", {"vi": "Blog", "en": "Blog"}),
+    ("/news/", {"vi": "Tin tức", "en": "News"}),
     ("/contact.html", {"vi": "Liên hệ", "en": "Contact"}),
 ]
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="zhang-calibration", date="2026-11-04", min=15,
+         tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
+         title={"vi": "Hiệu chuẩn camera bằng bàn cờ: phương pháp Zhang",
+                "en": "Camera calibration from a chessboard: Zhang's method"},
+         summary={"vi": "Một mẫu phẳng cho ra ma trận nội tại theo công thức đóng, vì sao cần ít nhất 3 góc nhìn, và thí nghiệm Monte-Carlo về nhiễu và số ảnh.",
+                  "en": "How a planar pattern yields the intrinsic matrix in closed form, why at least three views are needed, and a Monte-Carlo experiment on noise and number of images."},
+         seo_title={"vi": "Hiệu chuẩn camera Zhang: ma trận nội tại từ bàn cờ | Shopsmon",
+                    "en": "Zhang camera calibration: intrinsic matrix from a chessboard | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất phương pháp hiệu chuẩn camera của Zhang (homography, ràng buộc trên B, SVD, công thức đóng), kèm code NumPy và thí nghiệm về nhiễu và số góc nhìn.",
+                   "en": "Derivation of Zhang's camera calibration (homography, constraints on B, SVD, closed form), with NumPy code and an experiment on noise and the number of views."}),
     dict(slug="eight-point-normalization", date="2026-11-04", min=14,
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
          title={"vi": "Thuật toán 8 điểm và vì sao chuẩn hoá toạ độ lại quan trọng",
@@ -140,6 +155,21 @@ def post_cards(L, limit=None):
     return out
 
 
+def news_cards(L, limit=None, cat=None):
+    items = sorted(NEWS, key=lambda n: n["date"], reverse=True)
+    if cat:
+        items = [n for n in items if n["cat"] == cat]
+    if limit:
+        items = items[:limit]
+    t = lambda vi, en: vi if L == "vi" else en
+    out = ""
+    for n in items:
+        out += (f'<article class="card newsitem"><span class="tag">{CATS[n["cat"]][L]} &middot; {n["date"]}</span>'
+                f'<h3>{n["title"][L]}</h3><p>{n["body"][L]}</p>'
+                f'<p class="src">{t("Nguồn", "Source")}: <a href="{n["url"]}" rel="noopener nofollow" target="_blank">{n["src"]}</a></p></article>')
+    return out
+
+
 # =============================================================== PAGES
 def home(L):
     t = lambda vi, en: vi if L == "vi" else en
@@ -158,7 +188,7 @@ def home(L):
 <div class="grid g3">
 <div class="card"><span class="tag">LLM</span><h3>{t('Chatbot &amp; agent LLM', 'Chatbot &amp; agent development')}</h3><p>{t('Bot hỗ trợ khách hàng, trợ lý tri thức nội bộ và agent biết dùng công cụ, truy xuất trên chính tài liệu của bạn.', 'Support bots, internal knowledge assistants and tool-using agents with retrieval over your own documents.')}</p><a href="{P('/solutions/llm-chatbot-agent.html')}">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
 <div class="card"><span class="tag">3D</span><h3>{t('Tái tạo 3D', '3D reconstruction')}</h3><p>{t('Hình học đa góc nhìn, pipeline kiểu photogrammetry, hiệu chuẩn camera và xử lý đám mây điểm bằng Python.', 'Multi-view geometry, photogrammetry-style pipelines, camera calibration and point-cloud processing in Python.')}</p><a href="{P('/solutions/3d-reconstruction.html')}">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
-<div class="card"><span class="tag">Tools</span><h3>{t('Công cụ AI theo yêu cầu', 'Custom AI tools')}</h3><p>{t('Tự động hoá và ứng dụng nhỏ: trích xuất tài liệu, phân loại, làm sạch dữ liệu, dashboard &mdash; đo ni đóng giày theo quy trình của bạn.', 'Automations and small apps: document extraction, classification, data cleaning, dashboards &mdash; scoped to your workflow.')}</p><a href="{P('/services.html')}#tools">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
+<div class="card"><span class="tag">Tools</span><h3>{t('Công cụ AI theo yêu cầu', 'Custom AI tools')}</h3><p>{t('Tự động hoá và ứng dụng nhỏ: trích xuất tài liệu, phân loại, làm sạch dữ liệu, dashboard &mdash; đo ni đóng giày theo quy trình của bạn.', 'Automations and small apps: document extraction, classification, data cleaning, dashboards &mdash; scoped to your workflow.')}</p><a href="{P('/solutions/custom-ai-tools.html')}">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
 </div></div></section>
 
 <section class="band"><div class="wrap">
@@ -174,6 +204,12 @@ def home(L):
 <h2>{t('Đọc blog', 'Learn from the blog')}</h2>
 <p class="sub">{t('Bài kỹ thuật về khoa học dữ liệu, AI, tái tạo 3D và khoa học máy tính &mdash; có công thức, hình minh hoạ và code chạy được.', 'Technical articles on data science, AI, 3D reconstruction and computer science &mdash; with equations, figures and code that runs.')}</p>
 <div class="grid postlist">{post_cards(L, 3)}</div>
+</div></section>
+
+<section><div class="wrap">
+<h2>{t('Tin công nghệ mới', 'Latest tech news')}</h2>
+<p class="sub">{t('Điểm tin AI, LLM, chip, điện thoại&hellip; có dẫn nguồn.', 'AI, LLM, chip and smartphone headlines, with sources.')} <a href="{P('/news/')}">{t('Xem tất cả', 'See all')} &rarr;</a></p>
+<div class="grid g2 newslist">{news_cards(L, 4)}</div>
 </div></section>
 
 <section class="band"><div class="wrap" style="text-align:center">
@@ -238,6 +274,7 @@ def services(L):
 <section id="tools"><div class="wrap">
 <h2>{t('3. Công cụ AI theo yêu cầu', '3. Custom AI tools')}</h2>
 <p class="sub">{t('Phần mềm nhỏ, tập trung, loại bỏ một công việc lặp đi lặp lại.', 'Small, focused software that removes a repetitive task.')}</p>
+<p><a href="{P('/solutions/custom-ai-tools.html')}">{t('Xem trang dịch vụ công cụ AI đầy đủ', 'Read the full custom AI tools page')} &rarr;</a></p>
 <div class="grid g2">
 <div class="card"><h3>{t('Ví dụ', 'Examples')}</h3><ul>
 <li>{t('Trích xuất trường dữ liệu từ hoá đơn, biểu mẫu hoặc email vào bảng tính', 'Extract fields from invoices, forms or emails into a spreadsheet')}</li>
@@ -270,6 +307,9 @@ def portfolio(L):
 <div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thí nghiệm tam giác hoá hai góc nhìn (DLT)', 'Two-view triangulation (DLT) experiment')}</h3>
 <p>{t('Bản cài đặt NumPy của tam giác hoá tuyến tính và phương pháp điểm giữa, cùng thí nghiệm tái lập được về ảnh hưởng của baseline camera đến độ chính xác 3D. Có kiểm tra tính đúng đắn với dữ liệu không nhiễu.', 'A NumPy implementation of linear triangulation and the midpoint method, with a reproducible experiment on how camera baseline affects 3D accuracy. Includes an exact noise-free sanity check.')}</p>
 <p><a href="{P('/blog/triangulation-dlt.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/triangulation_dlt.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
+<div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Hiệu chuẩn camera Zhang từ mẫu phẳng', 'Zhang camera calibration from a planar pattern')}</h3>
+<p>{t('Cài đặt NumPy giai đoạn công thức đóng (homography, ràng buộc trên B, SVD) và thí nghiệm Monte-Carlo 3600 lần chạy về ảnh hưởng của nhiễu và số góc nhìn lên tiêu cự và điểm chính, kể cả tỉ lệ thất bại thực tế.', 'A NumPy implementation of the closed-form stage (homography, constraints on B, SVD) and a 3,600-run Monte-Carlo experiment on how noise and the number of views affect focal length and principal point, including the actual failure rate.')}</p>
+<p><a href="{P('/blog/zhang-calibration.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/zhang_calibration.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
 <div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thuật toán 8 điểm: thô so với chuẩn hoá Hartley', 'Eight-point algorithm: raw vs. Hartley-normalised')}</h3>
 <p>{t('Ước lượng ma trận cơ bản bằng SVD, kèm thí nghiệm tái lập được cho thấy chuẩn hoá giảm số điều kiện từ 4.6e5 xuống 18 và giảm sai số epipolar đáng kể khi có nhiễu.', 'Fundamental-matrix estimation with an SVD, plus a reproducible experiment showing that normalisation cuts the condition number from 4.6e5 to 18 and reduces epipolar error substantially under noise.')}</p>
 <p><a href="{P('/blog/eight-point-normalization.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/eight_point.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
@@ -368,6 +408,49 @@ def landing3d(L):
            body, active="/services.html")
 
 
+def landing_tools(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    body = f"""
+<div class="hero"><div class="wrap">
+<span class="pill">{t('Công cụ AI theo yêu cầu', 'Custom AI tools')}</span>
+<h1>{t('Một công cụ nhỏ, đúng việc, thay cho một công việc lặp đi lặp lại.', 'One small, focused tool that replaces one repetitive task.')}</h1>
+<p class="lead">{t('Bạn có một quy trình tốn thời gian &mdash; đọc hoá đơn, phân loại phản hồi, làm sạch bảng dữ liệu, tổng hợp báo cáo? Tôi xây dựng công cụ AI gọn nhẹ, đo ni đóng giày cho quy trình đó, kèm cách đo xem nó có thật sự tiết kiệm thời gian không.', 'Have a time-consuming routine &mdash; reading invoices, sorting feedback, cleaning spreadsheets, compiling reports? I build lightweight AI tools tailored to that workflow, with a way to measure whether they really save time.')}</p>
+<div class="cta">{cta_btns(L)}</div></div></div>
+
+<section><div class="wrap"><h2>{t('Những loại công cụ tôi xây dựng', 'Kinds of tools I build')}</h2><p class="sub">{t('Ví dụ về loại việc phù hợp. Đây là các hướng dịch vụ, không phải dự án khách hàng đã hoàn thành.', 'Examples of the kind of work that fits. These are service directions, not completed client projects.')}</p>
+<div class="grid g3">
+<div class="card"><h3>{t('Trích xuất tài liệu', 'Document extraction')}</h3><p>{t('Đọc PDF, ảnh chụp hoá đơn, biểu mẫu hoặc email và đưa các trường cần thiết vào bảng tính/CSV, kèm cờ cảnh báo cho các dòng cần người kiểm tra.', 'Read PDFs, invoice photos, forms or emails and put the required fields into a spreadsheet/CSV, with flags on the rows a human should check.')}</p></div>
+<div class="card"><h3>{t('Phân loại &amp; gắn thẻ', 'Classification &amp; tagging')}</h3><p>{t('Phân loại ticket, phản hồi khách hàng, đánh giá sản phẩm hoặc sản phẩm trong danh mục theo nhãn của riêng bạn, có thể kèm mức độ tin cậy.', 'Sort tickets, customer feedback, reviews or catalogue items into your own labels, optionally with a confidence score.')}</p></div>
+<div class="card"><h3>{t('Làm sạch &amp; hợp nhất dữ liệu', 'Data cleaning &amp; merging')}</h3><p>{t('Chuẩn hoá tên, ngày, địa chỉ; phát hiện bản ghi trùng; hợp nhất nhiều nguồn. Mọi thay đổi được ghi log để đối chiếu.', 'Normalise names, dates and addresses; detect duplicate records; merge several sources. Every change is logged so it can be audited.')}</p></div>
+<div class="card"><h3>{t('Báo cáo &amp; dashboard', 'Reports &amp; dashboards')}</h3><p>{t('Tự động tổng hợp số liệu định kỳ thành báo cáo hoặc dashboard web đơn giản, kèm phần tóm tắt bằng ngôn ngữ tự nhiên khi hữu ích.', 'Turn recurring numbers into a report or a simple web dashboard, with a natural-language summary where it helps.')}</p></div>
+<div class="card"><h3>{t('Tự động hoá quy trình', 'Workflow automation')}</h3><p>{t('Nối các bước đang làm tay: đọc email, gọi API, cập nhật bảng tính, gửi thông báo &mdash; có bước xác nhận của con người ở chỗ rủi ro.', 'Connect steps you do by hand: read an email, call an API, update a sheet, send a notification &mdash; with a human approval step where it is risky.')}</p></div>
+<div class="card"><h3>{t('Công cụ dòng lệnh / web nhỏ', 'Small CLI / web utilities')}</h3><p>{t('Một ứng dụng nhỏ chạy trên máy bạn hoặc một server rẻ, có hướng dẫn cài đặt và mã nguồn đầy đủ.', 'A small app that runs on your machine or a cheap server, with install instructions and full source.')}</p></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Cách làm việc', 'How I work')}</h2><p class="sub">{t('Nhỏ gọn, đo được, không lock-in.', 'Small, measurable, no lock-in.')}</p>
+<div class="grid g3 steps">
+<div class="card"><h3>{t('Hiểu quy trình hiện tại', 'Understand the current routine')}</h3><p>{t('Bạn gửi 5&ndash;10 ví dụ thật (đã ẩn thông tin nhạy cảm) và mô tả đầu ra mong muốn.', 'You send 5&ndash;10 real examples (sensitive data removed) and describe the output you want.')}</p></div>
+<div class="card"><h3>{t('Đặt tiêu chí nghiệm thu', 'Agree acceptance criteria')}</h3><p>{t('Chúng ta thống nhất cách đo: tỉ lệ đúng trên bộ ví dụ giữ lại, thời gian xử lý, số dòng cần người duyệt.', 'We agree how to measure: accuracy on held-out examples, processing time, number of rows that need review.')}</p></div>
+<div class="card"><h3>{t('Demo rồi bàn giao', 'Demo, then deliver')}</h3><p>{t('Bạn thử bản demo trên dữ liệu của mình; sau khi đồng ý, bạn nhận mã nguồn, tài liệu và buổi hướng dẫn. Thanh toán bằng hoá đơn PayPal.', 'You try the demo on your own data; once you agree you get the source, documentation and a walkthrough. Payment by PayPal invoice.')}</p></div>
+</div></div></section>
+
+<section><div class="wrap"><h2>{t('Điều tôi nói thẳng từ đầu', 'What I will tell you up front')}</h2>
+<div class="grid g2"><div class="card"><ul><li>{t('AI không đúng 100%: tôi đo độ chính xác trên ví dụ của bạn và thiết kế bước kiểm tra của con người.', 'AI is not 100% accurate: I measure accuracy on your examples and design the human-review step.')}</li><li>{t('Không phải việc nào cũng đáng để tự động hoá &mdash; nếu một script đơn giản là đủ, tôi sẽ nói vậy.', 'Not every task is worth automating &mdash; if a simple script is enough, I will say so.')}</li><li>{t('Dữ liệu của bạn chỉ dùng cho dự án; nếu cần gửi tới nhà cung cấp AI bên thứ ba, tôi sẽ báo trước (xem', 'Your data is used only for the project; if it must go to a third-party AI provider I will tell you first (see the')} <a href="{P('/privacy.html')}">{t('Chính sách bảo mật', 'Privacy Policy')}</a>{t(').', ').')}</li></ul></div>
+<div class="card"><p>{t('Không phù hợp với: các hệ thống ra quyết định tự động về y tế, pháp lý, tín dụng hoặc việc làm mà không có con người giám sát; hoặc các dự án cần kết quả được đảm bảo.', 'Not a fit for: automated decisions on health, legal, credit or employment matters without human oversight, or projects that need guaranteed outcomes.')}</p>
+<p>{t('Quan tâm đến phần kỹ thuật nền tảng? Đọc blog:', 'Curious about the engineering underneath? Read the blog:')} <a href="{P('/blog/')}">{t('các bài về AI, dữ liệu và 3D', 'articles on AI, data and 3D')}</a>.</p></div></div></div></section>
+
+<section class="band"><div class="wrap" style="text-align:center"><h2>{t('Mô tả công việc bạn muốn bớt đi', 'Describe the task you want gone')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Hai ba câu là đủ để tôi phản hồi với câu hỏi và đề xuất phạm vi cố định.', 'Two or three sentences are enough for me to reply with questions and a fixed-scope proposal.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)}</div></div></section>
+"""
+    layout(L, "/solutions/custom-ai-tools.html",
+           t("Công cụ AI theo yêu cầu: trích xuất, phân loại, tự động hoá | Shopsmon", "Custom AI tools: extraction, classification, automation | Shopsmon"),
+           t("Xây dựng công cụ AI gọn nhẹ cho quy trình của bạn: trích xuất tài liệu, phân loại, làm sạch dữ liệu, báo cáo và tự động hoá. Đo độ chính xác trên dữ liệu của bạn, demo trước, bàn giao mã nguồn.",
+             "Lightweight custom AI tools for your workflow: document extraction, classification, data cleaning, reporting and automation. Accuracy measured on your data, demo first, source handed over."),
+           body, active="/services.html")
+
+
 def contact(L):
     t = lambda vi, en: vi if L == "vi" else en
     subj = t("Y%C3%AAu%20c%E1%BA%A7u%20d%E1%BB%B1%20%C3%A1n%20-%20Shopsmon", "Project%20inquiry%20-%20Shopsmon")
@@ -389,6 +472,30 @@ def contact(L):
            t("Liên hệ Shopsmon — bắt đầu dự án của bạn", "Contact Shopsmon — start your project"),
            t("Liên hệ Shopsmon để trao đổi về dự án chatbot LLM, tái tạo 3D hoặc công cụ AI.", "Contact Shopsmon to discuss an LLM chatbot, 3D reconstruction or custom AI tool project."),
            body, active="/contact.html")
+
+
+def news_index(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    sections = ""
+    for key in CATS:
+        cards = news_cards(L, cat=key)
+        if cards:
+            sections += f'<h2 id="{key}" style="margin-top:40px">{CATS[key][L]}</h2><div class="grid g2 newslist">{cards}</div>'
+    chips = "".join(f'<a class="pill" href="#{k}">{v[L]}</a> ' for k, v in CATS.items())
+    body = f"""
+<div class="hero" style="padding:64px 0 24px"><div class="wrap">
+<h1 style="font-size:clamp(30px,5vw,46px)">{t('Tin tức công nghệ', 'Tech news')}</h1>
+<p class="lead">{t('Điểm tin mới nhất về AI, LLM, hệ thống máy tính, khoa học máy tính &amp; dữ liệu, điện thoại thông minh và công nghệ mới. Mỗi mục được tóm tắt lại bằng lời của chúng tôi, kèm liên kết tới nguồn gốc.', 'The latest on AI, LLMs, computer systems, computer science &amp; data, smartphones and emerging tech. Each item is summarised in our own words with a link to the original source.')}</p>
+<p>{chips}</p>
+<p class="meta">{t('Cập nhật', 'Updated')}: {TODAY}. {t('Các con số do công ty/tác giả công bố được ghi rõ là tuyên bố của họ; chúng tôi không tự kiểm chứng độc lập các benchmark.', 'Figures published by companies/authors are marked as their own claims; we do not independently verify benchmarks.')}</p>
+</div></div>
+<section><div class="wrap">{sections}</div></section>
+"""
+    layout(L, "/news/",
+           t("Tin tức công nghệ: AI, LLM, chip, điện thoại | Shopsmon", "Tech news: AI, LLM, chips, smartphones | Shopsmon"),
+           t("Điểm tin công nghệ mới nhất về AI, LLM, hệ thống máy tính, khoa học máy tính, dữ liệu và điện thoại thông minh, kèm nguồn gốc.",
+             "Latest tech news on AI, LLMs, computer systems, computer science, data and smartphones, with original sources."),
+           body, active="/news/")
 
 
 def blog_index(L):
@@ -553,8 +660,10 @@ for L in LANGS:
     portfolio(L)
     landing(L)
     landing3d(L)
+    landing_tools(L)
     contact(L)
     blog_index(L)
+    news_index(L)
     privacy(L)
     for p in POSTS:
         blog_post(L, p)
