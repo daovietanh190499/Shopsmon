@@ -25,6 +25,7 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 
 # Pages without og:image: use the article's own lead image.
 OVERRIDE = {
+    "atsign-edgeai": "https://cdn.prod.website-files.com/6a0e0dacd9a0567a4e90580e/6ac3cad5b0b9f389d4e0e765_Intel%20x%20Atsign.webp",
     "nsf-fabaid-data-fabric": "https://computing.unl.edu/sites/unl.edu.engineering.school-of-computing/files/media/image/hcc.jpg",
 }
 

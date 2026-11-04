@@ -130,6 +130,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){{var a=document.qu
 <footer class="site"><div class="wrap">
 <div>&copy; 2026 Shopsmon &middot; {t('Freelance AI &amp; kỹ thuật 3D', 'Freelance AI &amp; 3D engineering')} &middot; <a href="{pth(L, '/privacy.html')}">{t('Chính sách bảo mật', 'Privacy Policy')}</a></div>
 <div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:{EMAIL}">{EMAIL}</a></div>
+<div class="fine">{t('Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.', 'Some product links may earn Shopsmon a commission.')}</div>
 </div></footer>
 <script>
 (function(){{var d=document.documentElement,b=document.getElementById('themeBtn');
@@ -232,7 +233,7 @@ def aff_box(L, key):
     lis = "".join(
         f'<li><a href="{AFF[i]["link"]}" rel="sponsored nofollow noopener" target="_blank">{AFF[i][L]}</a> '
         f'<span class="price">{AFF[i]["price"]}</span></li>' for i in b["items"])
-    return (f'<aside class="aff-box"><h3>{b["title"][L]} <span class="afftag">Affiliate &middot; Shopee</span></h3><p>{b["intro"][L]}</p><ul>{lis}</ul></aside>')
+    return (f'<aside class="aff-box"><h3>{b["title"][L]}</h3><p>{b["intro"][L]}</p><ul>{lis}</ul></aside>')
 
 
 def sorted_news():
@@ -718,7 +719,7 @@ def privacy(L):
 <li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
 <li><strong>Google (Gmail)</strong>: trao đổi qua email.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: nếu bạn tương tác với Facebook Page của Shopsmon, Meta xử lý dữ liệu theo chính sách của Meta.</li>
-<li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết affiliate tới Shopee Việt Nam và được ghi chú rõ. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>
+<li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết tiếp thị liên kết (affiliate) tới Shopee Việt Nam. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>
 <li><strong>PayPal</strong>: thanh toán và hoá đơn.</li>
 </ul>
 <p>Mỗi bên có chính sách bảo mật riêng; chúng tôi khuyến khích bạn đọc chúng. Chúng tôi không bán hay cho thuê thông tin cá nhân của bạn.</p>
@@ -773,7 +774,7 @@ def privacy(L):
 <li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, which then receive your IP address and browser details.</li>
 <li><strong>Google (Gmail)</strong>: email correspondence.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: if you interact with the Shopsmon Facebook Page, Meta processes your data under its own policy.</li>
-<li><strong>Shopee (affiliate links)</strong>: some pages contain clearly labelled affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>
+<li><strong>Shopee (affiliate links)</strong>: some pages contain affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>
 <li><strong>PayPal</strong>: payments and invoices.</li>
 </ul>
 <p>Each of these has its own privacy policy, which we encourage you to read. We do not sell or rent your personal information.</p>

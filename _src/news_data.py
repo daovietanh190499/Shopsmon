@@ -12,6 +12,24 @@ CATS = {
 }
 
 NEWS = [
+    dict(date="2026-11-04", cat="hw", src="Winbond",
+         url="https://www.winbond.com/hq/about-winbond/news-and-events/news/2026_1104_winbond_cube_lite_edge_ai_applications",
+         title={"vi": "Winbond ra mắt CUBE-Lite: bộ nhớ bán tuỳ biến 8 GB/s ở khoảng 70 mW cho edge AI",
+                "en": "Winbond introduces CUBE-Lite: semi-custom memory with 8 GB/s at about 70 mW for edge AI"},
+         body={"vi": "Theo thông cáo của Winbond (4/11/2026), CUBE-Lite là giải pháp bộ nhớ bán tuỳ biến xây trên nền tảng CUBE, dành cho các hệ thống AI nhúng như AI-ISP, thiết bị đeo và thiết kế dùng MCU. Winbond cho biết CUBE-Lite đạt băng thông tới 8 GB/s ở khoảng 70 mW, hiệu suất năng lượng khoảng 1 pJ/bit và độ trễ truy cập khoảng 20 ns. Mục tiêu ban đầu là thị giác biên công suất thấp và hệ thống AI chạy Micro Linux. Sản phẩm đang trong giai đoạn kiểm định, dự kiến sản xuất hàng loạt trong nửa đầu năm 2027.",
+               "en": "According to Winbond's announcement (Nov 4, 2026), CUBE-Lite is a semi-custom memory solution built on the CUBE platform for embedded AI systems such as AI-ISP, wearables and MCU-based designs. Winbond says CUBE-Lite delivers up to 8 GB/s of bandwidth at about 70 mW, roughly 1 pJ/bit energy efficiency and about 20 ns access latency. Initial targets are low-power edge vision and AI systems running Micro Linux. The product is in validation, with mass production targeted for the first half of 2027."}),
+    dict(date="2026-11-03", cat="iot", src="Atsign",
+         url="https://www.atsign.com/press-release/atsign-edgeai-launch-secure-distributed-autonomous-agents-iot",
+         title={"vi": "Atsign EdgeAI: kết nối an toàn agent tự động, thiết bị IoT/OT và hệ thống physical AI",
+                "en": "Atsign EdgeAI: secure connectivity for autonomous agents, IoT/OT devices and physical-AI systems"},
+         body={"vi": "Theo thông cáo của Atsign (3/11/2026), EdgeAI là giải pháp đóng gói chạy trên thiết bị, gateway và hệ thống biên, kèm Control Center để quản trị tập trung chính sách giao tiếp theo danh tính. Quản trị viên có thể dùng Kill Switch theo danh tính để cắt hoặc hạn chế liên lạc từ thiết bị, ứng dụng hoặc agent AI bị xâm nhập hay hoạt động bất thường mà không cần đổi cấu hình tường lửa. Atsign cho biết khi dùng tăng tốc mã hoá bằng phần cứng, thử nghiệm của hãng đạt thông lượng mã hoá cao hơn tới 60 lần trên Intel Core Ultra (6 Gbps) và tới 88 lần trên Intel Xeon (5 Gbps) so với mã hoá thuần phần mềm (khoảng 100 Mbps và 57 Mbps). Giải pháp nhắm tới edge AI, physical AI, IoT/OT, giao thông thông minh, robot và hạ tầng trọng yếu.",
+               "en": "According to Atsign's announcement (Nov 3, 2026), EdgeAI is a packaged solution that runs on devices, gateways and edge systems, with a Control Center for centralised management of identity-based communication policies. Administrators can use an identity-based Kill Switch to cut off or limit communications from compromised or misbehaving devices, applications or AI agents without waiting for firewall changes. Atsign says its testing with hardware crypto acceleration reached up to 60x higher encryption throughput on Intel Core Ultra (6 Gbps) and up to 88x on Intel Xeon (5 Gbps) versus software-only encryption (about 100 Mbps and 57 Mbps). The solution targets edge AI, physical AI, IoT/OT, smart transportation, robotics and critical infrastructure."}),
+    dict(date="2026-11-02", cat="ai", src="Anthropic",
+         url="https://www.anthropic.com/research/provable-inference",
+         title={"vi": "Anthropic công bố FlashProve: chứng minh mật mã rằng câu trả lời đến từ đúng mô hình đã cam kết",
+                "en": "Anthropic releases FlashProve: cryptographic proof that a reply came from the committed model"},
+         body={"vi": "Theo bài nghiên cứu của Anthropic (2/11/2026), FlashProve là nguyên mẫu mã nguồn mở cho suy luận có thể chứng minh với mô hình Mixture-of-Experts lớn. Nhà cung cấp công bố một cam kết (commitment) với trọng số mô hình, rồi với mỗi yêu cầu tạo một bằng chứng zkSNARK; người dùng kiểm tra bằng chứng trên CPU thông thường mà không cần biết trọng số. Với Llama 4 Maverick (MoE 400 tỉ tham số, trọng số 4-bit), một GPU H100 tạo bằng chứng khoảng 110 token/giây, mỗi bằng chứng khoảng 19 MB cho yêu cầu 1.024 token; kiểm tra mất khoảng 17 giây trên 24 luồng CPU. Anthropic cho biết thời gian GPU gấp khoảng 70&ndash;95 lần so với chạy vLLM, và bằng chứng áp dụng cho mô hình số nguyên với giải mã tham lam; bản triển khai chưa được công bố cho sản xuất.",
+               "en": "According to Anthropic's research post (Nov 2, 2026), FlashProve is an open-source prototype of provable inference for large Mixture-of-Experts models. The provider publishes a commitment to the model weights and then produces a zkSNARK proof for each request; users verify the proof on an ordinary CPU without knowing the weights. For Llama 4 Maverick (a 400B-parameter MoE, 4-bit weights), a single H100 generates proofs at about 110 tokens/second, each proof about 19 MB for a 1,024-token request, and checking takes about 17 seconds on 24 CPU threads. Anthropic says GPU time is roughly 70&ndash;95x that of running vLLM, and the proof applies to an integer model under greedy decoding; production deployment has not been announced."}),
     dict(date="2026-11-04", cat="ai", src="South China Morning Post",
          url="https://www.scmp.com/tech/big-tech/article/3373227/tencent-unveils-hy4-open-weight-ai-race-deepseek-zai-alibaba-heats",
          title={"vi": "Tencent ra mắt Hy4: lần đầu có thị giác và điều khiển máy tính, nhắm tới nhóm mô hình mở mạnh nhất",
@@ -140,6 +158,9 @@ NEWS = [
 # which blog/landing to link, and which affiliate box (see build.py AFF_BOXES) fits the topic.
 # ---------------------------------------------------------------------------------------------
 META = {
+    "https://www.winbond.com/hq/about-winbond/news-and-events/news/2026_1104_winbond_cube_lite_edge_ai_applications": dict(slug="winbond-cube-lite", aff=None),
+    "https://www.atsign.com/press-release/atsign-edgeai-launch-secure-distributed-autonomous-agents-iot": dict(slug="atsign-edgeai", aff="iot"),
+    "https://www.anthropic.com/research/provable-inference": dict(slug="anthropic-flashprove", aff="agents"),
     "https://www.scmp.com/tech/big-tech/article/3373227/tencent-unveils-hy4-open-weight-ai-race-deepseek-zai-alibaba-heats": dict(slug="tencent-hy4", aff="agents"),
     "https://www.thecomponentclub.com/news/2026-11-u-blox-introduces-alma-w1-wi-fi-6-6e-modules-for-iot-devices": dict(slug="u-blox-alma-w1-nrf71", aff="iot"),
     "https://computing.unl.edu/news/university-lead-cybersecurity-national-fabaid-data-fabric/": dict(slug="nsf-fabaid-data-fabric", aff=None),

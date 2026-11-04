@@ -86,5 +86,21 @@
    1090,
    613
   ]
+ },
+ "anthropic-flashprove": {
+  "credit": "Anthropic",
+  "image_url": "https://www-cdn.anthropic.com/images/4zrzovbb/website/2eba335a28661a8253187053fa36add230af728b-2000x1125.jpg",
+  "orig_size": [
+   2000,
+   1125
+  ]
+ },
+ "atsign-edgeai": {
+  "credit": "Atsign",
+  "image_url": "https://cdn.prod.website-files.com/6a0e0dacd9a0567a4e90580e/6ac3cad5b0b9f389d4e0e765_Intel%20x%20Atsign.webp",
+  "orig_size": [
+   1920,
+   1080
+  ]
  }
 }

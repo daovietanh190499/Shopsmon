@@ -58,6 +58,7 @@ section .sub{color:var(--muted);margin:0 0 32px;max-width:700px}
 .steps .card::before{counter-increment:s;content:counter(s);display:inline-flex;width:30px;height:30px;border-radius:50%;background:var(--brand);color:var(--btn-text);font-weight:700;align-items:center;justify-content:center;margin-bottom:10px}
 footer.site{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:14px}
 footer.site .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer.site .fine{flex-basis:100%;font-size:12px;opacity:.8}
 footer.site a{color:var(--muted)} footer.site a:hover{color:var(--brand)}
 /* article + legal */
 article.post{max-width:780px;margin:0 auto;padding:48px 20px 72px}
