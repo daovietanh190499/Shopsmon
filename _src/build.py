@@ -24,6 +24,16 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="eight-point-normalization", date="2026-11-04", min=14,
+         tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
+         title={"vi": "Thuật toán 8 điểm và vì sao chuẩn hoá toạ độ lại quan trọng",
+                "en": "The eight-point algorithm and why normalisation matters"},
+         summary={"vi": "Ước lượng ma trận cơ bản bằng SVD, vì sao toạ độ pixel thô làm bài toán điều kiện kém, và thí nghiệm số về chuẩn hoá Hartley.",
+                  "en": "Estimating the fundamental matrix with an SVD, why raw pixel coordinates make the problem ill-conditioned, and a numerical experiment on Hartley normalisation."},
+         seo_title={"vi": "Thuật toán 8 điểm & chuẩn hoá Hartley: ma trận cơ bản | Shopsmon",
+                    "en": "Eight-point algorithm & Hartley normalisation explained | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất thuật toán 8 điểm ước lượng ma trận cơ bản, giải thích điều kiện số và chuẩn hoá Hartley, kèm code NumPy, hình minh hoạ và thí nghiệm tái lập được.",
+                   "en": "Derivation of the eight-point algorithm for the fundamental matrix, conditioning and Hartley normalisation, with NumPy code, figures and a reproducible experiment."}),
     dict(slug="triangulation-dlt", date="2026-11-04", min=12,
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
          title={"vi": "Tam giác hoá (triangulation): từ hai góc nhìn đến một điểm 3D",
@@ -147,7 +157,7 @@ def home(L):
 <p class="sub">{t('Ba dịch vụ tập trung. Mỗi dự án bắt đầu bằng một cuộc trao đổi ngắn để xác định phạm vi và báo giá cố định trước khi làm.', 'Three focused services. Each starts with a short scoping chat and a fixed-scope quote before any work begins.')}</p>
 <div class="grid g3">
 <div class="card"><span class="tag">LLM</span><h3>{t('Chatbot &amp; agent LLM', 'Chatbot &amp; agent development')}</h3><p>{t('Bot hỗ trợ khách hàng, trợ lý tri thức nội bộ và agent biết dùng công cụ, truy xuất trên chính tài liệu của bạn.', 'Support bots, internal knowledge assistants and tool-using agents with retrieval over your own documents.')}</p><a href="{P('/solutions/llm-chatbot-agent.html')}">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
-<div class="card"><span class="tag">3D</span><h3>{t('Tái tạo 3D', '3D reconstruction')}</h3><p>{t('Hình học đa góc nhìn, pipeline kiểu photogrammetry, hiệu chuẩn camera và xử lý đám mây điểm bằng Python.', 'Multi-view geometry, photogrammetry-style pipelines, camera calibration and point-cloud processing in Python.')}</p><a href="{P('/services.html')}#3d">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
+<div class="card"><span class="tag">3D</span><h3>{t('Tái tạo 3D', '3D reconstruction')}</h3><p>{t('Hình học đa góc nhìn, pipeline kiểu photogrammetry, hiệu chuẩn camera và xử lý đám mây điểm bằng Python.', 'Multi-view geometry, photogrammetry-style pipelines, camera calibration and point-cloud processing in Python.')}</p><a href="{P('/solutions/3d-reconstruction.html')}">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
 <div class="card"><span class="tag">Tools</span><h3>{t('Công cụ AI theo yêu cầu', 'Custom AI tools')}</h3><p>{t('Tự động hoá và ứng dụng nhỏ: trích xuất tài liệu, phân loại, làm sạch dữ liệu, dashboard &mdash; đo ni đóng giày theo quy trình của bạn.', 'Automations and small apps: document extraction, classification, data cleaning, dashboards &mdash; scoped to your workflow.')}</p><a href="{P('/services.html')}#tools">{t('Tìm hiểu thêm', 'Learn more')} &rarr;</a></div>
 </div></div></section>
 
@@ -221,7 +231,8 @@ def services(L):
 <li>{t('Thông tin camera nếu có', 'Camera information if available')}</li>
 <li>{t('Ràng buộc tính toán (laptop, server, GPU)', 'Compute constraints (laptop, server, GPU)')}</li></ul></div>
 </div>
-<p style="margin-top:20px">{t('Muốn xem tôi giải thích nền tảng thế nào? Đọc', 'Want to see how I explain the fundamentals? Read')} <a href="{P('/blog/triangulation-dlt.html')}">{[x for x in POSTS if x['slug'] == 'triangulation-dlt'][0]['title'][L]}</a>.</p>
+<p style="margin-top:20px"><a href="{P('/solutions/3d-reconstruction.html')}">{t('Xem trang dịch vụ tái tạo 3D đầy đủ', 'Read the full 3D reconstruction service page')} &rarr;</a></p>
+<p style="margin-top:8px">{t('Muốn xem tôi giải thích nền tảng thế nào? Đọc', 'Want to see how I explain the fundamentals? Read')} <a href="{P('/blog/triangulation-dlt.html')}">{[x for x in POSTS if x['slug'] == 'triangulation-dlt'][0]['title'][L]}</a>.</p>
 </div></section>
 
 <section id="tools"><div class="wrap">
@@ -259,6 +270,9 @@ def portfolio(L):
 <div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thí nghiệm tam giác hoá hai góc nhìn (DLT)', 'Two-view triangulation (DLT) experiment')}</h3>
 <p>{t('Bản cài đặt NumPy của tam giác hoá tuyến tính và phương pháp điểm giữa, cùng thí nghiệm tái lập được về ảnh hưởng của baseline camera đến độ chính xác 3D. Có kiểm tra tính đúng đắn với dữ liệu không nhiễu.', 'A NumPy implementation of linear triangulation and the midpoint method, with a reproducible experiment on how camera baseline affects 3D accuracy. Includes an exact noise-free sanity check.')}</p>
 <p><a href="{P('/blog/triangulation-dlt.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/triangulation_dlt.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
+<div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thuật toán 8 điểm: thô so với chuẩn hoá Hartley', 'Eight-point algorithm: raw vs. Hartley-normalised')}</h3>
+<p>{t('Ước lượng ma trận cơ bản bằng SVD, kèm thí nghiệm tái lập được cho thấy chuẩn hoá giảm số điều kiện từ 4.6e5 xuống 18 và giảm sai số epipolar đáng kể khi có nhiễu.', 'Fundamental-matrix estimation with an SVD, plus a reproducible experiment showing that normalisation cuts the condition number from 4.6e5 to 18 and reduces epipolar error substantially under noise.')}</p>
+<p><a href="{P('/blog/eight-point-normalization.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/eight_point.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
 <div class="card"><span class="tag">{t('LLM &middot; trang dịch vụ', 'LLM &middot; service page')}</span><h3>{t('Chatbot &amp; agent LLM', 'LLM chatbot &amp; agent development')}</h3>
 <p>{t('Một dự án chatbot từ đầu đến cuối: xác định phạm vi, truy xuất trên tài liệu của bạn, đánh giá, triển khai và bàn giao.', 'What a chatbot project looks like end to end: scoping, retrieval over your documents, evaluation, deployment and handover.')}</p>
 <p><a href="{P('/solutions/llm-chatbot-agent.html')}">{t('Xem trang dịch vụ', 'See the service page')}</a></p></div>
@@ -313,6 +327,44 @@ def landing(L):
            t("Phát triển chatbot & agent LLM cho doanh nghiệp | Shopsmon", "LLM chatbot & agent development for your business | Shopsmon"),
            t("Chatbot LLM và agent dùng công cụ dựa trên tài liệu của bạn, có đánh giá, guardrail và bàn giao mã nguồn đầy đủ. Demo trước, báo giá phạm vi cố định.",
              "Custom LLM chatbots and tool-using agents grounded in your documents, with evaluation, guardrails and full source handover. Demo first, fixed-scope quote."),
+           body, active="/services.html")
+
+
+def landing3d(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    body = f"""
+<div class="hero"><div class="wrap">
+<span class="pill">{t('Dịch vụ tái tạo 3D', '3D reconstruction service')}</span>
+<h1>{t('Từ ảnh và video đến hình học 3D đo được.', 'From photos and video to measurable 3D geometry.')}</h1>
+<p class="lead">{t('Tôi xây dựng pipeline tái tạo 3D bằng Python: hiệu chuẩn camera, ước lượng tư thế, tam giác hoá, đám mây điểm và mesh &mdash; với báo cáo kỹ thuật rõ ràng về độ chính xác bạn có thể mong đợi.', 'I build 3D reconstruction pipelines in Python: camera calibration, pose estimation, triangulation, point clouds and meshes &mdash; with a clear technical report on the accuracy you can expect.')}</p>
+<div class="cta">{cta_btns(L)}</div></div></div>
+
+<section><div class="wrap"><h2>{t('Có thể làm gì', 'What it can do')}</h2><p class="sub">{t('Nền tảng là hình học đa góc nhìn cổ điển, được kiểm chứng bằng dữ liệu của bạn.', 'Built on classical multi-view geometry, validated on your own data.')}</p>
+<div class="grid g3">
+<div class="card"><h3>{t('Hiệu chuẩn camera', 'Camera calibration')}</h3><p>{t('Ước lượng tham số nội và méo ống kính từ ảnh bàn cờ hoặc từ chính dữ liệu của bạn, kèm sai số chiếu lại.', 'Estimate intrinsics and lens distortion from chessboard images or from your own data, with the reprojection error reported.')}</p></div>
+<div class="card"><h3>{t('Hình học hai và nhiều góc nhìn', 'Two- and multi-view geometry')}</h3><p>{t('Ma trận cơ bản/cốt yếu, khôi phục tư thế camera, tam giác hoá và tinh chỉnh bằng bundle adjustment.', 'Fundamental/essential matrix, camera pose recovery, triangulation and bundle-adjustment refinement.')}</p></div>
+<div class="card"><h3>{t('Đám mây điểm &amp; mesh', 'Point clouds &amp; meshes')}</h3><p>{t('Lọc nhiễu, căn chỉnh, dựng mesh và xuất PLY/OBJ/CSV để dùng trong công cụ của bạn.', 'Filtering, alignment, meshing and export to PLY/OBJ/CSV for use in your own tools.')}</p></div>
+<div class="card"><h3>{t('Đo đạc', 'Measurement')}</h3><p>{t('Script đo khoảng cách, thể tích hoặc kích thước từ mô hình, kèm ước lượng độ bất định.', 'Scripts that measure distances, volumes or dimensions from the model, with an uncertainty estimate.')}</p></div>
+<div class="card"><h3>{t('Báo cáo trung thực', 'Honest reporting')}</h3><p>{t('Tôi nói rõ điều gì đo được, điều gì không, và độ chính xác phụ thuộc vào baseline, độ phân giải và chất lượng ảnh thế nào.', 'I state what can and cannot be measured, and how accuracy depends on baseline, resolution and image quality.')}</p></div>
+<div class="card"><h3>{t('Mã tái lập được', 'Reproducible code')}</h3><p>{t('Python sạch, có hướng dẫn chạy, để bạn tự chạy lại trên dữ liệu mới. Không bị khoá nhà cung cấp.', 'Clean Python with run instructions so you can re-run it on new data. No lock-in.')}</p></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Hiểu cách tôi làm việc', 'See how I think')}</h2><p class="sub">{t('Hai bài viết kỹ thuật, có công thức, hình và code chạy được, giải thích nền tảng đằng sau dịch vụ này.', 'Two technical articles, with equations, figures and runnable code, explaining the fundamentals behind this service.')}</p>
+<div class="grid postlist">{post_cards(L)}</div></div></section>
+
+<section><div class="wrap"><h2>{t('Tôi cần gì từ bạn', 'What I need from you')}</h2>
+<div class="grid g2"><div class="card"><ul><li>{t('Ảnh hoặc video mẫu và kích thước vật thể/cảnh', 'Example images or video and the object/scene scale')}</li><li>{t('Độ chính xác yêu cầu và định dạng đầu ra', 'Required accuracy and output format')}</li><li>{t('Thông tin camera nếu có (model, tiêu cự, ảnh bàn cờ)', 'Camera information if available (model, focal length, chessboard images)')}</li></ul></div>
+<div class="card"><p>{t('Không phù hợp với: các yêu cầu cần độ chính xác cấp trắc địa được chứng nhận, hoặc dữ liệu quá ít góc nhìn/quá mờ để tái tạo đáng tin cậy. Tôi sẽ nói thẳng điều này sau khi xem dữ liệu mẫu.', 'Not a fit for: requirements that need certified survey-grade accuracy, or data with too few views or too much blur for a reliable reconstruction. I will tell you so plainly after seeing sample data.')}</p></div></div></div></section>
+
+<section class="band"><div class="wrap" style="text-align:center"><h2>{t('Gửi tôi vài ảnh mẫu', 'Send me a few sample photos')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Mô tả mục tiêu trong hai ba câu; tôi sẽ phản hồi với câu hỏi làm rõ và đề xuất phạm vi cố định.', 'Describe the goal in two or three sentences; I will reply with clarifying questions and a fixed-scope proposal.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)}</div></div></section>
+"""
+    layout(L, "/solutions/3d-reconstruction.html",
+           t("Dịch vụ tái tạo 3D từ ảnh & video bằng Python | Shopsmon", "3D reconstruction from photos & video in Python | Shopsmon"),
+           t("Pipeline tái tạo 3D tuỳ chỉnh: hiệu chuẩn camera, hình học đa góc nhìn, tam giác hoá, đám mây điểm và mesh, kèm báo cáo độ chính xác trung thực và mã nguồn tái lập được.",
+             "Custom 3D reconstruction pipelines: camera calibration, multi-view geometry, triangulation, point clouds and meshes, with honest accuracy reporting and reproducible source code."),
            body, active="/services.html")
 
 
@@ -500,6 +552,7 @@ for L in LANGS:
     services(L)
     portfolio(L)
     landing(L)
+    landing3d(L)
     contact(L)
     blog_index(L)
     privacy(L)

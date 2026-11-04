@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D reconstruction from photos & video in Python | Shopsmon</title>
+<meta name="description" content="Custom 3D reconstruction pipelines: camera calibration, multi-view geometry, triangulation, point clouds and meshes, with honest accuracy reporting and reproducible source code.">
+<link rel="canonical" href="https://shopsmon.com/en/solutions/3d-reconstruction.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/solutions/3d-reconstruction.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/solutions/3d-reconstruction.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/solutions/3d-reconstruction.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="3D reconstruction from photos & video in Python | Shopsmon">
+<meta property="og:description" content="Custom 3D reconstruction pipelines: camera calibration, multi-view geometry, triangulation, point clouds and meshes, with honest accuracy reporting and reproducible source code.">
+<meta property="og:url" content="https://shopsmon.com/en/solutions/3d-reconstruction.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html" class=active>Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/blog/">Blog</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/solutions/3d-reconstruction.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+
+<div class="hero"><div class="wrap">
+<span class="pill">3D reconstruction service</span>
+<h1>From photos and video to measurable 3D geometry.</h1>
+<p class="lead">I build 3D reconstruction pipelines in Python: camera calibration, pose estimation, triangulation, point clouds and meshes &mdash; with a clear technical report on the accuracy you can expect.</p>
+<div class="cta"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Get a free quote</a><a class="btn ghost" href="/en/portfolio.html">See portfolio</a></div></div></div>
+
+<section><div class="wrap"><h2>What it can do</h2><p class="sub">Built on classical multi-view geometry, validated on your own data.</p>
+<div class="grid g3">
+<div class="card"><h3>Camera calibration</h3><p>Estimate intrinsics and lens distortion from chessboard images or from your own data, with the reprojection error reported.</p></div>
+<div class="card"><h3>Two- and multi-view geometry</h3><p>Fundamental/essential matrix, camera pose recovery, triangulation and bundle-adjustment refinement.</p></div>
+<div class="card"><h3>Point clouds &amp; meshes</h3><p>Filtering, alignment, meshing and export to PLY/OBJ/CSV for use in your own tools.</p></div>
+<div class="card"><h3>Measurement</h3><p>Scripts that measure distances, volumes or dimensions from the model, with an uncertainty estimate.</p></div>
+<div class="card"><h3>Honest reporting</h3><p>I state what can and cannot be measured, and how accuracy depends on baseline, resolution and image quality.</p></div>
+<div class="card"><h3>Reproducible code</h3><p>Clean Python with run instructions so you can re-run it on new data. No lock-in.</p></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>See how I think</h2><p class="sub">Two technical articles, with equations, figures and runnable code, explaining the fundamentals behind this service.</p>
+<div class="grid postlist"><a class="card" href="/en/blog/eight-point-normalization.html"><span class="tag">3D reconstruction &middot; 2026-11-04</span><h3>The eight-point algorithm and why normalisation matters</h3><p>Estimating the fundamental matrix with an SVD, why raw pixel coordinates make the problem ill-conditioned, and a numerical experiment on Hartley normalisation.</p></a><a class="card" href="/en/blog/triangulation-dlt.html"><span class="tag">3D reconstruction &middot; 2026-11-04</span><h3>Triangulation: from two views to a 3D point</h3><p>Why two noisy rays never intersect, how the Direct Linear Transform solves it with an SVD, and a numerical experiment on how camera baseline controls accuracy.</p></a></div></div></section>
+
+<section><div class="wrap"><h2>What I need from you</h2>
+<div class="grid g2"><div class="card"><ul><li>Example images or video and the object/scene scale</li><li>Required accuracy and output format</li><li>Camera information if available (model, focal length, chessboard images)</li></ul></div>
+<div class="card"><p>Not a fit for: requirements that need certified survey-grade accuracy, or data with too few views or too much blur for a reliable reconstruction. I will tell you so plainly after seeing sample data.</p></div></div></div></section>
+
+<section class="band"><div class="wrap" style="text-align:center"><h2>Send me a few sample photos</h2>
+<p class="sub" style="margin:0 auto 24px">Describe the goal in two or three sentences; I will reply with clarifying questions and a fixed-scope proposal.</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Get a free quote</a><a class="btn ghost" href="/en/portfolio.html">See portfolio</a></div></div></section>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; Tái tạo 3D &middot; đọc ~14 phút</p>
+<h1>Thuật toán 8 điểm và vì sao chuẩn hoá toạ độ lại quan trọng</h1>
+<p class="meta">Ước lượng ma trận cơ bản (fundamental matrix) từ các cặp điểm tương ứng, lời giải bằng SVD, và một thí nghiệm số cho thấy chuẩn hoá Hartley thay đổi điều gì.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Trong <a href="@@L@@/blog/triangulation-dlt.html">bài trước</a>, ta giả định hai camera đã biết và khôi phục một điểm 3D từ hai ảnh của nó. Trong thực tế, camera hiếm khi được cho sẵn. Thứ bạn có là một tập các <em>cặp điểm tương ứng</em>: các cặp pixel trông như cùng một điểm vật lý trong hai bức ảnh. Bước đầu tiên của hầu hết pipeline structure-from-motion là rút ra từ các cặp này một ma trận 3&times;3 duy nhất, <strong>ma trận cơ bản</strong> \(F\), mã hoá quan hệ hình học tương đối giữa hai góc nhìn.</p>
+<p>Cách kinh điển để tính nó từ tám cặp điểm trở lên là <strong>thuật toán 8 điểm</strong>. Longuet-Higgins (1981) đề xuất thuật toán này cho camera đã hiệu chuẩn; sau đó trong một thời gian dài nó bị coi là quá nhạy với nhiễu để dùng được. Hartley (1997) chỉ ra rằng một bước tiền xử lý rất đơn giản &mdash; tịnh tiến và co giãn toạ độ pixel &mdash; giúp chính thuật toán tuyến tính đó cạnh tranh được với các phương pháp lặp. Bài viết này dẫn xuất thuật toán, cài đặt cả hai phiên bản và đo sự khác biệt.</p>
+
+<h2>2. Hình học epipolar và ma trận cơ bản</h2>
+<p>Xét điểm 3D \(\mathbf X\) được hai camera nhìn thấy tại các điểm ảnh \(\mathbf x=(u,v,1)^\top\) và \(\mathbf x'=(u',v',1)^\top\). Hai tâm camera \(C,C'\) và \(\mathbf X\) xác định một mặt phẳng, gọi là <em>mặt phẳng epipolar</em>. Cả hai điểm ảnh nằm trên giao tuyến của mặt phẳng này với mỗi mặt phẳng ảnh, nên \(\mathbf x'\) phải nằm trên một đường thẳng trong ảnh thứ hai, đường này chỉ phụ thuộc vào \(\mathbf x\) và hình học camera. Đường thẳng nối \(C\) và \(C'\) (baseline) cắt các mặt phẳng ảnh tại các <em>epipole</em> \(\mathbf e,\mathbf e'\).</p>
+<figure><img src="/assets/img/blog/eight-point-geometry.svg" alt="Lát cắt mặt phẳng epipolar: hai tâm camera, một điểm 3D, hai mặt cắt mặt phẳng ảnh, các điểm ảnh x và x' và các epipole e và e'" width="640" height="440">
+<figcaption>Hình 1. Lát cắt mặt phẳng epipolar. Các đoạn màu xanh là giao tuyến của hai mặt phẳng ảnh với mặt phẳng này; chúng cắt baseline tại các epipole \(\mathbf e\) và \(\mathbf e'\). (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
+<p>Sự thật hình học này được biểu diễn đại số bằng <strong>ràng buộc epipolar</strong></p>
+$$\mathbf x'^\top F\,\mathbf x = 0 ,$$
+<p>trong đó, với các camera \(P=K[I\mid\mathbf 0]\) và \(P'=K'[R\mid\mathbf t]\), ma trận cơ bản là \(F=K'^{-\top}[\mathbf t]_\times R\,K^{-1}\), với \([\mathbf t]_\times\) là ma trận phản đối xứng của tích có hướng (Hartley &amp; Zisserman, Ch. 9). Hai tính chất quan trọng khi ước lượng: \(F\) chỉ xác định sai khác một hệ số tỉ lệ, và nó có <strong>hạng 2</strong> (vì \([\mathbf t]_\times\) có hạng 2), do đó còn 7 bậc tự do. Nếu camera đã hiệu chuẩn, \(E=K'^\top F K\) là <em>ma trận cốt yếu</em> (essential matrix) mà Longuet-Higgins làm việc với.</p>
+
+<h2>3. Thuật toán tuyến tính</h2>
+<p>Viết \(\mathbf x'^\top F\mathbf x=0\) cho một cặp điểm. Với \(F=(f_{ij})\), khai triển cho</p>
+$$u'u\,f_{11}+u'v\,f_{12}+u'\,f_{13}+v'u\,f_{21}+v'v\,f_{22}+v'\,f_{23}+u\,f_{31}+v\,f_{32}+f_{33}=0 ,$$
+<p>tuyến tính theo chín ẩn \(\mathbf f=(f_{11},\dots,f_{33})^\top\). Do đó mỗi cặp điểm cho một hàng \((u'u,\;u'v,\;u',\;v'u,\;v'v,\;v',\;u,\;v,\;1)\), và xếp \(N\ge 8\) cặp điểm ta được</p>
+$$A\,\mathbf f=\mathbf 0,\qquad A\in\mathbb R^{N\times 9}.$$
+<p>Với tám cặp điểm chính xác ở vị trí tổng quát, \(A\) có hạng 8 và nghiệm là vector không gian null của nó. Với dữ liệu nhiễu và \(N\ge 8\), ta giải</p>
+$$\hat{\mathbf f}=\arg\min_{\|\mathbf f\|=1}\ \|A\mathbf f\|^2 ,$$
+<p>nghiệm là vector kỳ dị phải của \(A\) ứng với giá trị kỳ dị nhỏ nhất, giống hệt như trong bài tam giác hoá. Ma trận \(\hat F\) sau khi sắp xếp lại nhìn chung có hạng 3, vi phạm hình học epipolar (các đường epipolar sẽ không cùng đi qua một điểm). Vì vậy ta thay nó bằng ma trận hạng 2 gần nhất theo chuẩn Frobenius: nếu \(\hat F=U\,\mathrm{diag}(\sigma_1,\sigma_2,\sigma_3)\,V^\top\), đặt</p>
+$$F=U\,\mathrm{diag}(\sigma_1,\sigma_2,0)\,V^\top .$$
+
+<h2>4. Vì sao toạ độ pixel thô gây hại: điều kiện số</h2>
+<p>Hãy nhìn các phần tử của một hàng trong \(A\). Với toạ độ pixel cỡ hàng trăm, \(u'u\) cỡ \(10^5\), các số hạng như \(u\) hay \(u'\) cỡ \(10^2\), còn phần tử cuối là \(1\). Các cột của \(A\) chênh nhau về thang đo tới năm bậc độ lớn. SVD cực tiểu hoá \(\|A\mathbf f\|\) theo nghĩa Euclid, nên thực chất nó gán trọng số lớn hơn nhiều cho các cột lớn so với các cột nhỏ; bài toán điều kiện kém.</p>
+<p><strong>Chuẩn hoá Hartley</strong> sửa thang đo trước khi dựng \(A\). Với từng ảnh riêng biệt, tìm phép biến đổi đồng dạng \(T\) đưa trọng tâm các điểm về gốc toạ độ và co giãn sao cho khoảng cách trung bình tới gốc bằng \(\sqrt 2\):</p>
+$$\tilde{\mathbf x}_i=T\mathbf x_i,\qquad \tilde{\mathbf x}'_i=T'\mathbf x'_i .$$
+<p>Chạy thuật toán ở trên với các điểm đã chuẩn hoá để có \(\tilde F\), rồi hoàn tác chuẩn hoá. Vì \(\tilde{\mathbf x}'^\top\tilde F\tilde{\mathbf x}=\mathbf x'^\top (T'^\top\tilde F\,T)\,\mathbf x\), kết quả trong toạ độ pixel là</p>
+$$F=T'^\top\,\tilde F\,T .$$
+<p>(Hartley &amp; Zisserman gọi đây là <em>normalized 8-point algorithm</em>, Ch. 11.)</p>
+
+<h2>5. Cài đặt</h2>
+<p>Phần lõi của bản cài đặt (NumPy). <a href="/blog/code/eight_point.py">Toàn bộ script</a>, gồm cả thí nghiệm và hai hình, có thể tải về.</p>
+<pre><code class="language-python">import numpy as np
+
+def normalise(pts):
+    """Hartley normalisation: centroid -> origin, mean distance -> sqrt(2)."""
+    c = pts.mean(axis=0)
+    d = np.sqrt(((pts - c) ** 2).sum(axis=1)).mean()
+    s = np.sqrt(2) / d
+    T = np.array([[s, 0, -s * c[0]], [0, s, -s * c[1]], [0, 0, 1.0]])
+    return np.column_stack([pts, np.ones(len(pts))]) @ T.T, T
+
+def eight_point(p1, p2, normalised):
+    """p1, p2: (N,2) pixel coordinates, N>=8. Convention: x2^T F x1 = 0."""
+    if normalised:
+        h1, T1 = normalise(p1); h2, T2 = normalise(p2)
+    else:
+        h1 = np.column_stack([p1, np.ones(len(p1))])
+        h2 = np.column_stack([p2, np.ones(len(p2))])
+        T1 = T2 = np.eye(3)
+    A = np.stack([np.kron(b, a) for a, b in zip(h1, h2)])   # N x 9
+    _, S, Vt = np.linalg.svd(A)
+    F = Vt[-1].reshape(3, 3)
+    U, D, Vt2 = np.linalg.svd(F)                             # enforce rank 2
+    F = U @ np.diag([D[0], D[1], 0.0]) @ Vt2
+    F = T2.T @ F @ T1                                        # denormalise
+    return F / np.linalg.norm(F), S
+</code></pre>
+
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Tôi sinh 20 cặp điểm không nhiễu từ một \(F_{\text{true}}\) đã biết. Cả hai phiên bản đều khôi phục được nó tới mức sai số làm tròn: \(\|F-F_{\text{true}}\|=4.7\times10^{-15}\) (thô) và \(5.9\times10^{-15}\) (chuẩn hoá), sau khi cố định dấu. Khi không có nhiễu, hai thuật toán đúng như nhau; mọi khác biệt phải đến từ điều kiện số.</p>
+
+<h2>6. Thí nghiệm: thô so với chuẩn hoá</h2>
+<p><strong>Thiết lập (dữ liệu tổng hợp, tái lập hoàn toàn).</strong> Tham số nội \(f=800\) px, điểm chính \((320,240)\), giống nhau cho hai camera. Camera 1 là \([I\mid\mathbf 0]\); camera 2 quay \(-8^\circ\) quanh trục y với \(\mathbf t=(-1,\,0.05,\,0.05)\). Các điểm 3D ngẫu nhiên với \(x\in[-1,1]\), \(y\in[-0.75,0.75]\), \(z\in[4,8]\). Mỗi lần thử dùng \(N=20\) cặp điểm, cộng nhiễu Gauss độc lập với độ lệch chuẩn \(\sigma\) vào mọi toạ độ pixel. \(F\) ước lượng được chấm điểm trên 1000 cặp điểm <em>không nhiễu</em> riêng biệt không dùng khi ước lượng, bằng khoảng cách trung bình đối xứng từ điểm đến đường epipolar (đơn vị pixel). Tôi báo cáo trung vị trên 300 lần thử (NumPy seed 11).</p>
+<p><strong>Điều kiện số.</strong> Với dữ liệu không nhiễu, trung vị tỉ số giữa giá trị kỳ dị lớn nhất và giá trị kỳ dị thứ tám của \(A\) là \(4.6\times10^{5}\) với toạ độ pixel thô và \(18.0\) sau khi chuẩn hoá (seed 5, 300 lần thử).</p>
+<table>
+<thead><tr><th>Nhiễu &sigma; (px)</th><th>8 điểm thô (px)</th><th>8 điểm chuẩn hoá (px)</th></tr></thead>
+<tbody>
+<tr><td>0.00</td><td>0.0000</td><td>0.0000</td></tr>
+<tr><td>0.10</td><td>0.1943</td><td>0.0917</td></tr>
+<tr><td>0.50</td><td>1.8377</td><td>0.4428</td></tr>
+<tr><td>1.00</td><td>8.6689</td><td>0.9326</td></tr>
+<tr><td>2.00</td><td>15.1767</td><td>1.8583</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/eight-point-error.svg" alt="Đồ thị log-log sai số epipolar trung vị theo nhiễu ảnh cho thuật toán 8 điểm thô và chuẩn hoá" width="640" height="420">
+<figcaption>Hình 2. Sai số epipolar trung vị trên các điểm giữ lại không nhiễu theo nhiễu ảnh (log&ndash;log). Kết quả đầu ra của script trong bài. (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
+
+<h3>Các con số cho thấy điều gì</h3>
+<ul>
+<li><strong>Chuẩn hoá giảm số điều kiện bốn bậc độ lớn</strong> (từ khoảng \(4.6\times10^{5}\) xuống 18) trong thiết lập này, đây là lý do số học khiến hai phiên bản cư xử khác nhau khi có nhiễu.</li>
+<li><strong>Ước lượng chuẩn hoá suy giảm êm.</strong> Sai số trên điểm giữ lại gần với mức nhiễu được thêm vào và tăng xấp xỉ tỉ lệ với \(\sigma\): 0.092, 0.443, 0.933 và 1.858 px với \(\sigma=0.1, 0.5, 1, 2\) px.</li>
+<li><strong>Ước lượng thô tệ hơn nhiều và tăng nhanh hơn nhiễu.</strong> Tại \(\sigma=1\) px sai số của nó là 8.67 px so với 0.93 px (lớn hơn 9.3 lần); tại \(\sigma=0.5\) lớn hơn 4.2 lần và tại \(\sigma=0.1\) lớn hơn 2.1 lần.</li>
+<li><strong>Không nhiễu thì không có khác biệt</strong>, như phép kiểm tra đã cho thấy: chuẩn hoá là về ổn định số học, không phải về một nghiệm khác.</li>
+</ul>
+<p><strong>Hạn chế.</strong> Dữ liệu là tổng hợp, nhiễu là Gauss đẳng hướng, không có cặp điểm ngoại lai, tôi dùng một hình học camera cố định với \(N=20\) cặp điểm, và chỉ đo khoảng cách epipolar trên các điểm giữ lại. Tôi không so sánh với các bộ ước lượng lặp (hợp lý cực đại); Hartley (1997) báo cáo các so sánh như vậy trên ảnh thật và thấy thuật toán chuẩn hoá tương đương với các phương pháp lặp tốt nhất. Các cặp điểm thật còn chứa ngoại lai, đòi hỏi ước lượng bền vững (RANSAC) bao quanh bộ giải 8 điểm.</p>
+
+<h2>7. Bài học thực hành</h2>
+<ol>
+<li>Luôn chuẩn hoá toạ độ trước khi chạy một bộ ước lượng tuyến tính (kiểu DLT); chỉ tốn vài dòng code mà loại bỏ một nguồn sai số số học lớn.</li>
+<li>Ép hạng 2 sau SVD và hoàn tác chuẩn hoá ở cuối.</li>
+<li>Kiểm thử bằng dữ liệu tổng hợp không nhiễu trước, rồi đánh giá trên các điểm giữ lại, không phải trên chính các điểm đã khớp.</li>
+<li>Dùng kết quả 8 điểm làm ước lượng khởi tạo; với dữ liệu thật, bọc nó trong RANSAC và tinh chỉnh bằng cách cực tiểu sai số hình học.</li>
+<li>Khi đã biết \(F\) (hoặc \(E\)) và khôi phục được các camera, bạn có thể tam giác hoá các điểm như trong <a href="@@L@@/blog/triangulation-dlt.html">bài trước</a>.</li>
+</ol>
+
+<div class="cta-box"><strong>Bạn cần tái tạo 3D, chatbot agent hay một công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này với tư cách freelancer. Hãy mô tả dự án trong vài câu, tôi sẽ phản hồi bằng các câu hỏi làm rõ và báo giá theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20t%C3%A1i%20t%E1%BA%A1o%203D">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/services.html">Xem dịch vụ</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>H. C. Longuet-Higgins. &ldquo;A computer algorithm for reconstructing a scene from two projections.&rdquo; <em>Nature</em> 293:133&ndash;135, 10 September 1981. <a href="https://doi.org/10.1038/293133a0">doi:10.1038/293133a0</a>.</li>
+<li>R. I. Hartley. &ldquo;In defense of the eight-point algorithm.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 19(6):580&ndash;593, June 1997. <a href="https://doi.org/10.1109/34.601246">doi:10.1109/34.601246</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Chương 9, hình học epipolar và ma trận cơ bản; Chương 11, tính ma trận cơ bản.) <a href="https://www.cambridge.org/9780521540513">Trang nhà xuất bản</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/eight_point.py">eight_point.py</a> (Python 3.12, NumPy, Matplotlib). Mọi số liệu ở Mục 6 là kết quả đầu ra của script này.</p>
+</article>

@@ -1,0 +1,112 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; 3D reconstruction &middot; ~14 min read</p>
+<h1>The eight-point algorithm and why normalisation matters</h1>
+<p class="meta">Estimating the fundamental matrix from point matches, the SVD solution, and a numerical experiment showing what Hartley normalisation changes.</p>
+
+<h2>1. Context</h2>
+<p>In the <a href="@@L@@/blog/triangulation-dlt.html">previous article</a> we assumed the two cameras were known and recovered a 3D point from its two images. In practice the cameras are rarely given. What you have is a set of <em>matches</em>: pixel pairs that look like the same physical point in two photos. The first step of most structure-from-motion pipelines is to extract from these matches a single 3&times;3 matrix, the <strong>fundamental matrix</strong> \(F\), that encodes the relative geometry of the two views.</p>
+<p>The classic way to compute it from eight or more matches is the <strong>eight-point algorithm</strong>. Longuet-Higgins (1981) introduced the algorithm for calibrated cameras; for a long time afterwards it was considered too sensitive to noise to be useful. Hartley (1997) showed that a very simple preprocessing step &mdash; translating and scaling the pixel coordinates &mdash; makes the same linear algorithm competitive with iterative methods. This article derives the algorithm, implements both versions, and measures the difference.</p>
+
+<h2>2. Epipolar geometry and the fundamental matrix</h2>
+<p>Take a 3D point \(\mathbf X\) seen by two cameras at image points \(\mathbf x=(u,v,1)^\top\) and \(\mathbf x'=(u',v',1)^\top\). The two camera centres \(C,C'\) and \(\mathbf X\) span a plane, the <em>epipolar plane</em>. Both image points lie on its intersection with each image plane, so \(\mathbf x'\) must lie on a line in the second image that depends only on \(\mathbf x\) and the camera geometry. The line joining \(C\) and \(C'\) (the baseline) pierces the image planes at the <em>epipoles</em> \(\mathbf e,\mathbf e'\).</p>
+<figure><img src="/assets/img/blog/eight-point-geometry.svg" alt="Cross-section of the epipolar plane: two camera centres, a 3D point, the two image-plane sections, image points x and x' and epipoles e and e'" width="640" height="440">
+<figcaption>Figure 1. Cross-section of the epipolar plane. The blue segments are the intersections of the two image planes with this plane; they meet the baseline at the epipoles \(\mathbf e\) and \(\mathbf e'\).</figcaption></figure>
+<p>This geometric fact is expressed algebraically by the <strong>epipolar constraint</strong></p>
+$$\mathbf x'^\top F\,\mathbf x = 0 ,$$
+<p>where, for cameras \(P=K[I\mid\mathbf 0]\) and \(P'=K'[R\mid\mathbf t]\), the fundamental matrix is \(F=K'^{-\top}[\mathbf t]_\times R\,K^{-1}\), with \([\mathbf t]_\times\) the skew-symmetric matrix of the cross product (Hartley &amp; Zisserman, Ch. 9). Two properties matter for estimation: \(F\) is defined only up to scale, and it has <strong>rank 2</strong> (because \([\mathbf t]_\times\) does), leaving 7 degrees of freedom. If the cameras are calibrated, \(E=K'^\top F K\) is the <em>essential matrix</em> that Longuet-Higgins worked with.</p>
+
+<h2>3. The linear algorithm</h2>
+<p>Write out \(\mathbf x'^\top F\mathbf x=0\) for one match. With \(F=(f_{ij})\), multiplying out gives</p>
+$$u'u\,f_{11}+u'v\,f_{12}+u'\,f_{13}+v'u\,f_{21}+v'v\,f_{22}+v'\,f_{23}+u\,f_{31}+v\,f_{32}+f_{33}=0 ,$$
+<p>which is linear in the nine unknowns \(\mathbf f=(f_{11},\dots,f_{33})^\top\). Each match therefore contributes one row \((u'u,\;u'v,\;u',\;v'u,\;v'v,\;v',\;u,\;v,\;1)\), and stacking \(N\ge 8\) matches gives</p>
+$$A\,\mathbf f=\mathbf 0,\qquad A\in\mathbb R^{N\times 9}.$$
+<p>With eight exact matches in general position \(A\) has rank 8 and the solution is its null vector. With noisy data and \(N\ge 8\) we instead solve</p>
+$$\hat{\mathbf f}=\arg\min_{\|\mathbf f\|=1}\ \|A\mathbf f\|^2 ,$$
+<p>whose solution is the right singular vector of \(A\) for the smallest singular value, exactly as in the triangulation article. The reshaped matrix \(\hat F\) will in general have rank 3, which violates the epipolar geometry (the epipolar lines would not all meet at one point). We therefore replace it by the closest rank-2 matrix in the Frobenius norm: if \(\hat F=U\,\mathrm{diag}(\sigma_1,\sigma_2,\sigma_3)\,V^\top\), set</p>
+$$F=U\,\mathrm{diag}(\sigma_1,\sigma_2,0)\,V^\top .$$
+
+<h2>4. Why raw pixel coordinates hurt: conditioning</h2>
+<p>Look at the entries of one row of \(A\). With pixel coordinates of order hundreds, \(u'u\) is of order \(10^5\), terms like \(u\) or \(u'\) are of order \(10^2\), and the last entry is \(1\). The columns of \(A\) differ in scale by up to five orders of magnitude. The SVD minimises \(\|A\mathbf f\|\) in the Euclidean sense, so it effectively gives the large columns far more weight than the small ones; the problem is badly conditioned.</p>
+<p><strong>Hartley normalisation</strong> fixes the scale before building \(A\). For each image separately, find a similarity transform \(T\) that moves the centroid of the points to the origin and scales them so that their mean distance from the origin is \(\sqrt 2\):</p>
+$$\tilde{\mathbf x}_i=T\mathbf x_i,\qquad \tilde{\mathbf x}'_i=T'\mathbf x'_i .$$
+<p>Run the algorithm above on the normalised points to get \(\tilde F\), then undo the normalisation. Since \(\tilde{\mathbf x}'^\top\tilde F\tilde{\mathbf x}=\mathbf x'^\top (T'^\top\tilde F\,T)\,\mathbf x\), the answer in pixel coordinates is</p>
+$$F=T'^\top\,\tilde F\,T .$$
+<p>(Hartley &amp; Zisserman describe this as the <em>normalized 8-point algorithm</em>, Ch. 11.)</p>
+
+<h2>5. Implementation</h2>
+<p>The core of the implementation (NumPy). The <a href="/blog/code/eight_point.py">complete script</a>, including the experiment and both figures, is downloadable.</p>
+<pre><code class="language-python">import numpy as np
+
+def normalise(pts):
+    """Hartley normalisation: centroid -> origin, mean distance -> sqrt(2)."""
+    c = pts.mean(axis=0)
+    d = np.sqrt(((pts - c) ** 2).sum(axis=1)).mean()
+    s = np.sqrt(2) / d
+    T = np.array([[s, 0, -s * c[0]], [0, s, -s * c[1]], [0, 0, 1.0]])
+    return np.column_stack([pts, np.ones(len(pts))]) @ T.T, T
+
+def eight_point(p1, p2, normalised):
+    """p1, p2: (N,2) pixel coordinates, N>=8. Convention: x2^T F x1 = 0."""
+    if normalised:
+        h1, T1 = normalise(p1); h2, T2 = normalise(p2)
+    else:
+        h1 = np.column_stack([p1, np.ones(len(p1))])
+        h2 = np.column_stack([p2, np.ones(len(p2))])
+        T1 = T2 = np.eye(3)
+    A = np.stack([np.kron(b, a) for a, b in zip(h1, h2)])   # N x 9
+    _, S, Vt = np.linalg.svd(A)
+    F = Vt[-1].reshape(3, 3)
+    U, D, Vt2 = np.linalg.svd(F)                             # enforce rank 2
+    F = U @ np.diag([D[0], D[1], 0.0]) @ Vt2
+    F = T2.T @ F @ T1                                        # denormalise
+    return F / np.linalg.norm(F), S
+</code></pre>
+
+<h3>Sanity check</h3>
+<p>I generated 20 noise-free matches from a known \(F_{\text{true}}\). Both variants recover it to round-off: \(\|F-F_{\text{true}}\|=4.7\times10^{-15}\) (raw) and \(5.9\times10^{-15}\) (normalised), after fixing the sign. Without noise the two algorithms are therefore equally correct; any difference must come from numerics.</p>
+
+<h2>6. Experiment: raw vs. normalised</h2>
+<p><strong>Setup (synthetic, fully reproducible).</strong> Intrinsics \(f=800\) px, principal point \((320,240)\), identical for both cameras. Camera 1 is \([I\mid\mathbf 0]\); camera 2 is rotated by \(-8^\circ\) about the y-axis with \(\mathbf t=(-1,\,0.05,\,0.05)\). Random 3D points with \(x\in[-1,1]\), \(y\in[-0.75,0.75]\), \(z\in[4,8]\). Each trial uses \(N=20\) matches with independent Gaussian noise of standard deviation \(\sigma\) added to every pixel coordinate. The estimated \(F\) is scored on 1000 separate <em>noise-free</em> matches that were not used for estimation, using the mean symmetric point-to-epipolar-line distance in pixels. I report the median over 300 trials (NumPy seed 11).</p>
+<p><strong>Conditioning.</strong> For noise-free data, the median ratio of the largest to the eighth singular value of \(A\) is \(4.6\times10^{5}\) for raw pixel coordinates and \(18.0\) after normalisation (seed 5, 300 trials).</p>
+<table>
+<thead><tr><th>Noise &sigma; (px)</th><th>Raw 8-point (px)</th><th>Normalised 8-point (px)</th></tr></thead>
+<tbody>
+<tr><td>0.00</td><td>0.0000</td><td>0.0000</td></tr>
+<tr><td>0.10</td><td>0.1943</td><td>0.0917</td></tr>
+<tr><td>0.50</td><td>1.8377</td><td>0.4428</td></tr>
+<tr><td>1.00</td><td>8.6689</td><td>0.9326</td></tr>
+<tr><td>2.00</td><td>15.1767</td><td>1.8583</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/eight-point-error.svg" alt="Log-log plot of median epipolar error versus image noise for the raw and the normalised eight-point algorithm" width="640" height="420">
+<figcaption>Figure 2. Median epipolar error on held-out noise-free points versus image noise (log&ndash;log). Output of the script in this article.</figcaption></figure>
+
+<h3>What the numbers say</h3>
+<ul>
+<li><strong>Normalisation shrinks the condition number by four orders of magnitude</strong> (about \(4.6\times10^{5}\) to 18) in this setup, which is the numerical reason the two variants behave differently once noise is present.</li>
+<li><strong>The normalised estimate degrades gracefully.</strong> Its held-out error is close to the injected noise level and grows roughly in proportion to \(\sigma\): 0.092, 0.443, 0.933 and 1.858 px for \(\sigma=0.1, 0.5, 1, 2\) px.</li>
+<li><strong>The raw estimate is far worse and grows faster than the noise.</strong> At \(\sigma=1\) px its error is 8.67 px versus 0.93 px (9.3&times; larger); at \(\sigma=0.5\) it is 4.2&times; larger and at \(\sigma=0.1\) it is 2.1&times; larger.</li>
+<li><strong>Without noise there is no difference</strong>, as the sanity check showed: normalisation is about numerical stability, not about a different solution.</li>
+</ul>
+<p><strong>Limitations.</strong> The data are synthetic, noise is Gaussian and isotropic, there are no outlier matches, I used a single fixed camera geometry with \(N=20\) matches, and I measured only epipolar distance on held-out points. I did not compare against iterative (maximum-likelihood) estimators; Hartley (1997) reports such comparisons on real images and finds the normalised algorithm comparable with the best iterative methods. Real matches also contain outliers, which require robust estimation (RANSAC) around the eight-point solver.</p>
+
+<h2>7. Practical takeaways</h2>
+<ol>
+<li>Always normalise the coordinates before running a linear (DLT-style) estimator; it costs a few lines and removes a major source of numerical error.</li>
+<li>Enforce rank 2 after the SVD, and denormalise at the end.</li>
+<li>Test with noise-free synthetic data first, then evaluate on held-out points, not on the points you fitted.</li>
+<li>Use the eight-point result as an initial estimate; with real data, wrap it in RANSAC and refine by minimising a geometric error.</li>
+<li>Once \(F\) (or \(E\)) is known and the cameras are recovered, you can triangulate the points as in the <a href="@@L@@/blog/triangulation-dlt.html">previous article</a>.</li>
+</ol>
+
+<div class="cta-box"><strong>Need 3D reconstruction, a chatbot agent or a custom AI tool?</strong><br>
+I build these as a freelancer. Describe your project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=3D%20reconstruction%20project">Ask for a quote</a> <a class="btn ghost" href="@@L@@/services.html">See services</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>H. C. Longuet-Higgins. &ldquo;A computer algorithm for reconstructing a scene from two projections.&rdquo; <em>Nature</em> 293:133&ndash;135, 10 September 1981. <a href="https://doi.org/10.1038/293133a0">doi:10.1038/293133a0</a>.</li>
+<li>R. I. Hartley. &ldquo;In defense of the eight-point algorithm.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 19(6):580&ndash;593, June 1997. <a href="https://doi.org/10.1109/34.601246">doi:10.1109/34.601246</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Chapter 9, epipolar geometry and the fundamental matrix; Chapter 11, computation of the fundamental matrix.) <a href="https://www.cambridge.org/9780521540513">Publisher page</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/eight_point.py">eight_point.py</a> (Python 3.12, NumPy, Matplotlib). All numbers in Section 6 are the output of this script.</p>
+</article>
