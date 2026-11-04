@@ -34,7 +34,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 
 <div class="hero" style="padding:64px 0 32px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">Portfolio</h1>
-<p class="lead">Shopsmon is a new studio, so this page shows open technical work you can inspect, not client logos. As client projects are completed (with permission), they will be added here.</p>
+<p class="lead">Open technical work: source code, articles and reproducible experiments.</p>
 </div></div>
 <section><div class="wrap"><div class="grid g2">
 <div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Two-view triangulation (DLT) experiment</h3>
@@ -46,6 +46,9 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Eight-point algorithm: raw vs. Hartley-normalised</h3>
 <p>Fundamental-matrix estimation with an SVD, plus a reproducible experiment showing that normalisation cuts the condition number from 4.6e5 to 18 and reduces epipolar error substantially under noise.</p>
 <p><a href="/en/blog/eight-point-normalization.html">Read the article</a> &middot; <a href="/blog/code/eight_point.py">Download the code</a></p></div>
+<div class="card"><span class="tag">Data science &middot; open code</span><h3>Gradient descent, condition number and feature standardisation</h3>
+<p>Gradient descent vs. conjugate gradient against the theoretical bounds, plus a regression experiment where standardising features cuts the condition number from 3.0e5 to 1.09.</p>
+<p><a href="/en/blog/gd-conditioning.html">Read the article</a> &middot; <a href="/blog/code/gd_conditioning.py">Download the code</a></p></div>
 <div class="card"><span class="tag">LLM &middot; service page</span><h3>LLM chatbot &amp; agent development</h3>
 <p>What a chatbot project looks like end to end: scoping, retrieval over your documents, evaluation, deployment and handover.</p>
 <p><a href="/en/solutions/llm-chatbot-agent.html">See the service page</a></p></div>

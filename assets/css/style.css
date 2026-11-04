@@ -113,6 +113,8 @@ button.chip{cursor:pointer;font:inherit;font-size:13px;margin:0}
 button.chip.on{background:var(--brand);color:var(--btn-text);border-color:var(--brand)}
 .newspost .crumbs{font-size:14px;color:var(--muted);margin:0 0 14px}
 .newspost .standfirst{font-size:19px;line-height:1.7;color:var(--post-text)}
+.newspost .srcline{margin:18px 0 0;font-size:15px;color:var(--muted)}
+.aff-box h3 .afftag{display:inline-block;margin-left:8px;padding:1px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted);vertical-align:middle;text-transform:uppercase}
 .newspost figure.cover{padding:0;overflow:hidden;background:var(--card)}
 .newspost figure.cover img{display:block;width:100%;aspect-ratio:1200/630;object-fit:cover}
 .newspost figure.cover figcaption{padding:8px 12px;color:var(--muted)}

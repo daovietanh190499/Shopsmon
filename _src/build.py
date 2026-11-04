@@ -30,6 +30,16 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="gd-conditioning", date="2026-11-04", min=13, aff="ml-books",
+         tag={"vi": "Khoa học dữ liệu", "en": "Data science"},
+         title={"vi": "Gradient descent và số điều kiện: vì sao bình phương tối thiểu chạy chậm",
+                "en": "Gradient descent and the condition number: why least squares gets slow"},
+         summary={"vi": "Tốc độ hội tụ (κ−1)/(κ+1) dẫn xuất trong năm dòng, so sánh với conjugate gradient, và thí nghiệm cho thấy chuẩn hoá đặc trưng đổi hàng triệu vòng lặp thành bốn.",
+                  "en": "The (κ−1)/(κ+1) convergence rate derived in five lines, a comparison with conjugate gradient, and an experiment where standardising features turns millions of iterations into four."},
+         seo_title={"vi": "Gradient descent và số điều kiện: chuẩn hoá đặc trưng | Shopsmon",
+                    "en": "Gradient descent and the condition number: why standardise features | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất tốc độ hội tụ của gradient descent trên hàm bậc hai, so sánh với conjugate gradient và đo tác động của chuẩn hoá đặc trưng lên bài hồi quy, kèm code NumPy.",
+                   "en": "Derivation of gradient descent's convergence rate on a quadratic, comparison with conjugate gradient and a measured effect of feature standardisation on a regression, with NumPy code."}),
     dict(slug="zhang-calibration", date="2026-11-04", min=15, aff="calib",
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
          title={"vi": "Hiệu chuẩn camera bằng bàn cờ: phương pháp Zhang",
@@ -147,8 +157,9 @@ def cta_btns(L):
             f'<a class="btn ghost" href="{pth(L, "/portfolio.html")}">{t("Xem portfolio", "See portfolio")}</a>')
 
 
-def post_cards(L, limit=None):
-    items = POSTS[:limit] if limit else POSTS
+def post_cards(L, limit=None, tag_en=None):
+    items = [p for p in POSTS if not tag_en or p["tag"]["en"] == tag_en]
+    items = items[:limit] if limit else items
     out = ""
     for p in items:
         out += (f'<a class="card" href="{pth(L, "/blog/" + p["slug"] + ".html")}"><span class="tag">{p["tag"][L]} &middot; {p["date"]}</span>'
@@ -156,7 +167,12 @@ def post_cards(L, limit=None):
     return out
 
 
-SHOPEE_NOTE = {"vi": "Giá tham khảo ngày 04/11/2026, có thể thay đổi.", "en": "Reference prices as of 2026-11-04; they may change."}
+import json  # noqa: E402
+try:
+    with open(os.path.join(os.path.dirname(__file__), "news_images.json"), encoding="utf-8") as _f:
+        NEWS_IMG = json.load(_f)  # slug -> {credit, image_url}: lead image taken from the source article
+except FileNotFoundError:
+    NEWS_IMG = {}
 
 # Shopee Affiliate links (owner's account; collected 2026-11-04, see states/affiliate.md). `price` is the listing price seen that day.
 AFF = {
@@ -178,6 +194,8 @@ AFF = {
                  vi="Mô-đun LoRa SX1262 giao tiếp UART (DX-LR30)", en="LoRa SX1262 UART module (DX-LR30)"),
     "sonoff-zb": dict(link="https://s.shopee.vn/7fb7kNXg67", price="₫504.900",
                       vi="SONOFF ZB Bridge-P &ndash; cầu nối Zigbee 3.0 cho smart home", en="SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge"),
+    "data-strategy": dict(link="https://s.shopee.vn/3g4yyvPH69", price="₫169.100",
+                          vi="Data Strategy &ndash; Chiến lược dữ liệu (sách tiếng Việt)", en="Data Strategy (Vietnamese edition)"),
     "webcam-fhd": dict(link="https://s.shopee.vn/8VAEjvGDOM", price="₫178.000",
                        vi="Webcam Full HD có mic cho PC/laptop", en="Full HD webcam with mic for PC/laptop"),
     "webcam-4k": dict(link="https://s.shopee.vn/40hpNfO0O7", price="₫164.000",
@@ -187,19 +205,24 @@ AFF = {
 AFF_BOXES = {
     "agents": dict(
         title={"vi": "Đọc thêm: sách về agent LLM và hệ thống ML", "en": "Further reading: books on LLM agents and ML systems"},
-        intro={"vi": "Nếu bạn muốn tự xây agent hoặc đưa mô hình vào sản phẩm, đây là vài đầu sách tiếng Việt liên quan trực tiếp tới chủ đề.",
-               "en": "If you want to build agents yourself or ship models in a product, these Vietnamese-language books relate directly to the topic."},
+        intro={"vi": "Sách tiếng Việt về agent LLM, Python và hệ thống học máy.",
+               "en": "Vietnamese-language books on LLM agents, Python and machine-learning systems."},
         items=["agent-combo", "ml-systems", "python-adv", "agent-book"]),
     "iot": dict(
-        title={"vi": "Muốn tự thử IoT / AIoT? Một vài linh kiện phổ biến", "en": "Want to try IoT / AIoT yourself? A few common parts"},
-        intro={"vi": "Các board và cảm biến dưới đây thường dùng để làm nguyên mẫu (ESP32-S3 chạy được mô hình nhỏ; Zigbee/LoRa cho mạng cảm biến). Chúng không phải sản phẩm được nhắc trong bản tin.",
-               "en": "These boards and sensors are commonly used for prototyping (ESP32-S3 can run small models; Zigbee/LoRa for sensor networks). They are not the products mentioned in the news item. Shopee Vietnam only."},
+        title={"vi": "Linh kiện IoT / AIoT phổ biến", "en": "Common IoT / AIoT parts"},
+        intro={"vi": "Board và cảm biến thường dùng để làm nguyên mẫu: ESP32-S3 chạy mô hình nhỏ, Zigbee và LoRa cho mạng cảm biến.",
+               "en": "Boards and sensors commonly used for prototyping: ESP32-S3 for small models, Zigbee and LoRa for sensor networks."},
         items=["esp32-ai", "esp32-n16r8", "sht40", "lora", "sonoff-zb"]),
     "calib": dict(
-        title={"vi": "Muốn tự hiệu chuẩn camera? Thiết bị để thử", "en": "Want to calibrate your own camera? Hardware to try"},
-        intro={"vi": "Webcam USB đủ để làm lại thí nghiệm trong bài (in bàn cờ trên giấy phẳng). Mẹo: tắt lấy nét tự động hoặc cố định tiêu cự khi chụp, vì tiêu cự thay đổi theo lấy nét sẽ làm ma trận nội tại thay đổi.",
-               "en": "A USB webcam is enough to repeat the experiment in this post (print a chessboard on flat paper). Tip: disable autofocus or lock the focus while capturing, because focal length changes with focus and so does the intrinsic matrix. Shopee Vietnam only."},
+        title={"vi": "Thiết bị để tự hiệu chuẩn camera", "en": "Hardware for calibrating your own camera"},
+        intro={"vi": "Webcam USB và một bàn cờ in trên giấy phẳng là đủ để làm lại thí nghiệm trong bài. Nên cố định lấy nét khi chụp vì tiêu cự đổi theo lấy nét.",
+               "en": "A USB webcam and a chessboard printed on flat paper are enough to repeat the experiment. Lock the focus while capturing, since focal length changes with focus."},
         items=["webcam-fhd", "webcam-4k"]),
+    "ml-books": dict(
+        title={"vi": "Sách để học tiếp", "en": "Further reading"},
+        intro={"vi": "Sách tiếng Việt về Python, học máy và dữ liệu.",
+               "en": "Vietnamese-language books on Python, machine learning and data."},
+        items=["python-adv", "ml-systems", "data-strategy", "agent-combo"]),
 }
 
 
@@ -209,10 +232,7 @@ def aff_box(L, key):
     lis = "".join(
         f'<li><a href="{AFF[i]["link"]}" rel="sponsored nofollow noopener" target="_blank">{AFF[i][L]}</a> '
         f'<span class="price">{AFF[i]["price"]}</span></li>' for i in b["items"])
-    return (f'<aside class="aff-box"><h3>{b["title"][L]}</h3><p>{b["intro"][L]}</p><ul>{lis}</ul>'
-            f'<p class="disc"><strong>{t("Công khai liên kết affiliate", "Affiliate disclosure")}:</strong> '
-            f'{t("bài viết có chứa liên kết affiliate Shopee. Nếu bạn mua qua liên kết, Shopsmon có thể nhận hoa hồng, giá của bạn không đổi. Chúng tôi chỉ gợi ý sản phẩm liên quan tới nội dung và chưa kiểm tra trực tiếp từng sản phẩm.", "this page contains Shopee affiliate links. If you buy through them Shopsmon may earn a commission at no extra cost to you. We only suggest products related to the content and have not tested each one ourselves.")} '
-            f'{SHOPEE_NOTE[L]}</p></aside>')
+    return (f'<aside class="aff-box"><h3>{b["title"][L]} <span class="afftag">Affiliate &middot; Shopee</span></h3><p>{b["intro"][L]}</p><ul>{lis}</ul></aside>')
 
 
 def sorted_news():
@@ -265,17 +285,15 @@ def news_article(L, n):
         "mobile": ("/solutions/custom-ai-tools.html", t("Cần ứng dụng hoặc công cụ AI theo yêu cầu?", "Need a custom app or AI tool?")),
     }[n["cat"]]
     box = aff_box(L, n["aff"]) if n.get("aff") else ""
+    cap = (f'<figcaption>{t("Ảnh", "Image")}: {NEWS_IMG[n["slug"]]["credit"]}</figcaption>' if n["slug"] in NEWS_IMG else "")
     art = f"""<article class="post newspost">
 <p class="crumbs"><a href="{P('/news/')}">{t('Tin tức', 'News')}</a> &rsaquo; <a href="{P('/news/')}#{n['cat']}">{CATS[n['cat']][L]}</a></p>
 <span class="tag cat-{n['cat']}">{CATS[n['cat']][L]}</span>
 <h1>{n['title'][L]}</h1>
-<p class="meta">{n['date']} &middot; {t('Tóm tắt bởi Shopsmon', 'Summarised by Shopsmon')} &middot; {t('Nguồn', 'Source')}: <a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a></p>
-<figure class="cover"><img src="/assets/img/news/{n['slug']}.jpg" width="1200" height="630" alt="{t('Hình minh hoạ cho bản tin', 'Illustration for the news item')}"><figcaption>{t('Hình minh hoạ do Shopsmon tự vẽ, không phải ảnh từ nguồn tin.', 'Illustration drawn by Shopsmon, not a photo from the source.')}</figcaption></figure>
+<p class="meta">{n['date']} &middot; {t('Nguồn', 'Source')}: <a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a></p>
+<figure class="cover"><img src="/assets/img/news/{n['slug']}.jpg" width="1200" height="630" alt="{html.escape(html.unescape(n['title'][L]), quote=True)}">{cap}</figure>
 <p class="standfirst">{n['body'][L]}</p>
-<h2>{t('Vì sao đáng chú ý', 'Why it matters')}</h2>
-<div class="callout"><p>{n['why'][L]}</p><p class="meta" style="margin:8px 0 0">{t('Nhận định của Shopsmon, không phải của nguồn tin.', 'Shopsmon&rsquo;s own take, not the source&rsquo;s.')}</p></div>
-<h2>{t('Nguồn gốc', 'Original source')}</h2>
-<p><a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a> &mdash; {t('đọc bản gốc để xem đầy đủ phương pháp, điều kiện và giới hạn. Các con số hiệu năng do hãng/tác giả công bố là tuyên bố của họ; Shopsmon không tự kiểm chứng độc lập.', 'read the original for the full method, conditions and limits. Performance figures published by companies/authors are their own claims; Shopsmon does not verify them independently.')}</p>
+<p class="srcline">{t('Nguồn', 'Source')}: <a href="{n['url']}" rel="noopener nofollow" target="_blank">{n['src']}</a></p>
 {box}
 <div class="cta-box"><h3 style="margin-top:0">{svc[1]}</h3><p>{t('Mô tả ngắn yêu cầu của bạn; bạn sẽ nhận câu hỏi làm rõ và đề xuất phạm vi trước khi bắt đầu.', 'Describe your need briefly; you will get clarifying questions and a scoped proposal before any work starts.')}</p>
 <p><a class="btn primary" href="mailto:{EMAIL}?subject=Project%20inquiry%20-%20Shopsmon">{t('Gửi yêu cầu', 'Send a request')}</a> <a class="btn ghost" href="{P(svc[0])}">{t('Xem dịch vụ', 'See the service')}</a></p></div>
@@ -419,7 +437,7 @@ def portfolio(L):
     body = f"""
 <div class="hero" style="padding:64px 0 32px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">Portfolio</h1>
-<p class="lead">{t('Shopsmon là studio mới, nên trang này giới thiệu các công việc kỹ thuật mở mà bạn có thể kiểm chứng, không phải logo khách hàng. Khi các dự án khách hàng hoàn thành (khi được cho phép), chúng sẽ được thêm vào đây.', 'Shopsmon is a new studio, so this page shows open technical work you can inspect, not client logos. As client projects are completed (with permission), they will be added here.')}</p>
+<p class="lead">{t('Công việc kỹ thuật mở: mã nguồn, bài viết và thí nghiệm tái lập được.', 'Open technical work: source code, articles and reproducible experiments.')}</p>
 </div></div>
 <section><div class="wrap"><div class="grid g2">
 <div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thí nghiệm tam giác hoá hai góc nhìn (DLT)', 'Two-view triangulation (DLT) experiment')}</h3>
@@ -431,6 +449,9 @@ def portfolio(L):
 <div class="card"><span class="tag">{t('Tái tạo 3D &middot; mã nguồn mở', '3D reconstruction &middot; open code')}</span><h3>{t('Thuật toán 8 điểm: thô so với chuẩn hoá Hartley', 'Eight-point algorithm: raw vs. Hartley-normalised')}</h3>
 <p>{t('Ước lượng ma trận cơ bản bằng SVD, kèm thí nghiệm tái lập được cho thấy chuẩn hoá giảm số điều kiện từ 4.6e5 xuống 18 và giảm sai số epipolar đáng kể khi có nhiễu.', 'Fundamental-matrix estimation with an SVD, plus a reproducible experiment showing that normalisation cuts the condition number from 4.6e5 to 18 and reduces epipolar error substantially under noise.')}</p>
 <p><a href="{P('/blog/eight-point-normalization.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/eight_point.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
+<div class="card"><span class="tag">{t('Khoa học dữ liệu &middot; mã nguồn mở', 'Data science &middot; open code')}</span><h3>{t('Gradient descent, số điều kiện và chuẩn hoá đặc trưng', 'Gradient descent, condition number and feature standardisation')}</h3>
+<p>{t('So sánh gradient descent và conjugate gradient với chặn lý thuyết, và thí nghiệm hồi quy cho thấy chuẩn hoá đặc trưng giảm số điều kiện từ 3,0e5 xuống 1,09.', 'Gradient descent vs. conjugate gradient against the theoretical bounds, plus a regression experiment where standardising features cuts the condition number from 3.0e5 to 1.09.')}</p>
+<p><a href="{P('/blog/gd-conditioning.html')}">{t('Đọc bài viết', 'Read the article')}</a> &middot; <a href="/blog/code/gd_conditioning.py">{t('Tải mã nguồn', 'Download the code')}</a></p></div>
 <div class="card"><span class="tag">{t('LLM &middot; trang dịch vụ', 'LLM &middot; service page')}</span><h3>{t('Chatbot &amp; agent LLM', 'LLM chatbot &amp; agent development')}</h3>
 <p>{t('Một dự án chatbot từ đầu đến cuối: xác định phạm vi, truy xuất trên tài liệu của bạn, đánh giá, triển khai và bàn giao.', 'What a chatbot project looks like end to end: scoping, retrieval over your documents, evaluation, deployment and handover.')}</p>
 <p><a href="{P('/solutions/llm-chatbot-agent.html')}">{t('Xem trang dịch vụ', 'See the service page')}</a></p></div>
@@ -508,8 +529,8 @@ def landing3d(L):
 <div class="card"><h3>{t('Mã tái lập được', 'Reproducible code')}</h3><p>{t('Python sạch, có hướng dẫn chạy, để bạn tự chạy lại trên dữ liệu mới. Không bị khoá nhà cung cấp.', 'Clean Python with run instructions so you can re-run it on new data. No lock-in.')}</p></div>
 </div></div></section>
 
-<section class="band"><div class="wrap"><h2>{t('Hiểu cách tôi làm việc', 'See how I think')}</h2><p class="sub">{t('Hai bài viết kỹ thuật, có công thức, hình và code chạy được, giải thích nền tảng đằng sau dịch vụ này.', 'Two technical articles, with equations, figures and runnable code, explaining the fundamentals behind this service.')}</p>
-<div class="grid postlist">{post_cards(L)}</div></div></section>
+<section class="band"><div class="wrap"><h2>{t('Hiểu cách tôi làm việc', 'See how I think')}</h2><p class="sub">{t('Các bài viết kỹ thuật, có công thức, hình và code chạy được, giải thích nền tảng đằng sau dịch vụ này.', 'Technical articles, with equations, figures and runnable code, explaining the fundamentals behind this service.')}</p>
+<div class="grid postlist">{post_cards(L, tag_en="3D reconstruction")}</div></div></section>
 
 <section><div class="wrap"><h2>{t('Tôi cần gì từ bạn', 'What I need from you')}</h2>
 <div class="grid g2"><div class="card"><ul><li>{t('Ảnh hoặc video mẫu và kích thước vật thể/cảnh', 'Example images or video and the object/scene scale')}</li><li>{t('Độ chính xác yêu cầu và định dạng đầu ra', 'Required accuracy and output format')}</li><li>{t('Thông tin camera nếu có (model, tiêu cự, ảnh bàn cờ)', 'Camera information if available (model, focal length, chessboard images)')}</li></ul></div>
@@ -536,7 +557,7 @@ def landing_tools(L):
 <p class="lead">{t('Bạn có một quy trình tốn thời gian &mdash; đọc hoá đơn, phân loại phản hồi, làm sạch bảng dữ liệu, tổng hợp báo cáo? Tôi xây dựng công cụ AI gọn nhẹ, đo ni đóng giày cho quy trình đó, kèm cách đo xem nó có thật sự tiết kiệm thời gian không.', 'Have a time-consuming routine &mdash; reading invoices, sorting feedback, cleaning spreadsheets, compiling reports? I build lightweight AI tools tailored to that workflow, with a way to measure whether they really save time.')}</p>
 <div class="cta">{cta_btns(L)}</div></div></div>
 
-<section><div class="wrap"><h2>{t('Những loại công cụ tôi xây dựng', 'Kinds of tools I build')}</h2><p class="sub">{t('Ví dụ về loại việc phù hợp. Đây là các hướng dịch vụ, không phải dự án khách hàng đã hoàn thành.', 'Examples of the kind of work that fits. These are service directions, not completed client projects.')}</p>
+<section><div class="wrap"><h2>{t('Những loại công cụ tôi xây dựng', 'Kinds of tools I build')}</h2><p class="sub">{t('Các loại việc phù hợp.', 'The kinds of work that fit.')}</p>
 <div class="grid g3">
 <div class="card"><h3>{t('Trích xuất tài liệu', 'Document extraction')}</h3><p>{t('Đọc PDF, ảnh chụp hoá đơn, biểu mẫu hoặc email và đưa các trường cần thiết vào bảng tính/CSV, kèm cờ cảnh báo cho các dòng cần người kiểm tra.', 'Read PDFs, invoice photos, forms or emails and put the required fields into a spreadsheet/CSV, with flags on the rows a human should check.')}</p></div>
 <div class="card"><h3>{t('Phân loại &amp; gắn thẻ', 'Classification &amp; tagging')}</h3><p>{t('Phân loại ticket, phản hồi khách hàng, đánh giá sản phẩm hoặc sản phẩm trong danh mục theo nhãn của riêng bạn, có thể kèm mức độ tin cậy.', 'Sort tickets, customer feedback, reviews or catalogue items into your own labels, optionally with a confidence score.')}</p></div>
@@ -610,8 +631,8 @@ def news_index(L):
     body = f"""
 <div class="hero" style="padding:56px 0 20px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">{t('Tin tức công nghệ', 'Tech news')}</h1>
-<p class="lead">{t('Điểm tin về AI, LLM, IoT &amp; AIoT, hệ thống máy tính, khoa học máy tính &amp; dữ liệu, điện thoại thông minh. Mỗi tin có trang riêng: tóm tắt bằng lời của chúng tôi, nhận định &ldquo;vì sao đáng chú ý&rdquo; và liên kết tới nguồn gốc.', 'News on AI, LLMs, IoT &amp; AIoT, computer systems, computer science &amp; data, and smartphones. Every item has its own page: a summary in our own words, a &ldquo;why it matters&rdquo; take and a link to the original source.')}</p>
-<p class="meta">{t('Cập nhật', 'Updated')}: {TODAY}. {t('Hình ảnh là minh hoạ do Shopsmon tự vẽ. Các con số do công ty/tác giả công bố được ghi rõ là tuyên bố của họ; chúng tôi không tự kiểm chứng độc lập các benchmark.', 'Images are illustrations drawn by Shopsmon. Figures published by companies/authors are marked as their own claims; we do not independently verify benchmarks.')}</p>
+<p class="lead">{t('AI, LLM, IoT &amp; AIoT, hệ thống máy tính, khoa học máy tính &amp; dữ liệu, điện thoại thông minh.', 'AI, LLMs, IoT &amp; AIoT, computer systems, computer science &amp; data, and smartphones.')}</p>
+<p class="meta">{t('Cập nhật', 'Updated')}: {TODAY}</p>
 </div></div>
 <section style="padding-top:20px"><div class="wrap">
 {feat}

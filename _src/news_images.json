@@ -1,0 +1,90 @@
+{
+ "ceva-mobilint-regulus": {
+  "credit": "IoT Now",
+  "image_url": "https://iot-now.com/app/uploads/2026/11/ceva-mobilint-regulus-edge-ai-soc-processor.jpg",
+  "orig_size": [
+   1280,
+   720
+  ]
+ },
+ "qualcomm-hbc-memory-bandwidth": {
+  "credit": "Futurum Group",
+  "image_url": "https://futurumgroup.com/wp-content/uploads/2026/11/stock_0273.png",
+  "orig_size": [
+   1920,
+   1080
+  ]
+ },
+ "zyphra-hierarchical-attention": {
+  "credit": "Zyphra",
+  "image_url": "https://cdn.sanity.io/images/6pyafx7r/production/32c1111fb207da9bffdb178c55f6a22d76418eaf-2400x1256.png?w=1200&q=75&auto=format",
+  "orig_size": [
+   1200,
+   628
+  ]
+ },
+ "motorola-signature-27": {
+  "credit": "Android Authority",
+  "image_url": "https://www.androidauthority.com/wp-content/uploads/2026/09/moto-signature-27-bO.jpg",
+  "orig_size": [
+   2500,
+   1406
+  ]
+ },
+ "gemini-4-carbon": {
+  "credit": "Tom's Hardware",
+  "image_url": "https://cdn.mos.cms.futurecdn.net/bCKPeU3stBtYmdyp38NMsd-1600-80.jpg",
+  "orig_size": [
+   1600,
+   900
+  ]
+ },
+ "gpt-6-1-terra": {
+  "credit": "LLM Stats",
+  "image_url": "https://media.beehiiv.com/cdn-cgi/image/fit=scale-down,quality=80,width=1200,onerror=redirect/uploads/asset/file/2faa0a5c-761a-440c-8c20-0d9f3f602bfc/upload_2d219b445c8727da.jpg?t=1793627616",
+  "orig_size": [
+   1200,
+   897
+  ]
+ },
+ "xiaomi-18-pro-global": {
+  "credit": "Android Central",
+  "image_url": "https://cdn.mos.cms.futurecdn.net/YW8T5YF6GSAfV5G6tyUTam-1200-80.jpg",
+  "orig_size": [
+   1200,
+   675
+  ]
+ },
+ "deepmind-agentic-cheminformatics": {
+  "credit": "Google DeepMind",
+  "image_url": "https://lh3.googleusercontent.com/UFTBrp1IrRBrc6_f4ibNgtV35iY8F2iTYaqOb1lzR-qZNy-Mb5726xrLKTozohfdZ_3quHe50uyn8z-Wh_Eril_8CVh7py7gH0188sl_EXkoJknlqg=w1200-h630-n-nu-rw",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "tencent-hy4": {
+  "credit": "South China Morning Post",
+  "image_url": "https://cdn.i-scmp.com/sites/default/files/styles/og_image_scmp_generic/public/d8/images/canvas/2026/11/04/e334e07d-a188-435f-a6f7-f2a094252aef_84648b5d.jpg?itok=BTQcsnZM&v=1793772758",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "u-blox-alma-w1-nrf71": {
+  "credit": "The Component Club",
+  "image_url": "https://www.thecomponentclub.com/media/b56cad84e1e6212bcc982019ee493119ea9c3a06cafad13e646f14c2e06bd679",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "nsf-fabaid-data-fabric": {
+  "credit": "University of Nebraska&ndash;Lincoln",
+  "image_url": "https://computing.unl.edu/sites/unl.edu.engineering.school-of-computing/files/media/image/hcc.jpg",
+  "orig_size": [
+   1090,
+   613
+  ]
+ }
+}

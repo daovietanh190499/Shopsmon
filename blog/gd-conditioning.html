@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gradient descent và số điều kiện: chuẩn hoá đặc trưng | Shopsmon</title>
+<meta name="description" content="Dẫn xuất tốc độ hội tụ của gradient descent trên hàm bậc hai, so sánh với conjugate gradient và đo tác động của chuẩn hoá đặc trưng lên bài hồi quy, kèm code NumPy.">
+<link rel="canonical" href="https://shopsmon.com/blog/gd-conditioning.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/gd-conditioning.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/gd-conditioning.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/gd-conditioning.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Gradient descent và số điều kiện: chuẩn hoá đặc trưng | Shopsmon">
+<meta property="og:description" content="Dẫn xuất tốc độ hội tụ của gradient descent trên hàm bậc hai, so sánh với conjugate gradient và đo tác động của chuẩn hoá đặc trưng lên bài hồi quy, kèm code NumPy.">
+<meta property="og:url" content="https://shopsmon.com/blog/gd-conditioning.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/blog/" class=active>Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/gd-conditioning.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; Khoa học dữ liệu &middot; ~13 phút đọc</p>
+<h1>Gradient descent và số điều kiện: vì sao bình phương tối thiểu chạy chậm</h1>
+<p class="meta">Tốc độ hội tụ chứng minh được trong năm dòng, phép kiểm tra bằng số so với conjugate gradient, và chuẩn hoá đặc trưng làm thay đổi số vòng lặp ra sao.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Hồi quy tuyến tính thường là mô hình đầu tiên người ta học, còn gradient descent là bộ tối ưu đầu tiên. Ghép hai thứ này lại có một điều bất ngờ: cùng một tập dữ liệu có thể cần mười vòng lặp hoặc một triệu vòng lặp, chỉ phụ thuộc vào cách co giãn các đặc trưng. Đại lượng quyết định là <strong>số điều kiện</strong> của ma trận Hessian. <a href="/blog/eight-point-normalization.html">Bài thuật toán 8 điểm</a> đã gặp chính đại lượng này dưới một dạng khác: toạ độ pixel thô cho ma trận điều kiện kém, và chuẩn hoá làm số điều kiện giảm từ \(4.6\times10^{5}\) xuống 18. Bài này dẫn xuất tốc độ hội tụ của gradient descent trên một hàm bậc hai, so sánh với conjugate gradient, và đo điều gì xảy ra với một bài hồi quy trước và sau khi chuẩn hoá.</p>
+
+<h2>2. Gradient descent trên hàm bậc hai</h2>
+<p>Xét mô hình bậc hai</p>
+$$f(\mathbf x)=\tfrac12\,\mathbf x^\top A\,\mathbf x-\mathbf b^\top\mathbf x,\qquad A=A^\top\succ 0,$$
+<p>với các giá trị riêng \(0<\lambda_1\le\dots\le\lambda_d\), điểm cực tiểu \(\mathbf x^\star=A^{-1}\mathbf b\) và sai số \(\mathbf e_k=\mathbf x_k-\mathbf x^\star\). Gradient là \(\nabla f(\mathbf x)=A\mathbf x-\mathbf b=A\,(\mathbf x-\mathbf x^\star)\), nên gradient descent với bước cố định \(\alpha\) cho</p>
+$$\mathbf x_{k+1}=\mathbf x_k-\alpha\nabla f(\mathbf x_k)\quad\Longrightarrow\quad \mathbf e_{k+1}=(I-\alpha A)\,\mathbf e_k\quad\Longrightarrow\quad \mathbf e_k=(I-\alpha A)^k\mathbf e_0 .$$
+<p>Trong cơ sở riêng của \(A\), mỗi thành phần của sai số được nhân với \((1-\alpha\lambda_i)^k\). Vòng lặp hội tụ khi và chỉ khi \(|1-\alpha\lambda_i|<1\) với mọi \(i\), tức \(0<\alpha<2/\lambda_d\). Thành phần chậm nhất quyết định tốc độ:</p>
+$$\rho(\alpha)=\max_i|1-\alpha\lambda_i|=\max\bigl(|1-\alpha\lambda_1|,\;|1-\alpha\lambda_d|\bigr).$$
+<p>Số hạng đầu giảm theo \(\alpha\), số hạng thứ hai tăng khi \(\alpha>1/\lambda_d\), nên cực tiểu đạt được khi hai số hạng bằng nhau về độ lớn và ngược dấu, \(1-\alpha\lambda_1=-(1-\alpha\lambda_d)\):</p>
+$$\alpha^\star=\frac{2}{\lambda_1+\lambda_d},\qquad \rho^\star=\frac{\lambda_d-\lambda_1}{\lambda_d+\lambda_1}=\frac{\kappa-1}{\kappa+1},\qquad \kappa=\frac{\lambda_d}{\lambda_1}.$$
+<p>Vì \(I-\alpha A\) giao hoán với \(A\) và có chuẩn phổ bằng \(\rho\), sai số đo bằng chuẩn năng lượng \(\|\mathbf e\|_A=\sqrt{\mathbf e^\top A\mathbf e}\) thoả</p>
+$$\|\mathbf e_k\|_A\le\rho^{k}\,\|\mathbf e_0\|_A .$$
+<p>Để giảm sai số đi \(\varepsilon\) lần cần \(k\ge \ln(1/\varepsilon)/\ln(1/\rho)\). Với \(\kappa\) lớn, \(\ln\frac{\kappa+1}{\kappa-1}\approx 2/\kappa\), nên</p>
+$$k\;\approx\;\frac{\kappa}{2}\,\ln\frac1\varepsilon .$$
+<p>Số vòng lặp <em>tỉ lệ tuyến tính với số điều kiện</em>. Hình 1 cho thấy lý do: theo hướng dốc, bước nhảy vượt quá và đổi dấu liên tục; theo hướng thoải, nó hầu như không tiến.</p>
+<figure><img src="/assets/img/blog/gd-paths.svg" alt="Đường đồng mức của hai hàm bậc hai có số điều kiện 2 và 20 cùng đường đi zig-zag của gradient descent với bước tối ưu cố định" width="860" height="400">
+<figcaption>Hình 1. Gradient descent với bước cố định tối ưu \(2/(\lambda_1+\lambda_d)\), 14 bước, trên \(f=\tfrac12(x_1^2+\kappa x_2^2)\). Trái: \(\kappa=2\), \(\rho=0.333\). Phải: \(\kappa=20\), \(\rho=0.905\). Ngôi sao đỏ là điểm cực tiểu. Nhãn hình bằng tiếng Anh.</figcaption></figure>
+
+<h2>3. Conjugate gradient: \(\sqrt\kappa\) thay vì \(\kappa\)</h2>
+<p>Phương pháp conjugate gradient (Hestenes &amp; Stiefel, 1952) giải \(A\mathbf x=\mathbf b\) với chi phí mỗi vòng lặp bằng gradient descent, một phép nhân với \(A\), nhưng dựng mỗi hướng tìm kiếm sao cho \(A\)-trực giao với các hướng trước. Trong số học chính xác, nó kết thúc sau nhiều nhất \(d\) bước, và sai số thoả chặn (Shewchuk, 1994, công thức 52)</p>
+$$\|\mathbf e_k\|_A\le 2\left(\frac{\sqrt\kappa-1}{\sqrt\kappa+1}\right)^{k}\|\mathbf e_0\|_A ,$$
+<p>suy ra cần khoảng \(k\approx\frac{\sqrt\kappa}{2}\ln\frac2\varepsilon\) vòng lặp. Số điều kiện đi vào qua căn bậc hai của nó.</p>
+
+<h2>4. Bình phương tối thiểu là hàm bậc hai, và Hessian bình phương điều kiện số</h2>
+<p>Với ma trận thiết kế \(X\in\mathbb R^{n\times d}\), hàm mất mát \(\frac1{2n}\|X\mathbf w-\mathbf y\|^2\) là hàm bậc hai với \(A=X^\top X/n\) và \(\mathbf b=X^\top\mathbf y/n\). Các giá trị riêng của \(X^\top X\) là bình phương các giá trị suy biến của \(X\), do đó</p>
+$$\kappa(A)=\kappa(X)^2 .$$
+<p>Các đặc trưng có thang đo rất khác nhau, hoặc có trung bình lớn đi cùng phương sai nhỏ, làm \(\kappa(X)\) lớn và \(\kappa(A)\) bằng bình phương của nó. Hai bước tiền xử lý xử lý vấn đề này. <strong>Căn giữa</strong> mỗi đặc trưng làm nó trực giao với cột hệ số chặn, vì \(X_{\cdot j}^\top\mathbf 1=0\); khi đó \(A\) trở thành ma trận khối chéo \(\mathrm{diag}\bigl(1,\,C\bigr)\), với \(C\) là ma trận hiệp phương sai mẫu của các đặc trưng. <strong>Co giãn</strong> mỗi đặc trưng về phương sai đơn vị biến \(C\) thành ma trận tương quan, có đường chéo toàn số 1. Nếu các đặc trưng gần như không tương quan thì \(C\approx I\) và \(\kappa\approx1\).</p>
+
+<h2>5. Cài đặt</h2>
+<p>Hai bộ giải bằng NumPy. <a href="/blog/code/gd_conditioning.py">Script đầy đủ</a>, gồm cả hai thí nghiệm và hai hình, có thể tải về.</p>
+<pre><code class="language-python">import numpy as np
+
+def a_norm(A, e):
+    return float(np.sqrt(e @ (A @ e)))
+
+def gd_iters(A, b, x_star, step, tol=1e-6, cap=300_000):
+    """Gradient descent bước cố định từ x0=0; dừng khi ||e_k||_A &lt;= tol * ||e_0||_A."""
+    x = np.zeros_like(b)
+    e0 = a_norm(A, x - x_star)
+    for k in range(1, cap + 1):
+        x = x - step * (A @ x - b)
+        ratio = a_norm(A, x - x_star) / e0
+        if ratio &lt;= tol:
+            return k, ratio
+    return None, ratio
+
+def cg_iters(A, b, x_star, tol=1e-6, cap=100_000):
+    """Conjugate gradient từ x0=0 với cùng điều kiện dừng."""
+    x = np.zeros_like(b); r = b - A @ x; p = r.copy(); rs = r @ r
+    e0 = a_norm(A, x - x_star)
+    for k in range(1, cap + 1):
+        Ap = A @ p
+        alpha = rs / (p @ Ap)
+        x = x + alpha * p
+        r = r - alpha * Ap
+        if a_norm(A, x - x_star) &lt;= tol * e0:
+            return k
+        rs_new = r @ r
+        p = r + (rs_new / rs) * p
+        rs = rs_new
+    return None
+</code></pre>
+
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Trên hàm bậc hai 2 chiều \(\mathrm{diag}(1,50)\) với bước tối ưu, chuẩn sai số sau 25 bước chia cho chuẩn ban đầu là \(0.3678304\), trùng với \(\rho^{25}=(49/51)^{25}\) tới các chữ số in ra: với ma trận này tốc độ đạt đúng bằng \(\rho\), không chỉ bị chặn bởi nó.</p>
+
+<h2>6. Thí nghiệm 1: gradient descent so với conjugate gradient</h2>
+<p><strong>Thiết lập (dữ liệu tổng hợp, tái lập hoàn toàn).</strong> Với mỗi \(\kappa\in\{10,10^2,10^3,10^4\}\), \(A=Q\,\mathrm{diag}(\lambda)\,Q^\top\) với \(d=100\), \(Q\) trực giao ngẫu nhiên và các giá trị riêng cách đều theo thang log từ 1 đến \(\kappa\); \(\mathbf b\) chuẩn tắc, \(\mathbf x_0=\mathbf 0\), NumPy seed 3. Gradient descent dùng bước cố định tối ưu \(2/(\lambda_1+\lambda_d)\). Tôi đếm số vòng lặp cho tới khi \(\|\mathbf e_k\|_A\le10^{-6}\|\mathbf e_0\|_A\) và so với chặn: \(\lceil\ln(10^{-6})/\ln\rho\rceil\) cho gradient descent và \(\lceil\ln(10^{-6}/2)/\ln q\rceil\) cho conjugate gradient, với \(q=(\sqrt\kappa-1)/(\sqrt\kappa+1)\).</p>
+<table>
+<thead><tr><th>&kappa;</th><th>Chặn GD</th><th>GD đo được</th><th>Chặn CG</th><th>CG đo được</th></tr></thead>
+<tbody>
+<tr><td>10</td><td>69</td><td>60</td><td>23</td><td>21</td></tr>
+<tr><td>100</td><td>691</td><td>633</td><td>73</td><td>59</td></tr>
+<tr><td>1.000</td><td>6.908</td><td>6.241</td><td>230</td><td>131</td></tr>
+<tr><td>10.000</td><td>69.078</td><td>59.014</td><td>726</td><td>272</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/gd-iterations.svg" alt="Đồ thị log-log số vòng lặp để đạt 1e-6 theo số điều kiện cho gradient descent và conjugate gradient, đo được và chặn" width="640" height="420">
+<figcaption>Hình 2. Số vòng lặp để đạt \(10^{-6}\) theo chuẩn \(A\), theo số điều kiện (log&ndash;log). Kết quả của script trong bài. Nhãn hình bằng tiếng Anh.</figcaption></figure>
+<ul>
+<li><strong>Gradient descent tăng tuyến tính theo \(\kappa\).</strong> Mỗi lần \(\kappa\) tăng 10 lần, số vòng lặp đo được tăng khoảng 10 lần (60, 633, 6.241, 59.014) và luôn nằm dưới chặn.</li>
+<li><strong>Conjugate gradient tăng xấp xỉ theo \(\sqrt\kappa\).</strong> Từ \(\kappa=10\) đến \(10^4\), số vòng lặp đo được tăng từ 21 lên 272, gấp 13 lần, trong khi \(\sqrt\kappa\) tăng gấp 32 lần; nó luôn dưới chặn và thấp hơn hẳn ở \(\kappa\) lớn; Shewchuk lưu ý CG thường tốt hơn chặn khi phân bố giá trị riêng thuận lợi.</li>
+<li><strong>Tại \(\kappa=10^4\), khoảng cách là 59.014 so với 272 vòng lặp</strong>, khoảng 217 lần, với cùng chi phí mỗi vòng lặp.</li>
+</ul>
+
+<h2>7. Thí nghiệm 2: chuẩn hoá đặc trưng trong bài hồi quy</h2>
+<p><strong>Thiết lập (dữ liệu tổng hợp, tái lập hoàn toàn).</strong> \(n=2000\) &ldquo;căn nhà&rdquo; với hệ số chặn và bốn đặc trưng: diện tích \(\sim\mathcal N(100,30^2)\), số phòng đều trên \(\{1,\dots,6\}\), tuổi nhà \(\sim U(0,50)\), khoảng cách \(\sim\mathcal N(5,2^2)\); mục tiêu \(y=X\mathbf w+\mathcal N(0,5^2)\) với \(\mathbf w=(20,\,1.5,\,4,\,-0.3,\,-2)\) (NumPy seed 5). Hàm mất mát \(\frac1{2n}\|X\mathbf w-\mathbf y\|^2\), \(A=X^\top X/n\), bắt đầu từ \(\mathbf w=\mathbf 0\), bước cố định tối ưu, cùng điều kiện dừng, giới hạn 300.000 vòng lặp. Ba phiên bản của cùng dữ liệu: thô, căn giữa, và căn giữa kèm co giãn về phương sai đơn vị.</p>
+<table>
+<thead><tr><th>Đặc trưng</th><th>&kappa;(A)</th><th>Chặn GD</th><th>GD đo được</th><th>CG đo được</th></tr></thead>
+<tbody>
+<tr><td>thô</td><td>3,04&times;10<sup>5</sup></td><td>2.099.254</td><td>chưa đạt sau 300.000 (tỉ lệ sai số 0,139)</td><td>6</td></tr>
+<tr><td>căn giữa</td><td>866,0</td><td>5.983</td><td>5.982</td><td>5</td></tr>
+<tr><td>căn giữa + phương sai đơn vị</td><td>1,087</td><td>5</td><td>4</td><td>4</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Đặc trưng thô:</strong> các giá trị riêng của \(A\) trải từ 0,0382 đến 11.615, \(\kappa=3{,}04\times10^5\). Sau 300.000 vòng lặp, gradient descent mới giảm sai số theo chuẩn \(A\) xuống còn 13,9% ban đầu; chặn dự đoán cần khoảng 2,1 triệu vòng lặp để đạt \(10^{-6}\).</li>
+<li><strong>Chỉ căn giữa</strong> đã giảm \(\kappa\) khoảng 350 lần (xuống 866), và gradient descent cần 5.982 vòng lặp, chỉ lệch một vòng so với chặn.</li>
+<li><strong>Căn giữa và co giãn</strong> cho \(\kappa=1{,}087\): bốn vòng lặp, vì các đặc trưng ở đây gần như không tương quan nên \(A\) gần với ma trận đơn vị.</li>
+<li>Conjugate gradient cần 4&ndash;6 vòng lặp trong mọi trường hợp. Với \(d=5\) ẩn, số học chính xác sẽ kết thúc sau nhiều nhất 5 bước; con số 6 ở dữ liệu thô phù hợp với sai số làm tròn dấu phẩy động ở \(\kappa\approx3\times10^5\).</li>
+</ul>
+<p><strong>Hạn chế.</strong> Cả hai thí nghiệm đều là hàm bậc hai, nơi \(\kappa\) không đổi; với hàm mất mát phi bậc hai, ma trận liên quan là Hessian cục bộ và nó thay đổi dọc đường đi. Bước tối ưu dùng chính xác các giá trị riêng cực trị, điều hiếm khi biết trước; với bước an toàn như \(1/\lambda_d\), tốc độ là \(1-1/\kappa\), còn chậm hơn. Các đặc trưng trong Thí nghiệm 2 gần như không tương quan nên chuẩn hoá đưa \(\kappa\) về gần 1; đặc trưng tương quan mạnh vẫn điều kiện kém sau chuẩn hoá, vì khi đó \(C\) có giá trị riêng nhỏ. Không có chính quy hoá, vốn cũng chặn dưới \(\lambda_1\). Toàn bộ dữ liệu là tổng hợp.</p>
+
+<h2>8. Điều rút ra trong thực hành</h2>
+<ol>
+<li>Căn giữa và co giãn đặc trưng trước khi dùng bất kỳ bộ giải dựa trên gradient nào cho mô hình tuyến tính hoặc tuyến tính suy rộng. Chỉ tốn hai dòng mã mà có thể đổi số vòng lặp theo nhiều bậc độ lớn.</li>
+<li>Nhớ rằng \(\kappa(X^\top X)=\kappa(X)^2\): khi giải trực tiếp bình phương tối thiểu, nên dùng QR hoặc SVD thay cho phương trình chuẩn, giống lập luận về toạ độ trong <a href="/blog/eight-point-normalization.html">bài thuật toán 8 điểm</a>.</li>
+<li>Với bài toán bậc hai lớn, thưa hoặc có cấu trúc, conjugate gradient trả giá \(\sqrt\kappa\) thay vì \(\kappa\) với một phép nhân ma trận-vector mỗi vòng lặp.</li>
+<li>Khi huấn luyện chậm hơn mong đợi, hãy xem số điều kiện (hay tỉ số giá trị riêng lớn nhất trên nhỏ nhất của Hessian) trước khi chỉnh learning rate.</li>
+<li>Kiểm tra tương quan sau khi chuẩn hoá: chúng quyết định số điều kiện còn lại.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần pipeline dữ liệu, chatbot agent hoặc công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này với tư cách freelancer. Hãy mô tả dự án trong vài câu, tôi sẽ phản hồi bằng các câu hỏi làm rõ và báo giá theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Data%20project">Nhận báo giá</a> <a class="btn ghost" href="/services.html">Xem dịch vụ</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>M. R. Hestenes and E. Stiefel. &ldquo;Methods of conjugate gradients for solving linear systems.&rdquo; <em>Journal of Research of the National Bureau of Standards</em> 49(6):409&ndash;436, December 1952 (Research Paper 2379). <a href="https://nvlpubs.nist.gov/nistpubs/jres/049/6/V49.N06.A08.pdf">PDF</a>.</li>
+<li>J. R. Shewchuk. &ldquo;An Introduction to the Conjugate Gradient Method Without the Agonizing Pain.&rdquo; School of Computer Science, Carnegie Mellon University, edition 1&frac14;, August 4, 1994. <a href="https://www.cs.cmu.edu/~jrs/jrspapers.html">Trang tác giả</a>. (Hội tụ của steepest descent và conjugate gradient theo số điều kiện; chặn có hệ số 2 là công thức 52.)</li>
+<li>S. Boyd and L. Vandenberghe. <em>Convex Optimization</em>. Cambridge University Press, 2004. <a href="https://web.stanford.edu/~boyd/cvxbook/">Trang sách</a>. (Chương 9: gradient descent cho hàm lồi mạnh.)</li>
+<li>R. I. Hartley. &ldquo;In defense of the eight-point algorithm.&rdquo; <em>IEEE TPAMI</em> 19(6):580&ndash;593, 1997. <a href="https://doi.org/10.1109/34.601246">doi:10.1109/34.601246</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/gd_conditioning.py">gd_conditioning.py</a> (Python 3.12, NumPy, Matplotlib). Mọi con số ở các Mục 5&ndash;7 là kết quả của script này.</p>
+<aside class="aff-box"><h3>Sách để học tiếp <span class="afftag">Affiliate &middot; Shopee</span></h3><p>Sách tiếng Việt về Python, học máy và dữ liệu.</p><ul><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Đường vào lập trình Python nâng cao</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/3g4yyvPH69" rel="sponsored nofollow noopener" target="_blank">Data Strategy &ndash; Chiến lược dữ liệu (sách tiếng Việt)</a> <span class="price">₫169.100</span></li><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫249.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>
