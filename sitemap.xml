@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://shopsmon.com/</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/services.html</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/portfolio.html</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/solutions/llm-chatbot-agent.html</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/contact.html</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/blog/</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://shopsmon.com/blog/triangulation-dlt.html</loc><lastmod>2026-11-04</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://shopsmon.com/</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/"/></url>
+  <url><loc>https://shopsmon.com/en/</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/"/></url>
+  <url><loc>https://shopsmon.com/services.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/services.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/services.html"/></url>
+  <url><loc>https://shopsmon.com/en/services.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/services.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/services.html"/></url>
+  <url><loc>https://shopsmon.com/portfolio.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/portfolio.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/portfolio.html"/></url>
+  <url><loc>https://shopsmon.com/en/portfolio.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/portfolio.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/portfolio.html"/></url>
+  <url><loc>https://shopsmon.com/solutions/llm-chatbot-agent.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/solutions/llm-chatbot-agent.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/solutions/llm-chatbot-agent.html"/></url>
+  <url><loc>https://shopsmon.com/en/solutions/llm-chatbot-agent.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/solutions/llm-chatbot-agent.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/solutions/llm-chatbot-agent.html"/></url>
+  <url><loc>https://shopsmon.com/contact.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/contact.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/contact.html"/></url>
+  <url><loc>https://shopsmon.com/en/contact.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/contact.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/contact.html"/></url>
+  <url><loc>https://shopsmon.com/blog/</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/"/></url>
+  <url><loc>https://shopsmon.com/en/blog/</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/"/></url>
+  <url><loc>https://shopsmon.com/privacy.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/privacy.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/privacy.html"/></url>
+  <url><loc>https://shopsmon.com/en/privacy.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/privacy.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/privacy.html"/></url>
+  <url><loc>https://shopsmon.com/blog/triangulation-dlt.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/triangulation-dlt.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/triangulation-dlt.html"/></url>
+  <url><loc>https://shopsmon.com/en/blog/triangulation-dlt.html</loc><lastmod>2026-11-04</lastmod><xhtml:link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/triangulation-dlt.html"/><xhtml:link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/triangulation-dlt.html"/></url>
 </urlset>

@@ -1,43 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Blog — AI, data science & 3D reconstruction | Shopsmon</title>
-<meta name="description" content="Technical articles on AI, data science, 3D reconstruction and computer science with equations, figures and runnable code.">
+<title>Blog — AI, khoa học dữ liệu & tái tạo 3D | Shopsmon</title>
+<meta name="description" content="Bài viết kỹ thuật về AI, khoa học dữ liệu, tái tạo 3D và khoa học máy tính, có công thức, hình minh hoạ và code chạy được.">
 <link rel="canonical" href="https://shopsmon.com/blog/">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Shopsmon">
-<meta property="og:title" content="Blog — AI, data science & 3D reconstruction | Shopsmon">
-<meta property="og:description" content="Technical articles on AI, data science, 3D reconstruction and computer science with equations, figures and runnable code.">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Blog — AI, khoa học dữ liệu & tái tạo 3D | Shopsmon">
+<meta property="og:description" content="Bài viết kỹ thuật về AI, khoa học dữ liệu, tái tạo 3D và khoa học máy tính, có công thức, hình minh hoạ và code chạy được.">
 <meta property="og:url" content="https://shopsmon.com/blog/">
 <meta property="og:image" content="https://shopsmon.com/assets/img/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
 <link rel="stylesheet" href="/assets/css/style.css">
 
 </head>
 <body>
 <header class="site"><div class="wrap">
 <a class="logo" href="/">shops<span>mon</span></a>
-<nav><a href="/">Home</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/blog/" class=active>Blog</a><a href="/contact.html">Contact</a></nav>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/blog/" class=active>Blog</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
 </div></header>
 <main>
 
 <div class="hero" style="padding:64px 0 24px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">Blog</h1>
-<p class="lead">Data science, AI, 3D reconstruction and computer science &mdash; explained with equations, figures and code that runs.</p>
+<p class="lead">Khoa học dữ liệu, AI, tái tạo 3D và khoa học máy tính &mdash; được giải thích bằng công thức, hình minh hoạ và code chạy được.</p>
 </div></div>
-<section><div class="wrap"><div class="grid postlist">
-<a class="card" href="/blog/triangulation-dlt.html"><span class="tag">3D reconstruction &middot; 2026-11-04</span><h3>Triangulation: from two views to a 3D point</h3>
-<p>Why two noisy rays never intersect, how the Direct Linear Transform solves it with an SVD, and a numerical experiment on how camera baseline controls accuracy.</p></a>
-</div></div></section>
+<section><div class="wrap"><div class="grid postlist"><a class="card" href="/blog/triangulation-dlt.html"><span class="tag">Tái tạo 3D &middot; 2026-11-04</span><h3>Tam giác hoá (triangulation): từ hai góc nhìn đến một điểm 3D</h3><p>Vì sao hai tia nhiễu không bao giờ cắt nhau, DLT giải bài toán bằng SVD ra sao, và thí nghiệm số về việc baseline quyết định độ chính xác.</p></a></div></div></section>
 
 </main>
 <footer class="site"><div class="wrap">
-<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering</div>
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
 <div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
 </div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
 
 </body>
 </html>

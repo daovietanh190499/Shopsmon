@@ -1,50 +1,63 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Portfolio — open technical work | Shopsmon</title>
-<meta name="description" content="Open technical work from Shopsmon: 3D triangulation experiment with code, and LLM chatbot service overview.">
+<title>Portfolio — công việc kỹ thuật mở | Shopsmon</title>
+<meta name="description" content="Công việc kỹ thuật mở của Shopsmon: thí nghiệm tam giác hoá 3D kèm mã nguồn và tổng quan dịch vụ chatbot LLM.">
 <link rel="canonical" href="https://shopsmon.com/portfolio.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/portfolio.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/portfolio.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/portfolio.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Shopsmon">
-<meta property="og:title" content="Portfolio — open technical work | Shopsmon">
-<meta property="og:description" content="Open technical work from Shopsmon: 3D triangulation experiment with code, and LLM chatbot service overview.">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Portfolio — công việc kỹ thuật mở | Shopsmon">
+<meta property="og:description" content="Công việc kỹ thuật mở của Shopsmon: thí nghiệm tam giác hoá 3D kèm mã nguồn và tổng quan dịch vụ chatbot LLM.">
 <meta property="og:url" content="https://shopsmon.com/portfolio.html">
 <meta property="og:image" content="https://shopsmon.com/assets/img/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
 <link rel="stylesheet" href="/assets/css/style.css">
 
 </head>
 <body>
 <header class="site"><div class="wrap">
 <a class="logo" href="/">shops<span>mon</span></a>
-<nav><a href="/">Home</a><a href="/services.html">Services</a><a href="/portfolio.html" class=active>Portfolio</a><a href="/blog/">Blog</a><a href="/contact.html">Contact</a></nav>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html" class=active>Portfolio</a><a href="/blog/">Blog</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/portfolio.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
 </div></header>
 <main>
 
 <div class="hero" style="padding:64px 0 32px"><div class="wrap">
 <h1 style="font-size:clamp(30px,5vw,46px)">Portfolio</h1>
-<p class="lead">Shopsmon is a new studio, so this page shows open technical work you can inspect, not client logos. As client projects are completed (with permission), they will be added here.</p>
+<p class="lead">Shopsmon là studio mới, nên trang này giới thiệu các công việc kỹ thuật mở mà bạn có thể kiểm chứng, không phải logo khách hàng. Khi các dự án khách hàng hoàn thành (khi được cho phép), chúng sẽ được thêm vào đây.</p>
 </div></div>
 <section><div class="wrap"><div class="grid g2">
-<div class="card"><span class="tag">3D reconstruction &middot; open code</span><h3>Two-view triangulation (DLT) experiment</h3>
-<p>A NumPy implementation of linear triangulation and the midpoint method, with a reproducible experiment on how camera baseline affects 3D accuracy. Includes an exact noise-free sanity check.</p>
-<p><a href="/blog/triangulation-dlt.html">Read the article</a> &middot; <a href="/blog/code/triangulation_dlt.py">Download the code</a></p></div>
-<div class="card"><span class="tag">LLM &middot; service page</span><h3>LLM chatbot &amp; agent development</h3>
-<p>What a chatbot project looks like end to end: scoping, retrieval over your documents, evaluation, deployment and handover.</p>
-<p><a href="/solutions/llm-chatbot-agent.html">See the service page</a></p></div>
+<div class="card"><span class="tag">Tái tạo 3D &middot; mã nguồn mở</span><h3>Thí nghiệm tam giác hoá hai góc nhìn (DLT)</h3>
+<p>Bản cài đặt NumPy của tam giác hoá tuyến tính và phương pháp điểm giữa, cùng thí nghiệm tái lập được về ảnh hưởng của baseline camera đến độ chính xác 3D. Có kiểm tra tính đúng đắn với dữ liệu không nhiễu.</p>
+<p><a href="/blog/triangulation-dlt.html">Đọc bài viết</a> &middot; <a href="/blog/code/triangulation_dlt.py">Tải mã nguồn</a></p></div>
+<div class="card"><span class="tag">LLM &middot; trang dịch vụ</span><h3>Chatbot &amp; agent LLM</h3>
+<p>Một dự án chatbot từ đầu đến cuối: xác định phạm vi, truy xuất trên tài liệu của bạn, đánh giá, triển khai và bàn giao.</p>
+<p><a href="/solutions/llm-chatbot-agent.html">Xem trang dịch vụ</a></p></div>
 </div></div></section>
-<section class="band"><div class="wrap" style="text-align:center"><h2>Want to be the first featured project?</h2>
-<p class="sub" style="margin:0 auto 24px">Early clients get a focused scope, close attention and a fair price.</p>
-<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Get a free quote</a><a class="btn ghost" href="/portfolio.html">See portfolio</a></div></div></section>
+<section class="band"><div class="wrap" style="text-align:center"><h2>Muốn là dự án tiêu biểu đầu tiên?</h2>
+<p class="sub" style="margin:0 auto 24px">Khách hàng đầu tiên được tập trung phạm vi, quan tâm sát sao và mức giá hợp lý.</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Y%C3%AAu%20c%E1%BA%A7u%20d%E1%BB%B1%20%C3%A1n%20-%20Shopsmon">Nhận báo giá miễn phí</a><a class="btn ghost" href="/portfolio.html">Xem portfolio</a></div></div></section>
 
 </main>
 <footer class="site"><div class="wrap">
-<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering</div>
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
 <div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
 </div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
 
 </body>
 </html>

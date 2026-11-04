@@ -1,19 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Triangulation: from two views to a 3D point (DLT explained) | Shopsmon</title>
-<meta name="description" content="Derivation of linear triangulation (DLT) for two views, with NumPy code, figures and an experiment showing how camera baseline controls 3D accuracy.">
+<title>Tam giác hoá DLT: từ hai góc nhìn đến điểm 3D | Shopsmon</title>
+<meta name="description" content="Dẫn xuất tam giác hoá tuyến tính (DLT) cho hai góc nhìn, kèm code NumPy, hình minh hoạ và thí nghiệm cho thấy baseline quyết định độ chính xác 3D.">
 <link rel="canonical" href="https://shopsmon.com/blog/triangulation-dlt.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/triangulation-dlt.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/triangulation-dlt.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/triangulation-dlt.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Shopsmon">
-<meta property="og:title" content="Triangulation: from two views to a 3D point (DLT explained) | Shopsmon">
-<meta property="og:description" content="Derivation of linear triangulation (DLT) for two views, with NumPy code, figures and an experiment showing how camera baseline controls 3D accuracy.">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Tam giác hoá DLT: từ hai góc nhìn đến điểm 3D | Shopsmon">
+<meta property="og:description" content="Dẫn xuất tam giác hoá tuyến tính (DLT) cho hai góc nhìn, kèm code NumPy, hình minh hoạ và thí nghiệm cho thấy baseline quyết định độ chính xác 3D.">
 <meta property="og:url" content="https://shopsmon.com/blog/triangulation-dlt.html">
 <meta property="og:image" content="https://shopsmon.com/assets/img/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
 <link rel="stylesheet" href="/assets/css/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -21,46 +29,45 @@
 <body>
 <header class="site"><div class="wrap">
 <a class="logo" href="/">shops<span>mon</span></a>
-<nav><a href="/">Home</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/blog/" class=active>Blog</a><a href="/contact.html">Contact</a></nav>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/blog/" class=active>Blog</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/triangulation-dlt.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
 </div></header>
 <main>
-
 <article class="post">
-<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; 3D reconstruction &middot; ~12 min read</p>
-<h1>Triangulation: from two views to a 3D point</h1>
-<p class="meta">Pinhole camera, the Direct Linear Transform (DLT), and a numerical experiment on baseline vs. accuracy.</p>
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-04 &middot; Tái tạo 3D &middot; đọc ~12 phút</p>
+<h1>Tam giác hoá (triangulation): từ hai góc nhìn đến một điểm 3D</h1>
+<p class="meta">Camera lỗ kim, biến đổi tuyến tính trực tiếp (DLT) và một thí nghiệm số về mối quan hệ giữa đường cơ sở (baseline) và độ chính xác.</p>
 
-<h2>1. Context</h2>
-<p>Every 3D reconstruction pipeline built from images &mdash; structure from motion, photogrammetry, stereo &mdash; eventually asks the same question: <em>given where a point appears in two or more images, and given the cameras, where is it in 3D?</em> Answering it is called <strong>triangulation</strong>. It is the &ldquo;recover the point&rdquo; step once the cameras are known (or estimated).</p>
-<p>In a perfect world the answer is just the intersection of two rays. In real images, pixel coordinates are noisy, the two rays are <em>skew</em> and almost never meet, and we need a principled way to pick the best point. This article derives the standard linear solution, implements it, and tests how it behaves.</p>
+<h2>1. Bối cảnh</h2>
+<p>Mọi pipeline tái tạo 3D từ ảnh &mdash; structure from motion, photogrammetry, stereo &mdash; cuối cùng đều phải trả lời cùng một câu hỏi: <em>biết một điểm xuất hiện ở đâu trong hai (hoặc nhiều) ảnh, và biết các camera, thì điểm đó nằm ở đâu trong không gian 3D?</em> Bước này gọi là <strong>tam giác hoá</strong> (triangulation): &ldquo;khôi phục điểm 3D&rdquo; khi các camera đã biết (hoặc đã được ước lượng).</p>
+<p>Trong trường hợp lý tưởng, đáp án chỉ là giao điểm của hai tia. Với ảnh thật, toạ độ pixel có nhiễu, hai tia là các đường <em>chéo nhau</em> (skew) và gần như không bao giờ cắt nhau, nên ta cần một tiêu chí hợp lý để chọn điểm tốt nhất. Bài viết này dẫn xuất lời giải tuyến tính chuẩn, cài đặt nó và kiểm tra hành vi của nó bằng thực nghiệm.</p>
 
-<h2>2. The pinhole camera</h2>
-<p>A 3D point in homogeneous coordinates \(\mathbf{X}=(X,Y,Z,1)^\top\) is projected to the image point \(\mathbf{x}=(u,v,1)^\top\) by a \(3\times4\) camera matrix \(P\):</p>
+<h2>2. Camera lỗ kim</h2>
+<p>Một điểm 3D trong toạ độ thuần nhất \(\mathbf{X}=(X,Y,Z,1)^\top\) được chiếu thành điểm ảnh \(\mathbf{x}=(u,v,1)^\top\) bởi ma trận camera \(P\) cỡ \(3\times4\):</p>
 $$\lambda\,\mathbf{x} = P\,\mathbf{X},\qquad P = K\,[\,R \mid \mathbf{t}\,],\qquad K=\begin{bmatrix} f_x & 0 & c_x\\ 0 & f_y & c_y\\ 0&0&1\end{bmatrix}$$
-<p>Here \(K\) holds the intrinsics (focal lengths \(f_x,f_y\) in pixels and principal point \((c_x,c_y)\)), and \([R\mid\mathbf t]\) are the extrinsics: the rotation and translation from world to camera coordinates. The scalar \(\lambda\) is the unknown projective depth. The symbol \(\simeq\) is often used for &ldquo;equal up to scale&rdquo;.</p>
+<p>Trong đó \(K\) chứa các tham số nội (tiêu cự \(f_x,f_y\) tính bằng pixel và điểm chính \((c_x,c_y)\)), còn \([R\mid\mathbf t]\) là các tham số ngoại: phép quay và tịnh tiến từ hệ toạ độ thế giới sang hệ toạ độ camera. Đại lượng vô hướng \(\lambda\) là độ sâu xạ ảnh chưa biết. Ký hiệu \(\simeq\) thường được dùng cho &ldquo;bằng nhau sai khác một hệ số tỉ lệ&rdquo;.</p>
 
-<h2>3. Why the rays do not meet</h2>
-<p>Each observed pixel defines a ray from the camera centre. With exact data the two rays intersect at the true point \(\mathbf X\). With noisy pixels, the rays in 3D are generally <em>skew</em> &mdash; they pass each other without touching. The top-down view below is a 2D slice, where two lines always cross, so it only shows the other half of the story: noise moves the crossing point away from the truth, mostly along the viewing direction (depth).</p>
-<figure><img src="/assets/img/blog/triangulation-geometry.svg" alt="Two cameras and their rays toward a point; dashed perturbed rays cross at a displaced estimate" width="640" height="540">
-<figcaption>Figure 1. Top-down 2D slice (x vs. depth z). Solid rays meet at the true point; the dashed rays, perturbed by about 1&ndash;1.5 degrees to mimic image noise, cross at a displaced estimate (orange cross). In full 3D such rays would not even cross.</figcaption></figure>
-<p>We therefore need a criterion for the &ldquo;best&rdquo; point. Two natural choices are (a) an <strong>algebraic</strong> criterion that leads to a linear system, and (b) the <strong>geometric reprojection error</strong>.</p>
+<h2>3. Vì sao hai tia không cắt nhau</h2>
+<p>Mỗi pixel quan sát được xác định một tia xuất phát từ tâm camera. Với dữ liệu chính xác, hai tia cắt nhau tại điểm thật \(\mathbf X\). Với pixel có nhiễu, trong không gian 3D hai tia nhìn chung là <em>chéo nhau</em> &mdash; chúng đi lướt qua nhau mà không chạm. Hình dưới là lát cắt 2D nhìn từ trên xuống, nơi hai đường thẳng luôn cắt nhau, nên nó chỉ minh hoạ một nửa câu chuyện: nhiễu làm điểm giao dịch chuyển khỏi vị trí thật, chủ yếu dọc theo hướng nhìn (độ sâu).</p>
+<figure><img src="/assets/img/blog/triangulation-geometry.svg" alt="Hai camera và các tia hướng tới một điểm; các tia nhiễu (nét đứt) cắt nhau tại một điểm ước lượng bị lệch" width="640" height="540">
+<figcaption>Hình 1. Lát cắt 2D nhìn từ trên xuống (x theo độ sâu z). Các tia nét liền gặp nhau tại điểm thật; các tia nét đứt, bị lệch khoảng 1&ndash;1,5 độ để mô phỏng nhiễu ảnh, cắt nhau tại một điểm ước lượng bị lệch (dấu chéo màu cam). Trong 3D đầy đủ, các tia như vậy thậm chí không cắt nhau. (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
+<p>Vì vậy ta cần một tiêu chí cho điểm &ldquo;tốt nhất&rdquo;. Hai lựa chọn tự nhiên là (a) tiêu chí <strong>đại số</strong> dẫn tới một hệ tuyến tính, và (b) <strong>sai số chiếu lại</strong> (reprojection error) mang ý nghĩa hình học.</p>
 
-<h2>4. Linear triangulation (DLT)</h2>
-<p>The relation \(\lambda\mathbf x=P\mathbf X\) says \(\mathbf x\) and \(P\mathbf X\) are parallel, so their cross product vanishes:</p>
+<h2>4. Tam giác hoá tuyến tính (DLT)</h2>
+<p>Quan hệ \(\lambda\mathbf x=P\mathbf X\) cho biết \(\mathbf x\) và \(P\mathbf X\) song song, do đó tích có hướng của chúng bằng không:</p>
 $$\mathbf{x}\times(P\mathbf{X})=\mathbf 0 .$$
-<p>Let \(\mathbf p_i^\top\) be the \(i\)-th row of \(P\) and \(\mathbf x=(u,v,1)^\top\). Expanding the cross product gives three equations, only two of which are linearly independent:</p>
+<p>Gọi \(\mathbf p_i^\top\) là hàng thứ \(i\) của \(P\) và \(\mathbf x=(u,v,1)^\top\). Khai triển tích có hướng cho ba phương trình, trong đó chỉ có hai phương trình độc lập tuyến tính:</p>
 $$u\,\mathbf p_3^\top\mathbf X-\mathbf p_1^\top\mathbf X=0,\qquad v\,\mathbf p_3^\top\mathbf X-\mathbf p_2^\top\mathbf X=0 .$$
-<p>With two views \((P,\mathbf x=(u,v,1)^\top)\) and \((P',\mathbf x'=(u',v',1)^\top)\) we stack four equations into \(A\mathbf X=\mathbf 0\):</p>
+<p>Với hai góc nhìn \((P,\mathbf x=(u,v,1)^\top)\) và \((P',\mathbf x'=(u',v',1)^\top)\), ta xếp bốn phương trình thành \(A\mathbf X=\mathbf 0\):</p>
 $$A=\begin{bmatrix} u\,\mathbf p_3^\top-\mathbf p_1^\top\\ v\,\mathbf p_3^\top-\mathbf p_2^\top\\ u'\,\mathbf p_3'^\top-\mathbf p_1'^\top\\ v'\,\mathbf p_3'^\top-\mathbf p_2'^\top\end{bmatrix}\in\mathbb R^{4\times4} .$$
-<p>Because \(\mathbf X\) is homogeneous we only know it up to scale, so we solve</p>
+<p>Vì \(\mathbf X\) là toạ độ thuần nhất nên ta chỉ biết nó sai khác một hệ số tỉ lệ, do đó ta giải bài toán</p>
 $$\hat{\mathbf X}=\arg\min_{\|\mathbf X\|=1}\ \|A\mathbf X\|^2 ,$$
-<p>whose solution is the right singular vector of \(A\) associated with the smallest singular value. If \(A=U\Sigma V^\top\), then \(\hat{\mathbf X}\) is the last column of \(V\). Finally we dehomogenise: \((X,Y,Z)=(\hat X_1,\hat X_2,\hat X_3)/\hat X_4\).</p>
-<div class="callout"><strong>Algebraic vs. geometric.</strong> The DLT minimises \(\|A\mathbf X\|\), a quantity without direct geometric meaning in the image. The quantity we usually care about is the <em>reprojection error</em>
+<p>nghiệm của nó là vector kỳ dị phải của \(A\) ứng với giá trị kỳ dị nhỏ nhất. Nếu \(A=U\Sigma V^\top\) thì \(\hat{\mathbf X}\) là cột cuối cùng của \(V\). Cuối cùng ta đưa về toạ độ thường: \((X,Y,Z)=(\hat X_1,\hat X_2,\hat X_3)/\hat X_4\).</p>
+<div class="callout"><strong>Đại số so với hình học.</strong> DLT cực tiểu hoá \(\|A\mathbf X\|\), một đại lượng không có ý nghĩa hình học trực tiếp trong ảnh. Đại lượng ta thường quan tâm là <em>sai số chiếu lại</em>
 $$E(\mathbf X)=\big\|\mathbf x-\pi(P\mathbf X)\big\|^2+\big\|\mathbf x'-\pi(P'\mathbf X)\big\|^2,\qquad \pi\big((a,b,c)^\top\big)=(a/c,\;b/c)^\top ,$$
-which is the maximum-likelihood criterion under independent Gaussian pixel noise. Hartley and Sturm (1997) give a non-iterative solution for the two-view case that finds the global minimum of this error; the linear DLT result is often used as an initial guess or when speed matters.</div>
+chính là tiêu chí hợp lý cực đại (maximum likelihood) khi nhiễu pixel là nhiễu Gauss độc lập. Hartley và Sturm (1997) đưa ra lời giải không lặp cho trường hợp hai góc nhìn, tìm được cực tiểu toàn cục của sai số này; kết quả DLT thường được dùng làm giá trị khởi tạo hoặc khi cần tốc độ.</div>
 
-<h2>5. Implementation</h2>
-<p>Below is the core of the implementation (NumPy). The <a href="/blog/code/triangulation_dlt.py">complete script</a>, including the experiment and the figures in this article, is downloadable.</p>
+<h2>5. Cài đặt</h2>
+<p>Dưới đây là phần lõi của bản cài đặt (NumPy). <a href="/blog/code/triangulation_dlt.py">Toàn bộ script</a>, gồm cả thí nghiệm và các hình trong bài, có thể tải về.</p>
 <pre><code class="language-python">import numpy as np
 
 def triangulate_dlt(P1, P2, x1, x2):
@@ -75,15 +82,15 @@ def triangulate_dlt(P1, P2, x1, x2):
     X = Vt[-1]              # right singular vector of the smallest singular value
     return X[:3] / X[3]     # dehomogenise
 </code></pre>
-<p>For comparison I also implemented the <strong>midpoint method</strong>: back-project both pixels to rays \(\mathbf c_i+s_i\mathbf d_i\), find \((s_1,s_2)\) minimising the distance between the rays, and return the midpoint of that shortest segment.</p>
+<p>Để so sánh, tôi cũng cài đặt <strong>phương pháp điểm giữa</strong> (midpoint): chiếu ngược hai pixel thành hai tia \(\mathbf c_i+s_i\mathbf d_i\), tìm \((s_1,s_2)\) làm cực tiểu khoảng cách giữa hai tia, rồi lấy trung điểm của đoạn thẳng ngắn nhất nối chúng.</p>
 
-<h3>Sanity check</h3>
-<p>Before trusting any numbers, I triangulated a point from <em>noise-free</em> projections. The reconstruction error was <code>1.13e-15</code> (floating-point round-off), as it must be when the rays intersect exactly.</p>
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Trước khi tin vào bất kỳ con số nào, tôi tam giác hoá một điểm từ các phép chiếu <em>không nhiễu</em>. Sai số tái tạo là <code>1.13e-15</code> (sai số làm tròn dấu phẩy động), đúng như kỳ vọng khi hai tia cắt nhau chính xác.</p>
 
-<h2>6. Experiment: how does baseline affect accuracy?</h2>
-<p><strong>Setup (synthetic, fully reproducible).</strong> Intrinsics \(f_x=f_y=800\) px, principal point \((320,240)\). Two cameras placed symmetrically on the x-axis at \(\pm b/2\), both looking at \((0,0,5)\). Random 3D points with \(x,y\in[-1,1]\), \(z\in[4,6]\). Each projection receives independent Gaussian noise with \(\sigma=0.5\) px. For each baseline \(b\) I triangulate 2000 points (NumPy random seed 7) and report the <em>median</em> Euclidean 3D error, in the same units as the scene.</p>
+<h2>6. Thí nghiệm: đường cơ sở ảnh hưởng thế nào đến độ chính xác?</h2>
+<p><strong>Thiết lập (dữ liệu tổng hợp, tái lập hoàn toàn).</strong> Tham số nội \(f_x=f_y=800\) px, điểm chính \((320,240)\). Hai camera đặt đối xứng trên trục x tại \(\pm b/2\), cùng nhìn về \((0,0,5)\). Các điểm 3D ngẫu nhiên với \(x,y\in[-1,1]\), \(z\in[4,6]\). Mỗi phép chiếu được cộng nhiễu Gauss độc lập với \(\sigma=0.5\) px. Với mỗi baseline \(b\), tôi tam giác hoá 2000 điểm (NumPy random seed 7) và báo cáo sai số 3D Euclid <em>trung vị</em>, cùng đơn vị với cảnh.</p>
 <table>
-<thead><tr><th>Baseline b</th><th>DLT median error</th><th>Midpoint median error</th></tr></thead>
+<thead><tr><th>Baseline b</th><th>Sai số trung vị DLT</th><th>Sai số trung vị Midpoint</th></tr></thead>
 <tbody>
 <tr><td>0.10</td><td>0.1492</td><td>0.1489</td></tr>
 <tr><td>0.20</td><td>0.0789</td><td>0.0792</td></tr>
@@ -91,42 +98,47 @@ def triangulate_dlt(P1, P2, x1, x2):
 <tr><td>1.00</td><td>0.0155</td><td>0.0155</td></tr>
 <tr><td>2.00</td><td>0.0083</td><td>0.0084</td></tr>
 </tbody></table>
-<figure><img src="/assets/img/blog/triangulation-error.svg" alt="Log-log plot of median 3D error versus baseline for DLT and midpoint triangulation" width="640" height="420">
-<figcaption>Figure 2. Median 3D error vs. baseline (log&ndash;log). Output of the script in this article.</figcaption></figure>
+<figure><img src="/assets/img/blog/triangulation-error.svg" alt="Đồ thị log-log sai số 3D trung vị theo baseline cho DLT và midpoint" width="640" height="420">
+<figcaption>Hình 2. Sai số 3D trung vị theo baseline (log&ndash;log). Kết quả đầu ra của script trong bài. (Nhãn trong hình bằng tiếng Anh.)</figcaption></figure>
 
-<h3>What the numbers say</h3>
+<h3>Các con số cho thấy điều gì</h3>
 <ul>
-<li><strong>Baseline dominates accuracy.</strong> Increasing the baseline 20&times; (0.1 &rarr; 2.0) reduced the median error by about 18&times; (0.149 &rarr; 0.0083), i.e. roughly inversely proportional to the baseline in this regime.</li>
-<li><strong>This matches the rectified-stereo intuition.</strong> For two parallel cameras with focal length \(f\) and baseline \(B\), depth is \(Z=fB/d\) where \(d\) is the disparity. Differentiating, a disparity error \(\delta d\) produces a depth error \(\delta Z\approx \dfrac{Z^2}{fB}\,\delta d\): depth error grows with the square of the distance and shrinks with the baseline.</li>
-<li><strong>In this setup DLT and midpoint are practically identical.</strong> The two methods differ by less than 1% at every baseline. This experiment (small noise, well-conditioned geometry, both cameras looking at the scene centre) is simply not one that separates them. I make no claim about other regimes; for a systematic comparison of methods see Hartley &amp; Sturm (1997).</li>
+<li><strong>Baseline quyết định độ chính xác.</strong> Tăng baseline 20 lần (0.1 &rarr; 2.0) làm sai số trung vị giảm khoảng 18 lần (0.149 &rarr; 0.0083), tức xấp xỉ tỉ lệ nghịch với baseline trong chế độ này.</li>
+<li><strong>Điều này khớp với trực giác của stereo đã hiệu chỉnh (rectified).</strong> Với hai camera song song có tiêu cự \(f\) và baseline \(B\), độ sâu là \(Z=fB/d\) trong đó \(d\) là độ chênh lệch (disparity). Lấy vi phân, sai số disparity \(\delta d\) gây ra sai số độ sâu \(\delta Z\approx \dfrac{Z^2}{fB}\,\delta d\): sai số độ sâu tăng theo bình phương khoảng cách và giảm theo baseline.</li>
+<li><strong>Trong thiết lập này DLT và midpoint gần như giống hệt nhau.</strong> Hai phương pháp chênh nhau dưới 1% ở mọi baseline. Thí nghiệm này (nhiễu nhỏ, hình học điều kiện tốt, cả hai camera đều nhìn vào tâm cảnh) đơn giản là không phân biệt được chúng. Tôi không đưa ra kết luận nào cho các chế độ khác; để có so sánh có hệ thống giữa các phương pháp, xem Hartley &amp; Sturm (1997).</li>
 </ul>
-<p><strong>Limitations.</strong> The data are synthetic, noise is Gaussian and isotropic, camera calibration is assumed exact, and I did not compare against the optimal (minimum reprojection error) method. Real pipelines add lens distortion, outlier matches and calibration error &mdash; each of which needs its own treatment (robust estimation, bundle adjustment).</p>
+<p><strong>Hạn chế.</strong> Dữ liệu là tổng hợp, nhiễu là Gauss đẳng hướng, hiệu chuẩn camera được giả định chính xác, và tôi không so sánh với phương pháp tối ưu (cực tiểu sai số chiếu lại). Pipeline thực tế còn có méo ống kính, ghép cặp ngoại lai và sai số hiệu chuẩn &mdash; mỗi yếu tố cần cách xử lý riêng (ước lượng bền vững, bundle adjustment).</p>
 
-<h2>7. Practical takeaways</h2>
+<h2>7. Bài học thực hành</h2>
 <ol>
-<li>Use as large a baseline as the matching algorithm tolerates: it directly reduces depth uncertainty.</li>
-<li>Check your code with noise-free data first; it should reproduce the point to round-off.</li>
-<li>Treat DLT as a fast, solid initial estimate; refine by minimising reprojection error when accuracy matters.</li>
-<li>Always report the metric you actually care about (reprojection error, 3D error) &mdash; they are not the same as the algebraic residual.</li>
+<li>Dùng baseline lớn nhất mà thuật toán ghép điểm còn chịu được: nó giảm trực tiếp độ bất định về độ sâu.</li>
+<li>Kiểm tra code bằng dữ liệu không nhiễu trước; nó phải khôi phục điểm tới mức sai số làm tròn.</li>
+<li>Xem DLT như một ước lượng khởi tạo nhanh và vững; tinh chỉnh bằng cách cực tiểu sai số chiếu lại khi cần độ chính xác cao.</li>
+<li>Luôn báo cáo đại lượng bạn thực sự quan tâm (sai số chiếu lại, sai số 3D) &mdash; chúng không giống phần dư đại số.</li>
 </ol>
 
-<div class="cta-box"><strong>Need 3D reconstruction, a chatbot agent or a custom AI tool?</strong><br>
-I build these as a freelancer. Describe your project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
-<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=3D%20reconstruction%20project">Ask for a quote</a> <a class="btn ghost" href="/services.html">See services</a></div>
+<div class="cta-box"><strong>Bạn cần tái tạo 3D, chatbot agent hay một công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này với tư cách freelancer. Hãy mô tả dự án trong vài câu, tôi sẽ phản hồi bằng các câu hỏi làm rõ và báo giá theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=D%E1%BB%B1%20%C3%A1n%20t%C3%A1i%20t%E1%BA%A1o%203D">Nhận báo giá</a> <a class="btn ghost" href="/services.html">Xem dịch vụ</a></div>
 
-<h2>References</h2>
+<h2>Tài liệu tham khảo</h2>
 <ol class="refs">
-<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Chapter 12, &ldquo;Structure computation&rdquo;.) <a href="https://www.cambridge.org/9780521540513">Publisher page</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Chương 12, &ldquo;Structure computation&rdquo;.) <a href="https://www.cambridge.org/9780521540513">Trang nhà xuất bản</a>.</li>
 <li>R. I. Hartley and P. Sturm. &ldquo;Triangulation.&rdquo; <em>Computer Vision and Image Understanding</em> 68(2):146&ndash;157, November 1997. <a href="https://doi.org/10.1006/cviu.1997.0547">doi:10.1006/cviu.1997.0547</a>.</li>
 </ol>
-<p class="meta">Code: <a href="/blog/code/triangulation_dlt.py">triangulation_dlt.py</a> (Python 3.12, NumPy, Matplotlib). All numbers in Section 6 are the output of this script.</p>
+<p class="meta">Mã nguồn: <a href="/blog/code/triangulation_dlt.py">triangulation_dlt.py</a> (Python 3.12, NumPy, Matplotlib). Mọi số liệu ở Mục 6 là kết quả đầu ra của script này.</p>
 </article>
 
 </main>
 <footer class="site"><div class="wrap">
-<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering</div>
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
 <div><a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
 </div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
