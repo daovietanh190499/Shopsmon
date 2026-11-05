@@ -1020,10 +1020,21 @@ for L in LANGS:
     for p in POSTS:
         blog_post(L, p)
 
-with open(os.path.join(ROOT, "404.html"), "w", encoding="utf-8", newline="\n") as f:
+def safe_open(path, mode="w", **kw):
+    """open() that retries: Windows sometimes returns a transient EINVAL while another process scans the file."""
+    for i in range(8):
+        try:
+            return open(path, mode, **kw)
+        except OSError:
+            if i == 7:
+                raise
+            time.sleep(0.4)
+
+
+with safe_open(os.path.join(ROOT, "404.html"), "w", encoding="utf-8", newline="\n") as f:
     f.write("""<!doctype html><html lang="vi" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>404 | Shopsmon</title><script>try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script><link rel="stylesheet" href="/assets/css/style.css"></head><body><div class="wrap" style="padding:120px 20px;text-align:center"><h1>404 &mdash; Không tìm thấy trang / Page not found</h1><p><a class="btn primary" href="/">Về trang chủ</a> <a class="btn ghost" href="/en/">Back to home (EN)</a></p></div></body></html>""")
 
-with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8", newline="\n") as f:
+with safe_open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8", newline="\n") as f:
     f.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n')
     for p, d in PAGES:
         for L in LANGS:
@@ -1031,11 +1042,11 @@ with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8", newline="\n"
                     f'<xhtml:link rel="alternate" hreflang="vi" href="{SITE}{pth("vi", p)}"/>'
                     f'<xhtml:link rel="alternate" hreflang="en" href="{SITE}{pth("en", p)}"/></url>\n')
     f.write("</urlset>\n")
-with open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8", newline="\n") as f:
+with safe_open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8", newline="\n") as f:
     f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")
-open(os.path.join(ROOT, ".nojekyll"), "w").close()
+safe_open(os.path.join(ROOT, ".nojekyll"), "w").close()
 
 os.makedirs(os.path.join(ROOT, "assets", "img"), exist_ok=True)
-with open(os.path.join(ROOT, "assets", "img", "favicon.svg"), "w", encoding="utf-8") as f:
+with safe_open(os.path.join(ROOT, "assets", "img", "favicon.svg"), "w", encoding="utf-8") as f:
     f.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#6ea8ff"/><stop offset="1" stop-color="#8b7bff"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#0b1020"/><text x="32" y="43" font-family="Arial" font-weight="800" font-size="34" text-anchor="middle" fill="url(#g)">S</text></svg>')
 print("built", len(PAGES), "pages x", len(LANGS), "languages")
