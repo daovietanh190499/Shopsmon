@@ -1,0 +1,203 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-05 &middot; AI products &middot; ~17 min read</p>
+<h1>Making ID photos with AI in the browser: how it was built, what was measured, what broke</h1>
+<p class="meta">A tool that removes the background, straightens the head, crops to a standard size and swaps the background colour for ID photos, running entirely in JavaScript and WebAssembly with no server. This post records each step: choosing models by licence, testing the model outside the browser, the geometry of the crop, the edge-cleaning filters, the bugs hit along the way and the results on real photos.</p>
+
+<div class="callout"><strong>Free to try:</strong> <a href="@@L@@/products/id-photo.html">AI ID photo maker</a>. The photo is processed on your own device and is not uploaded to any server.</div>
+
+<h2>1. The problem and the constraints</h2>
+<p>An ID photo has fairly rigid requirements: a plain background (white, blue or red depending on the receiving office), a face looking straight ahead, an upright head, the head filling a given share of the photo height, and a standard print size and resolution. Doing it by hand in an image editor means cutting the person out, rotating, cropping to size, filling the background and sharpening. The goal was to automate that chain under these constraints.</p>
+<ul>
+<li><strong>Everything in the browser.</strong> No backend: a face photo is personal data, and not sending it anywhere also means not having to run, pay for or secure a server.</li>
+<li><strong>Static hosting.</strong> The website lives on GitHub Pages, which cannot set the <code>Cross-Origin-Opener-Policy</code> and <code>Cross-Origin-Embedder-Policy</code> headers. Without them the browser withholds <code>SharedArrayBuffer</code>, so WebAssembly runs on a single thread. This constraint drove the model choice in Section 2.</li>
+<li><strong>Licences that allow commercial use.</strong> The product sits on a business website, so only components with suitable licences were considered.</li>
+<li><strong>Quality over speed</strong>, but the wait has to stay in the tens of seconds, not minutes.</li>
+</ul>
+
+<h2>2. Choosing the technology</h2>
+<p>The candidate list was MediaPipe, YuNet and SCRFD for face detection; MODNet, BiRefNet, IS-Net (packaged in IMG.LY&rsquo;s library), PICORN and RMBG for background removal; Real-ESRGAN, SwinIR and OpenCV.js for sharpening; and ONNX Runtime Web, Transformers.js and WebGPU as runtime. I judged them with four questions: does it give enough geometry, does the licence allow commercial use, how heavy is it, and does it work on single-thread WebAssembly.</p>
+<table>
+<thead><tr><th>Stage</th><th>Chosen</th><th>Why</th><th>Left out</th></tr></thead>
+<tbody>
+<tr><td>Face detection and alignment</td><td>MediaPipe Face Landmarker (478 landmarks, Apache-2.0, 3.76 MB)</td><td>Gives both iris centres, the chin and the face edges at once: enough to compute tilt and head height from a single model</td><td>YuNet, SCRFD: a box and a few points, not enough to measure head proportions</td></tr>
+<tr><td>Background removal</td><td>MODNet (Apache-2.0, ONNX fp16, 12.98 MB)</td><td>Portrait-specific, no trimap, soft alpha output (including hair)</td><td>IMG.LY is AGPL. RMBG is non-commercial. BiRefNet and PICORN: not tried here, given the time budget on single-thread WebAssembly</td></tr>
+<tr><td>Model runtime</td><td>ONNX Runtime Web 1.20.1, WebAssembly, in a Web Worker</td><td>MIT, stable, loaded from a CDN so the repo stays small</td><td>WebGPU: not widespread enough to be the main path</td></tr>
+<tr><td>Sharpening</td><td>Hand-written unsharp mask on canvas</td><td>An ID photo needs only mild sharpening; super-resolution invents detail and is heavy in a browser</td><td>Real-ESRGAN, SwinIR (listed under future work)</td></tr>
+<tr><td>Edge cleaning</td><td>Guided filter + Blur-Fusion</td><td>Two short algorithms, easy to implement, no need for OpenCV.js (several MB)</td><td>OpenCV.js</td></tr>
+</tbody></table>
+<p>Two points. First, the authoritative licence text lives in each model&rsquo;s own repository, not in a roundup article, so I re-read the licences of MODNet, MediaPipe and ONNX Runtime before committing. Second, &ldquo;lightest&rdquo; is not &ldquo;best for this job&rdquo;: a detector that returns only a face box cannot tell you how many degrees the head is tilted.</p>
+
+<h2>3. Testing the model outside the browser first</h2>
+<p>Before writing any JavaScript I used Python and <code>onnxruntime</code> to check the pre- and post-processing and to compare three variants of MODNet on a public-domain portrait. Input convention: RGB normalised as <code>(x &minus; 0.5) / 0.5</code>, NCHW layout, shorter side 512, both sides divisible by 32; the output is a single alpha channel in [0, 1].</p>
+<table>
+<thead><tr><th>Variant</th><th>Size</th><th>Mean abs. difference from fp32</th><th>99th percentile</th><th>Remark</th></tr></thead>
+<tbody>
+<tr><td>fp32</td><td>25.9 MB</td><td>&mdash;</td><td>&mdash;</td><td>reference</td></tr>
+<tr><td>fp16 (fp16 weights, float32 in/out)</td><td>13.0 MB</td><td>0.0001</td><td>0.0010</td><td>indistinguishable from fp32 in practice</td></tr>
+<tr><td>int8 (quantized)</td><td>6.6 MB</td><td>0.161</td><td>0.9998</td><td>broken: mean alpha 0.377 vs 0.532</td></tr>
+</tbody></table>
+<p>The result is surprising if you are used to int8 working well on small classifiers (see the <a href="@@L@@/blog/int8-quantization.html">int8 quantization post</a>): a dense matting network, where every pixel needs an accurate continuous value, is far more sensitive to coarse weights and activations. I used fp16: half the download for practically the same output. One caveat on timing, measured once on native CPU for a single image: fp32 2.88 s, fp16 4.23 s, int8 4.18 s. fp16 is not faster on CPU because of the type conversion; its benefit is download size, not speed.</p>
+
+<h2>4. Architecture: two phases</h2>
+<p>The heavy work (face detection, matting) runs once per photo. The parameters people tweak (size, background colour, head ratio, sharpness, edge softness) only affect the render stage, so it is kept separate and dragging a slider shows the result at once.</p>
+<pre><code class="language-text">Phase 1 - analysis (once per photo, ~15-25 s)
+  photo -> decode (respecting EXIF) -> MediaPipe: 478 landmarks -> tilt, eyes, chin
+        -> MODNet (ONNX Runtime Web, worker): coarse alpha at 512 resolution
+        -> upscale alpha to the photo size -> guided filter snapping to source edges
+        -> geometry: eye centre, angle theta, head height (crown -> chin)
+
+Phase 2 - render (instant, re-run whenever a setting changes)
+  rotate + scale + centre -> ID-photo frame
+  -> foreground colour estimate (Blur-Fusion) -> composite on background
+  -> optional levels -> unsharp mask -> PNG/JPG at 300 DPI + print sheet</code></pre>
+<p>All the code is one JavaScript file (about 520 lines) with no libraries other than ONNX Runtime Web and MediaPipe, both loaded from a CDN. The two models (<code>modnet-fp16.onnx</code>, 12.98 MB, and <code>face_landmarker.task</code>, 3.76 MB) live in the website repo. The first visit downloads about 37 MB in total, including both libraries&rsquo; WebAssembly; later visits use the browser cache.</p>
+
+<h2>5. Geometry: rotation, head ratio and placement</h2>
+<h3>5.1 Tilt from the eyes</h3>
+<p>Face Landmarker returns 478 points; points 468 and 473 are the iris centres. With \(\mathbf e_A\) and \(\mathbf e_B\) the two eye centres (ordered left to right in the image), the tilt angle and the inter-eye distance are</p>
+$$\theta=\operatorname{atan2}(e_{B,y}-e_{A,y},\;e_{B,x}-e_{A,x}),\qquad E=\lVert\mathbf e_B-\mathbf e_A\rVert.$$
+<p>Every point \(\mathbf p\) is expressed in an &ldquo;upright&rdquo; frame with its origin at the eye midpoint \(\mathbf c_0\):</p>
+$$\begin{pmatrix}x'\\y'\end{pmatrix}=\begin{pmatrix}\cos\theta&\sin\theta\\-\sin\theta&\cos\theta\end{pmatrix}\begin{pmatrix}p_x-c_{0,x}\\p_y-c_{0,y}\end{pmatrix}.$$
+<p>In this frame both eyes sit on one horizontal row, and the eye-to-chin distance (landmark 152) is \(H_{ec}=y'_{\text{chin}}\).</p>
+
+<h3>5.2 Crown: measured from the matte, clamped by body proportions</h3>
+<p>ID-photo head height runs from crown to chin, but Face Landmarker has no reliable crown point (hair gets in the way). I take the crown from the matte: rotate the alpha into the upright frame and scan upward from the eye row inside a column band around the face centre; the first row with at least 3 pixels of alpha above 0.5 is the crown. With big hair, a hat or a segmentation error that can be far off, so there are two safeguards. If the matte gives nothing, use the estimate \(y'_{\text{crown}}=-1.17\,H_{ec}\). If the matte value falls outside \([-1.6\,H_{ec},\,-0.95\,H_{ec}]\), clamp it to that range. The 1.17 factor and the two bounds are empirical coefficients of mine, derived from the ratio of eye-to-chin distance to head height; they are not a regulation.</p>
+
+<h3>5.3 Mapping into the ID-photo frame</h3>
+<p>Let \(\rho\) be the head ratio (head height over photo height) and \(h_{out}\) the output height in pixels. The scale is \(\sigma=\rho\,h_{out}/H_{head}\) with \(H_{head}=H_{ec}-y'_{\text{crown}}\). The transform is implemented as a canvas matrix:</p>
+$$a=\sigma\cos\theta,\quad b=-\sigma\sin\theta,\quad c=\sigma\sin\theta,\quad d=\sigma\cos\theta,$$
+<p>translated so that the point on the crown line directly above the face centre lands at \((w_{out}/2,\;m)\) with top margin \(m=h_{out}(1-\rho)\cdot 0.36\). The 0.36 splits the non-head remainder of the photo roughly 36% above the head and 64% below (neck and shoulders). Sizes and default head ratios:</p>
+<table>
+<thead><tr><th>Size</th><th>mm</th><th>Pixels at 300 DPI</th><th>Default head ratio \(\rho\)</th></tr></thead>
+<tbody>
+<tr><td>3&times;4</td><td>30&times;40</td><td>354&times;472</td><td>0.70</td></tr>
+<tr><td>4&times;6</td><td>40&times;60</td><td>472&times;709</td><td>0.72</td></tr>
+<tr><td>2&times;3</td><td>20&times;30</td><td>236&times;354</td><td>0.70</td></tr>
+<tr><td>35&times;45</td><td>35&times;45</td><td>413&times;531</td><td>0.75</td></tr>
+<tr><td>2&times;2 inch</td><td>50.8&times;50.8</td><td>600&times;600</td><td>0.60</td></tr>
+</tbody></table>
+<p>These are common defaults that the user can adjust with a slider; exact rules depend on the receiving authority, so check them before submitting.</p>
+<pre><code class="language-javascript">var scale = ratio * outH / g.headPx;
+var topMargin = outH * (1 - ratio) * 0.36;
+var a = scale * cs, b = -scale * sn, c = scale * sn, d = scale * cs;
+var e = outW / 2 - (a * P0x + c * P0y), f = topMargin - (b * P0x + d * P0y);
+rctx.setTransform(a, b, c, d, e, f);   // draw the source into the ID-photo frame
+rctx.drawImage(S.src, 0, 0);</code></pre>
+
+<h2>6. Cleaning the edge: from a coarse alpha to a composite</h2>
+<h3>6.1 Guided filter</h3>
+<p>MODNet runs with the shorter side at 512 pixels, so its alpha is coarse and staircased at the hair edge once scaled up to the source. The guided filter (He, Sun, Tang, 2013) filters the alpha \(p\) using a guide image \(I\) (here the grayscale of the source), so the alpha&rsquo;s edges snap to real image edges. In every window the output is a linear function of the guide:</p>
+$$q_i=\bar a_i I_i+\bar b_i,\qquad a_k=\frac{\operatorname{cov}_k(I,p)}{\operatorname{var}_k(I)+\varepsilon},\qquad b_k=\bar p_k-a_k\bar I_k,$$
+<p>where \(\bar a_i,\bar b_i\) are the means of \(a_k,b_k\) over the windows containing pixel \(i\). I implemented it with separable box filters computed by running sums, so the cost does not depend on the radius, using \(r=\max(3,\operatorname{round}(\max(W,H)/260))\) and \(\varepsilon=10^{-4}\).</p>
+
+<h3>6.2 Foreground colour estimation (Blur-Fusion)</h3>
+<p>Even with a correct alpha, compositing \(C=\alpha F+(1-\alpha)B'\) over a new background \(B'\) still shows a fringe if you reuse the source colour \(I\) as \(F\): a pixel on the hair edge is a mix of hair and the <em>old background</em>, so the fringe carries the old background colour (a white halo around hair when switching to a blue background). You need an estimate of the foreground colour \(F\) with the old background removed from semi-transparent pixels. Blur-Fusion (Forte, 2021) does this with a few blurs:</p>
+$$\hat F=\frac{\overline{F\alpha}}{\bar\alpha}+\alpha\Bigl(I-\alpha\frac{\overline{F\alpha}}{\bar\alpha}-(1-\alpha)\frac{\overline{B(1-\alpha)}}{1-\bar\alpha}\Bigr),$$
+<p>where an overbar is the mean over a window. I run two passes like the author&rsquo;s reference code: the first uses a large window (radius \(\max(9,\,h_{out}/14)\) pixels), the second a small window (radius 3) on the first pass&rsquo;s result.</p>
+
+<h3>6.3 Sharpening and levels</h3>
+<p>Sharpening is an unsharp mask, \(I'=I+k\,(I-G_\sigma*I)\), with the Gaussian approximated by three box passes, \(\sigma=\max(0.8,\,h_{out}/520)\), and differences under 2 grey levels ignored so that noise is not amplified. The amount \(k\) is suggested automatically from the sharpness of the face region, measured as the variance of the Laplacian \(\mathrm{Var}(\nabla^2 I)\): under 25 gives \(k=1.4\), under 60 gives 1.1, under 140 gives 0.75, otherwise 0.45. A photo that is already sharp is therefore not over-processed, and a blurry one gets more. The optional levels step stretches the range between the 1st and 99th percentile of subject brightness and blends 60% of that with the original so it stays natural.</p>
+
+<h2>7. Running the model in the browser</h2>
+<p>GitHub Pages has no <code>SharedArrayBuffer</code>, so ONNX Runtime Web runs on one thread. The first version ran inference on the main thread and froze the whole page during matting; the test harness even timed out because the page stopped responding. Setting <code>ort.env.wasm.proxy = true</code> moves inference into a Web Worker and fixes it: sliders still drag and the language still switches while you wait. Initialisation:</p>
+<pre><code class="language-javascript">libs.ort.env.wasm.wasmPaths = ORT_BASE;      // jsDelivr, onnxruntime-web 1.20.1
+libs.ort.env.wasm.proxy = true;               // inference runs in a worker
+libs.ort.env.wasm.numThreads = crossOriginIsolated ? Math.min(4, hw) : 1;
+libs.session = await libs.ort.InferenceSession.create(modelBuf,
+  { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });</code></pre>
+<p>If the site later moves to hosting that can send the two isolation headers, this code will use up to 4 threads automatically.</p>
+
+<h2>8. Results on real photos</h2>
+<p>I tested in a real Chrome (driven over CDP), loading photos into the file input as a user would and timing from load to result. The demo photo in this post is a portrait of the Vietnamese swimmer Nguyễn Thị Ánh Viên, a front-facing shot chosen because its licence allows editing and republishing. Below are the original and three results for the same photo, each produced entirely in the browser:</p>
+<div class="figrow">
+<figure><img src="/assets/img/blog/id-photo-demo-original.jpg" alt="Original: portrait of Nguyễn Thị Ánh Viên against green trees, wearing a blue swim-club top" width="744" height="1080" loading="lazy"><figcaption>Original</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-blue.jpg" alt="Result: 3x4 ID photo on a blue background" width="354" height="472" loading="lazy"><figcaption>3&times;4, blue</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-white.jpg" alt="Result: 35x45 ID photo on a white background" width="413" height="531" loading="lazy"><figcaption>35&times;45, white</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-red.jpg" alt="Result: 3x4 ID photo on a red background" width="354" height="472" loading="lazy"><figcaption>3&times;4, red</figcaption></figure>
+</div>
+<p class="meta">Source of the original: &ldquo;Nguyen Thi Anh Vien 2023&rdquo;, HITA TV, taken from a <a href="https://www.youtube.com/watch?v=T7dDUwyjdOs" rel="nofollow noopener">YouTube video</a>, published on <a href="https://commons.wikimedia.org/wiki/File:Nguyen_Thi_Anh_Vien_2023.png" rel="nofollow noopener">Wikimedia Commons</a> under <a href="https://creativecommons.org/licenses/by/3.0/" rel="nofollow noopener">CC BY 3.0</a>. The three results are modified versions by Shopsmon (background removal, rotation, crop, background swap, sharpening), shown with attribution under CC BY 3.0.</p>
+<p>For this photo the tool needed no rotation (already upright), kept even the loose strands of hair at the crown, and the head fills about 70% of the height at 3&times;4 (judged by eye on the output). The same analysis can also output a 10&times;15 cm print sheet with nine 3&times;4 photos:</p>
+<figure><img src="/assets/img/blog/id-photo-demo-sheet.jpg" alt="10x15 cm print sheet with nine 3x4 ID photos on blue, each with a thin grey outline" width="600" height="900" loading="lazy">
+<figcaption>10&times;15 cm sheet: 3&times;3 photos of 3&times;4, thin grey outline for cutting. Exported at 300 DPI.</figcaption></figure>
+
+<h3>A tilted-head case</h3>
+<p>The photo below is a selfie with the head tilted and slightly turned. The tool measured a tilt of \(-18.5^\circ\) and straightened it; it illustrates the alignment step, not a valid ID photo (a turned pose does not meet the front-facing requirement of a real ID photo).</p>
+<div class="figrow">
+<figure><img src="/assets/img/blog/id-photo-hard-original.jpg" alt="Selfie with a tilted head, pink hair, sitting in front of a monitor" width="640" height="855" loading="lazy"><figcaption>Original</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-hard-out.jpg" alt="Result after straightening and background removal, 3x4 on blue" width="354" height="472" loading="lazy"><figcaption>After rotating \(-18.5^\circ\), blue</figcaption></figure>
+</div>
+<p class="meta">Source of the original: &ldquo;Hinh-anh-chan-dung-cua-nha-phat-trien-quan-tri-vien-nguyen-thi-thu-huong.jpg&rdquo;, by Nguyen T Thu Huong (self-published), <a href="https://commons.wikimedia.org/wiki/File:Hinh-anh-chan-dung-cua-nha-phat-trien-quan-tri-vien-nguyen-thi-thu-huong.jpg" rel="nofollow noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="nofollow noopener">CC0</a>.</p>
+
+<h3>Timing table and other cases</h3>
+<table>
+<thead><tr><th>Test photo</th><th>Size / background</th><th>Time</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>NASA portrait 700&times;900</td><td>3&times;4 / blue</td><td>17.5 s</td><td>auto-rotated \(-5.4^\circ\), clean edge; a &ldquo;low face resolution&rdquo; warning because the photo is small</td></tr>
+<tr><td>Same photo, rotated a further \(14^\circ\), 1600 px</td><td>35&times;45 / red</td><td>20.1 s</td><td>measured \(-19.3^\circ\) (\(14^\circ\) plus the original \(5.4^\circ\) tilt), upright result</td></tr>
+<tr><td>Astronaut in a white suit</td><td>2&times;2 inch / white</td><td>27.3 s</td><td>head separated well; the white suit stays because it is foreground, its edge blends slightly into the white</td></tr>
+<tr><td>Tilted selfie (above)</td><td>3&times;4 / blue</td><td>21.6 s</td><td>measured \(-18.5^\circ\), straightened</td></tr>
+<tr><td>Ánh Viên (above)</td><td>3&times;4 / blue</td><td>18.0 s</td><td>good, no rotation needed</td></tr>
+<tr><td>Ánh Viên</td><td>35&times;45 / white</td><td>20.0 s</td><td>good; a very faint light halo remains around the ears and hair</td></tr>
+<tr><td>Ánh Viên</td><td>3&times;4 / red</td><td>104.8 s</td><td>result fine; the time is far outside the other runs, cause not identified</td></tr>
+<tr><td>Cat photo (no face)</td><td>3&times;4</td><td>6.8 s</td><td>correct error: no face found</td></tr>
+</tbody></table>
+<p>The six runs on photos with a face (excluding the 104.8 s one) fall between 17.5 and 27.3 s, median about 20 s, on one test machine with single-thread WebAssembly. These are one machine&rsquo;s numbers, not a benchmark; another machine will differ. After deploying I re-ran one photo on shopsmon.com itself (4&times;6, white background): the model and libraries loaded from the CDN and the sheet laid out four photos. No run produced a console error.</p>
+
+<h2>9. Bugs hit and how they were fixed</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Page freezes during matting, the test harness times out</td><td>Inference on the main thread</td><td><code>ort.env.wasm.proxy = true</code> (Web Worker)</td></tr>
+<tr><td>Head fills about 58% instead of 70%</td><td>Wrong crown clamp range: \([-2.1,\,-1.45]\cdot H_{ec}\)</td><td>Recomputed as \([-1.6,\,-0.95]\cdot H_{ec}\) with the estimate \(-1.17\,H_{ec}\); afterwards the head fills about 72% on the test photo</td></tr>
+<tr><td>Completely wrong alpha with int8 MODNet</td><td>Quantization breaks the matting network</td><td>Use the fp16 variant</td></tr>
+<tr><td>Elements with the <code>hidden</code> attribute still show</td><td>CSS <code>display:grid</code> overrides the attribute</td><td>Add <code>[hidden]{display:none!important}</code></td></tr>
+<tr><td>The page generator sometimes fails with <code>OSError 22</code> writing a file on Windows</td><td>Transient error while another process scans the file</td><td>Retry loop, up to 8 attempts</td></tr>
+<tr><td>Wrong author list on the Blur-Fusion citation</td><td>An extra author added that is not on the paper</td><td>Checked the DOI, fixed to a single author (M. Forte)</td></tr>
+</tbody></table>
+<p>The second bug is the most instructive: it showed up in no automated check, because the program ran smoothly and the photo looked &ldquo;reasonable&rdquo;. I only caught it by measuring the head ratio on the output and comparing it with the set value (70%). The lesson for image products: open the output image and measure it, do not just check that nothing threw an error.</p>
+
+<h2>10. Limitations</h2>
+<ul>
+<li>A background of the same colour as the clothing (white clothes on white) can make part of the background or clothing be misjudged; the astronaut case above is an example.</li>
+<li>On white backgrounds a very faint light halo can remain around the ears and hair, because the alpha at the edge is not perfectly accurate.</li>
+<li>A small photo makes a blurry ID photo when enlarged; the tool warns instead of inventing detail.</li>
+<li>The crown depends on the matte, so big hair, hats and head coverings reduce the accuracy of the head ratio; a slider lets the user adjust it by hand.</li>
+<li>The tool does not check for closed eyes, an open mouth or reflective glasses; an authority may still reject a photo of the right size.</li>
+<li>Processing takes about 15-30 s on one thread; the first load is about 37 MB.</li>
+<li>Not yet tested on a real phone, Safari or Firefox.</li>
+</ul>
+
+<h2>11. Future work</h2>
+<ol>
+<li>WebGPU for ONNX Runtime Web, or hosting that allows <code>SharedArrayBuffer</code> so multiple threads can be used.</li>
+<li>A &ldquo;high quality&rdquo; option with a larger matting model (such as BiRefNet), downloaded only when selected.</li>
+<li>A small super-resolution model (for example a light Real-ESRGAN) only when the source photo is too small.</li>
+<li>Quality warnings before generating: closed eyes, strong head tilt, glasses, hats.</li>
+<li>More country-specific sizes and print-sheet layouts.</li>
+</ol>
+
+<h2>12. The reusable process</h2>
+<ol>
+<li>Fix the constraints (hosting, licence, time budget) before comparing models.</li>
+<li>Rule out components with unsuitable licences early.</li>
+<li>Try the model in Python, settle pre-processing and numeric variant (fp32, fp16, int8), then write the JavaScript.</li>
+<li>Separate the heavy phase from the light one; run the heavy phase in a worker.</li>
+<li>Test end to end in a real browser with photos whose source and licence are clear; open the output and measure it.</li>
+<li>Test the bad cases: no face, rotated photo, background matching clothing, small photo.</li>
+<li>Deploy, wait for the CDN, and re-run a test against the live site.</li>
+</ol>
+
+<div class="cta-box"><strong>Need an AI tool that runs right in the browser, or a similar product for your data?</strong><br>
+I take this on as a freelancer. Describe the idea in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="@@L@@/products/id-photo.html">Try the tool</a> <a class="btn ghost" href="mailto:@@EMAIL@@?subject=Browser%20AI%20tool">Get a quote</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>Z. Ke, J. Sun, K. Li, Q. Yan and R. W. H. Lau. &ldquo;MODNet: Real-Time Trimap-Free Portrait Matting via Objective Decomposition.&rdquo; <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>, 36(1), 2022. <a href="https://doi.org/10.1609/aaai.v36i1.19999">doi:10.1609/aaai.v36i1.19999</a>.</li>
+<li>K. He, J. Sun and X. Tang. &ldquo;Guided Image Filtering.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em>, 35(6), 2013, pp. 1397&ndash;1409.</li>
+<li>M. Forte. &ldquo;Approximate Fast Foreground Colour Estimation.&rdquo; <em>IEEE International Conference on Image Processing (ICIP)</em>, 2021. <a href="https://doi.org/10.1109/ICIP42928.2021.9506164">doi:10.1109/ICIP42928.2021.9506164</a>.</li>
+<li>Google. &ldquo;MediaPipe Face Landmarker.&rdquo; Google AI Edge documentation, <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker">ai.google.dev/edge/mediapipe</a>.</li>
+<li>Microsoft. &ldquo;ONNX Runtime Web.&rdquo; <a href="https://onnxruntime.ai/docs/tutorials/web/">onnxruntime.ai/docs/tutorials/web</a>.</li>
+</ol>
+<p class="meta">The tool runs on the <a href="@@L@@/products/id-photo.html">product page</a> (<code>assets/js/idphoto.js</code>). Every measurement in Sections 3 and 8 comes from running the tests described in this post.</p>
+</article>

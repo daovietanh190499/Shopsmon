@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Làm ảnh thẻ bằng AI trong trình duyệt: MediaPipe, MODNet, ONNX Runtime Web | Shopsmon</title>
+<meta name="description" content="Quy trình xây dựng công cụ ảnh thẻ chạy hoàn toàn bằng JavaScript: chọn mô hình theo giấy phép, hình học căn thẳng và cắt, làm sạch viền, số đo thời gian và lỗi đã gặp.">
+<link rel="canonical" href="https://shopsmon.com/blog/id-photo-ai.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/id-photo-ai.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/id-photo-ai.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/id-photo-ai.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Làm ảnh thẻ bằng AI trong trình duyệt: MediaPipe, MODNet, ONNX Runtime Web | Shopsmon">
+<meta property="og:description" content="Quy trình xây dựng công cụ ảnh thẻ chạy hoàn toàn bằng JavaScript: chọn mô hình theo giấy phép, hình học căn thẳng và cắt, làm sạch viền, số đo thời gian và lỗi đã gặp.">
+<meta property="og:url" content="https://shopsmon.com/blog/id-photo-ai.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/id-photo-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/" class=active>Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/id-photo-ai.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-05 &middot; Sản phẩm AI &middot; ~18 phút đọc</p>
+<h1>Làm ảnh thẻ bằng AI ngay trong trình duyệt: quy trình xây dựng, số đo và các lỗi đã gặp</h1>
+<p class="meta">Một công cụ tách nền, căn thẳng, cắt đúng khổ và đổi màu nền cho ảnh thẻ, chạy hoàn toàn bằng JavaScript và WebAssembly, không máy chủ. Bài này ghi lại từng bước: chọn mô hình theo giấy phép, thử mô hình ngoài trình duyệt, hình học của phép cắt, các bộ lọc xử lý viền, những lỗi gặp phải và kết quả đo trên ảnh thật.</p>
+
+<div class="callout"><strong>Dùng thử miễn phí:</strong> <a href="/products/id-photo.html">Tạo ảnh thẻ bằng AI</a>. Ảnh được xử lý ngay trên máy của bạn và không được tải lên máy chủ nào.</div>
+
+<h2>1. Bài toán và ràng buộc</h2>
+<p>Ảnh thẻ có yêu cầu khá cứng: nền đơn sắc (trắng, xanh, đỏ tuỳ nơi nhận), mặt nhìn thẳng, đầu không nghiêng, đầu chiếm một tỉ lệ nhất định chiều cao ảnh, kích thước và độ phân giải in chuẩn. Quy trình thủ công trong một trình chỉnh sửa ảnh gồm: tách người khỏi nền, xoay cho thẳng, cắt theo khổ, tô nền, làm nét. Mục tiêu của công cụ là tự động hoá chuỗi này với các ràng buộc sau.</p>
+<ul>
+<li><strong>Chạy hoàn toàn trên trình duyệt.</strong> Không có backend: ảnh khuôn mặt là dữ liệu cá nhân, và không phải gửi ảnh đi đâu cũng đồng nghĩa không phải vận hành, trả tiền hay bảo vệ một máy chủ.</li>
+<li><strong>Hosting tĩnh.</strong> Website nằm trên GitHub Pages. Trang này không đặt được header <code>Cross-Origin-Opener-Policy</code> và <code>Cross-Origin-Embedder-Policy</code>, nên trình duyệt không cấp <code>SharedArrayBuffer</code> và WebAssembly chỉ chạy một luồng. Đây là ràng buộc quyết định tới lựa chọn mô hình ở Mục 2.</li>
+<li><strong>Giấy phép dùng thương mại được.</strong> Sản phẩm nằm trên website kinh doanh, nên chỉ chọn thành phần có giấy phép cho phép.</li>
+<li><strong>Chất lượng ưu tiên hơn tốc độ</strong>, nhưng thời gian chờ phải ở mức người dùng chấp nhận được (chục giây, không phải phút).</li>
+</ul>
+
+<h2>2. Chọn công nghệ</h2>
+<p>Danh sách ứng viên gồm MediaPipe, YuNet và SCRFD cho phát hiện mặt; MODNet, BiRefNet, IS-Net (đóng gói trong thư viện của IMG.LY), PICORN và RMBG cho tách nền; Real-ESRGAN, SwinIR và OpenCV.js cho làm nét; ONNX Runtime Web, Transformers.js và WebGPU làm môi trường chạy. Tôi chọn theo bốn câu hỏi: có đủ thông tin hình học không, giấy phép có cho dùng thương mại không, nặng bao nhiêu, và có chạy tốt trên WebAssembly một luồng không.</p>
+<table>
+<thead><tr><th>Khâu</th><th>Đã chọn</th><th>Lý do</th><th>Đã loại</th></tr></thead>
+<tbody>
+<tr><td>Phát hiện và căn thẳng mặt</td><td>MediaPipe Face Landmarker (478 điểm, Apache-2.0, 3,76 MB)</td><td>Cho đồng thời tâm hai mắt (iris), cằm và hai bên mặt: đủ để tính góc nghiêng và chiều cao đầu bằng một mô hình</td><td>YuNet, SCRFD: chỉ có khung và vài điểm, không đủ để đo tỉ lệ đầu</td></tr>
+<tr><td>Tách nền</td><td>MODNet (Apache-2.0, ONNX fp16, 12,98 MB)</td><td>Chuyên chân dung, không cần trimap, đầu ra là alpha mềm (có tóc)</td><td>IMG.LY dùng giấy phép AGPL. RMBG giới hạn phi thương mại. BiRefNet, PICORN: chưa thử trong bài này vì ngân sách thời gian với WebAssembly một luồng</td></tr>
+<tr><td>Chạy mô hình</td><td>ONNX Runtime Web 1.20.1, WebAssembly, trong Web Worker</td><td>MIT, ổn định, nạp từ CDN nên không làm repo nặng thêm</td><td>WebGPU: chưa phổ biến đủ để làm đường chạy chính</td></tr>
+<tr><td>Làm nét</td><td>Unsharp mask tự viết trên canvas</td><td>Ảnh thẻ chỉ cần làm nét nhẹ; super-resolution sinh chi tiết giả và rất nặng khi chạy trong trình duyệt</td><td>Real-ESRGAN, SwinIR (ghi vào hướng phát triển)</td></tr>
+<tr><td>Làm mịn viền</td><td>Guided filter + Blur-Fusion</td><td>Hai thuật toán ngắn, tự cài được, không cần OpenCV.js (nhiều MB)</td><td>OpenCV.js</td></tr>
+</tbody></table>
+<p>Hai điểm cần nhấn mạnh. Thứ nhất, thông tin đầy đủ nhất về giấy phép nằm ở kho mã nguồn của từng mô hình, không phải ở bài tổng hợp, nên tôi đọc lại giấy phép của MODNet, MediaPipe và ONNX Runtime trước khi quyết định. Thứ hai, &ldquo;nhẹ nhất&rdquo; không đồng nghĩa &ldquo;tốt nhất cho bài toán này&rdquo;: một bộ phát hiện chỉ trả khung mặt không cho biết đầu nghiêng bao nhiêu độ.</p>
+
+<h2>3. Thử mô hình ngoài trình duyệt trước khi viết giao diện</h2>
+<p>Trước khi viết dòng JavaScript nào, tôi dùng Python và <code>onnxruntime</code> để kiểm tra phần tiền xử lý, hậu xử lý và so ba biến thể của MODNet trên một ảnh chân dung phạm vi công cộng. Quy ước đầu vào: ảnh RGB chuẩn hoá <code>(x &minus; 0,5) / 0,5</code>, bố cục NCHW, cạnh ngắn bằng 512, cả hai cạnh chia hết cho 32; đầu ra là một kênh alpha trong đoạn [0, 1].</p>
+<table>
+<thead><tr><th>Biến thể</th><th>Dung lượng</th><th>Sai khác trung bình so với fp32</th><th>Phân vị 99</th><th>Nhận xét</th></tr></thead>
+<tbody>
+<tr><td>fp32</td><td>25,9 MB</td><td>&mdash;</td><td>&mdash;</td><td>chuẩn</td></tr>
+<tr><td>fp16 (trọng số fp16, vào/ra float32)</td><td>13,0 MB</td><td>0,0001</td><td>0,0010</td><td>giống fp32 ở mọi mục đích thực tế</td></tr>
+<tr><td>int8 (lượng tử hoá)</td><td>6,6 MB</td><td>0,161</td><td>0,9998</td><td>hỏng: alpha trung bình 0,377 so với 0,532</td></tr>
+</tbody></table>
+<p>Kết quả khá bất ngờ nếu đã quen với kết quả int8 tốt ở các bộ phân loại nhỏ (xem <a href="/blog/int8-quantization.html">bài về lượng tử hoá int8</a>): một mạng matting dày đặc, nơi mỗi điểm ảnh cần một giá trị liên tục chính xác, nhạy hơn nhiều với việc làm thô trọng số và kích hoạt. Tôi dùng bản fp16: giảm một nửa dung lượng mà gần như không đổi kết quả. Lưu ý đo thời gian trên CPU native cho một ảnh duy nhất: fp32 2,88 s, fp16 4,23 s, int8 4,18 s. Bản fp16 không nhanh hơn trên CPU vì phải đổi kiểu số; lợi ích của nó là dung lượng tải, không phải tốc độ.</p>
+
+<h2>4. Kiến trúc: hai pha</h2>
+<p>Việc nặng (phát hiện mặt, tách nền) làm một lần cho mỗi ảnh. Các thông số người dùng hay chỉnh (khổ ảnh, màu nền, tỉ lệ đầu, độ nét, độ mềm viền) chỉ ảnh hưởng tới phần dựng ảnh, nên được tách riêng để kéo thanh trượt là thấy kết quả ngay.</p>
+<pre><code class="language-text">Pha 1 - phân tích (một lần cho mỗi ảnh, ~15-25 s)
+  ảnh -> giải mã (tôn trọng EXIF) -> MediaPipe: 478 điểm -> góc nghiêng, hai mắt, cằm
+       -> MODNet (ONNX Runtime Web, worker): alpha thô ở độ phân giải 512
+       -> phóng alpha về kích thước ảnh gốc -> guided filter bám cạnh ảnh gốc
+       -> hình học: tâm mắt, góc theta, chiều cao đầu (đỉnh sọ -> cằm)
+
+Pha 2 - dựng ảnh (tức thì, chạy lại mỗi khi đổi thông số)
+  xoay + co giãn + căn giữa -> khung khổ ảnh thẻ
+  -> ước lượng màu tiền cảnh (Blur-Fusion) -> ghép lên màu nền
+  -> cân bằng sáng (tuỳ chọn) -> unsharp mask -> PNG/JPG 300 DPI + tờ in</code></pre>
+<p>Toàn bộ mã nằm trong một tệp JavaScript (khoảng 520 dòng) không phụ thuộc thư viện nào ngoài ONNX Runtime Web và MediaPipe, cả hai nạp từ CDN. Hai mô hình (<code>modnet-fp16.onnx</code> 12,98 MB và <code>face_landmarker.task</code> 3,76 MB) nằm trong repo của website. Lần đầu mở công cụ phải tải tổng cộng khoảng 37 MB, gồm cả WebAssembly của hai thư viện; các lần sau trình duyệt dùng bản lưu.</p>
+
+<h2>5. Hình học: xoay, tỉ lệ đầu và vị trí</h2>
+<h3>5.1 Góc nghiêng từ hai mắt</h3>
+<p>Face Landmarker trả 478 điểm, trong đó điểm 468 và 473 là tâm hai mắt. Với \(\mathbf e_A\) và \(\mathbf e_B\) là toạ độ hai tâm mắt (đã sắp theo thứ tự trái sang phải trong ảnh), góc nghiêng và khoảng cách hai mắt là</p>
+$$\theta=\operatorname{atan2}(e_{B,y}-e_{A,y},\;e_{B,x}-e_{A,x}),\qquad E=\lVert\mathbf e_B-\mathbf e_A\rVert.$$
+<p>Mỗi điểm \(\mathbf p\) được quy về hệ toạ độ &ldquo;đã xoay thẳng&rdquo; có gốc tại trung điểm hai mắt \(\mathbf c_0\):</p>
+$$\begin{pmatrix}x'\\y'\end{pmatrix}=\begin{pmatrix}\cos\theta&\sin\theta\\-\sin\theta&\cos\theta\end{pmatrix}\begin{pmatrix}p_x-c_{0,x}\\p_y-c_{0,y}\end{pmatrix}.$$
+<p>Trong hệ này, hai mắt nằm trên cùng một hàng ngang, và khoảng cách từ đường mắt đến cằm (điểm 152) là \(H_{ec}=y'_{\text{cằm}}\).</p>
+
+<h3>5.2 Đỉnh sọ: đo từ alpha, kẹp bằng tỉ lệ cơ thể</h3>
+<p>Chiều cao đầu ảnh thẻ tính từ đỉnh sọ đến cằm, nhưng Face Landmarker không có điểm đỉnh sọ đáng tin (tóc che). Tôi lấy đỉnh sọ từ matte: xoay alpha vào hệ đã thẳng, quét từ hàng mắt lên trên trong một dải cột quanh tâm mặt, hàng đầu tiên có ít nhất 3 điểm alpha lớn hơn 0,5 là đỉnh sọ. Với tóc xù, mũ hay lỗi tách nền, kết quả này có thể sai nhiều, nên có hai lớp bảo vệ. Nếu matte không cho kết quả, dùng ước lượng \(y'_{\text{đỉnh}}=-1{,}17\,H_{ec}\). Nếu matte cho kết quả ngoài khoảng \([-1{,}6\,H_{ec},\,-0{,}95\,H_{ec}]\), kẹp vào khoảng đó. Hệ số 1,17 và hai cận là hệ số thực nghiệm của tôi, rút ra từ tỉ lệ khoảng cách mắt-cằm so với chiều cao đầu; nó không phải một chuẩn quy định.</p>
+
+<h3>5.3 Phép biến đổi vào khung ảnh thẻ</h3>
+<p>Gọi \(\rho\) là tỉ lệ đầu (chiều cao đầu trên chiều cao ảnh) và \(h_{out}\) là chiều cao ảnh đầu ra tính bằng điểm ảnh. Tỉ lệ co giãn là \(\sigma=\rho\,h_{out}/H_{head}\), với \(H_{head}=H_{ec}-y'_{\text{đỉnh}}\). Phép biến đổi được cài thành ma trận cho canvas:</p>
+$$a=\sigma\cos\theta,\quad b=-\sigma\sin\theta,\quad c=\sigma\sin\theta,\quad d=\sigma\cos\theta,$$
+<p>và dịch sao cho điểm nằm trên đường đỉnh sọ, ngay trên tâm mặt, rơi vào toạ độ \((w_{out}/2,\;m)\) với khoảng đệm phía trên \(m=h_{out}(1-\rho)\cdot 0{,}36\). Hệ số 0,36 chia phần còn lại của ảnh (không thuộc đầu) theo tỉ lệ khoảng 36% phía trên đầu và 64% phía dưới (cổ và vai). Khổ và tỉ lệ đầu mặc định:</p>
+<table>
+<thead><tr><th>Khổ</th><th>mm</th><th>Điểm ảnh ở 300 DPI</th><th>Tỉ lệ đầu mặc định \(\rho\)</th></tr></thead>
+<tbody>
+<tr><td>3&times;4</td><td>30&times;40</td><td>354&times;472</td><td>0,70</td></tr>
+<tr><td>4&times;6</td><td>40&times;60</td><td>472&times;709</td><td>0,72</td></tr>
+<tr><td>2&times;3</td><td>20&times;30</td><td>236&times;354</td><td>0,70</td></tr>
+<tr><td>35&times;45</td><td>35&times;45</td><td>413&times;531</td><td>0,75</td></tr>
+<tr><td>2&times;2 inch</td><td>50,8&times;50,8</td><td>600&times;600</td><td>0,60</td></tr>
+</tbody></table>
+<p>Các tỉ lệ này là giá trị mặc định thông dụng, người dùng chỉnh được bằng thanh trượt; quy định chính xác tuỳ cơ quan tiếp nhận nên cần đối chiếu trước khi nộp.</p>
+<pre><code class="language-javascript">var scale = ratio * outH / g.headPx;
+var topMargin = outH * (1 - ratio) * 0.36;
+var a = scale * cs, b = -scale * sn, c = scale * sn, d = scale * cs;
+var e = outW / 2 - (a * P0x + c * P0y), f = topMargin - (b * P0x + d * P0y);
+rctx.setTransform(a, b, c, d, e, f);   // vẽ ảnh gốc vào khung ảnh thẻ
+rctx.drawImage(S.src, 0, 0);</code></pre>
+
+<h2>6. Làm sạch viền: từ alpha thô đến ảnh ghép</h2>
+<h3>6.1 Guided filter</h3>
+<p>MODNet chạy ở cạnh ngắn 512 điểm ảnh, nên alpha thô, răng cưa ở rìa tóc khi phóng lên ảnh gốc. Guided filter (He, Sun, Tang, 2013) lọc alpha \(p\) với một ảnh dẫn \(I\) (ở đây là ảnh xám của ảnh gốc), nên cạnh của alpha bám theo cạnh thật của ảnh. Trong mỗi cửa sổ, đầu ra là một hàm tuyến tính của ảnh dẫn:</p>
+$$q_i=\bar a_i I_i+\bar b_i,\qquad a_k=\frac{\operatorname{cov}_k(I,p)}{\operatorname{var}_k(I)+\varepsilon},\qquad b_k=\bar p_k-a_k\bar I_k,$$
+<p>với \(\bar a_i,\bar b_i\) là trung bình của \(a_k,b_k\) trên các cửa sổ chứa điểm \(i\). Tôi cài bằng bộ lọc hộp tách biệt hai chiều (tính theo tổng trượt, nên thời gian không phụ thuộc bán kính), với \(r=\max(3,\operatorname{round}(\max(W,H)/260))\) và \(\varepsilon=10^{-4}\).</p>
+
+<h3>6.2 Ước lượng màu tiền cảnh (Blur-Fusion)</h3>
+<p>Cho dù alpha chính xác, việc ghép \(C=\alpha F+(1-\alpha)B'\) với \(B'\) là màu nền mới vẫn lộ viền nếu lấy luôn màu ảnh gốc \(I\) làm \(F\): điểm ảnh ở rìa tóc là hỗn hợp của tóc và <em>nền cũ</em>, nên viền mang màu nền cũ (viền trắng quanh tóc khi đổi sang nền xanh). Cần ước lượng màu tiền cảnh \(F\) bằng cách loại phần nền cũ ra khỏi các điểm ảnh bán trong suốt. Phương pháp Blur-Fusion (Forte, 2021) làm điều đó bằng một vài bước làm mờ:</p>
+$$\hat F=\frac{\overline{F\alpha}}{\bar\alpha}+\alpha\Bigl(I-\alpha\frac{\overline{F\alpha}}{\bar\alpha}-(1-\alpha)\frac{\overline{B(1-\alpha)}}{1-\bar\alpha}\Bigr),$$
+<p>trong đó thanh trên là trung bình trong cửa sổ. Tôi chạy hai lượt như mã tham chiếu của tác giả: lượt đầu dùng cửa sổ lớn (bán kính \(\max(9,\,h_{out}/14)\) điểm ảnh), lượt sau dùng cửa sổ nhỏ (bán kính 3) trên kết quả của lượt đầu.</p>
+
+<h3>6.3 Làm nét và cân bằng sáng</h3>
+<p>Bước làm nét là unsharp mask: \(I'=I+k\,(I-G_\sigma*I)\), với bộ làm mờ Gauss xấp xỉ bằng ba lần lọc hộp, \(\sigma=\max(0{,}8,\,h_{out}/520)\), và bỏ qua chênh lệch nhỏ hơn 2 mức xám để không khuếch đại nhiễu. Hệ số \(k\) đề xuất tự động theo độ sắc của vùng mặt, đo bằng phương sai của toán tử Laplace \(\mathrm{Var}(\nabla^2 I)\): dưới 25 thì \(k=1{,}4\), dưới 60 thì 1,1, dưới 140 thì 0,75, còn lại 0,45. Nhờ đó ảnh đã nét không bị làm quá, và ảnh mờ được làm nét mạnh hơn. Cân bằng sáng (tuỳ chọn) kéo giãn đoạn từ phân vị 1 đến phân vị 99 của độ sáng vùng chủ thể, rồi trộn 60% với ảnh gốc để không làm mất tự nhiên.</p>
+
+<h2>7. Chạy mô hình trong trình duyệt</h2>
+<p>Trên GitHub Pages không có <code>SharedArrayBuffer</code>, nên ONNX Runtime Web chạy một luồng. Phiên bản đầu tiên chạy suy luận trên luồng chính và làm đơ cả trang trong lúc tách nền; công cụ kiểm thử còn bị &ldquo;timeout&rdquo; vì trang không phản hồi. Đặt <code>ort.env.wasm.proxy = true</code> chuyển suy luận vào một Web Worker và giải quyết triệt để, trang vẫn kéo thanh trượt, đổi ngôn ngữ được trong lúc chờ. Mã khởi tạo:</p>
+<pre><code class="language-javascript">libs.ort.env.wasm.wasmPaths = ORT_BASE;      // jsDelivr, onnxruntime-web 1.20.1
+libs.ort.env.wasm.proxy = true;               // suy luận chạy trong worker
+libs.ort.env.wasm.numThreads = crossOriginIsolated ? Math.min(4, hw) : 1;
+libs.session = await libs.ort.InferenceSession.create(modelBuf,
+  { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });</code></pre>
+<p>Nếu sau này website chuyển sang nơi hosting cho phép hai header cách ly nguồn gốc, đoạn mã trên sẽ tự dùng tới 4 luồng.</p>
+
+<h2>8. Kết quả trên ảnh thật</h2>
+<p>Tôi kiểm thử bằng Chrome thật (điều khiển qua CDP), nạp ảnh vào ô chọn tệp như người dùng, đo thời gian từ lúc nạp tới khi có kết quả. Ảnh minh hoạ trong bài là chân dung vận động viên bơi lội Nguyễn Thị Ánh Viên, một ảnh nhìn thẳng, chọn vì có giấy phép cho phép chỉnh sửa và đăng lại. Dưới đây là ảnh gốc và ba kết quả cho cùng một ảnh, mỗi kết quả chạy hoàn toàn trong trình duyệt:</p>
+<div class="figrow">
+<figure><img src="/assets/img/blog/id-photo-demo-original.jpg" alt="Ảnh gốc: chân dung Nguyễn Thị Ánh Viên với nền cây xanh, mặc áo bơi màu xanh" width="744" height="1080" loading="lazy"><figcaption>Ảnh gốc</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-blue.jpg" alt="Kết quả ảnh thẻ 3x4 nền xanh" width="354" height="472" loading="lazy"><figcaption>3&times;4, nền xanh</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-white.jpg" alt="Kết quả ảnh thẻ 35x45 nền trắng" width="413" height="531" loading="lazy"><figcaption>35&times;45, nền trắng</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-demo-red.jpg" alt="Kết quả ảnh thẻ 3x4 nền đỏ" width="354" height="472" loading="lazy"><figcaption>3&times;4, nền đỏ</figcaption></figure>
+</div>
+<p class="meta">Nguồn ảnh gốc: &ldquo;Nguyen Thi Anh Vien 2023&rdquo;, HITA TV, trích từ <a href="https://www.youtube.com/watch?v=T7dDUwyjdOs" rel="nofollow noopener">video YouTube</a>, đăng trên <a href="https://commons.wikimedia.org/wiki/File:Nguyen_Thi_Anh_Vien_2023.png" rel="nofollow noopener">Wikimedia Commons</a>, giấy phép <a href="https://creativecommons.org/licenses/by/3.0/" rel="nofollow noopener">CC BY 3.0</a>. Ba ảnh kết quả là bản đã chỉnh sửa của Shopsmon (tách nền, xoay, cắt, đổi nền, làm nét), đăng kèm ghi công theo CC BY 3.0.</p>
+<p>Với ảnh này công cụ không phải xoay (đã thẳng), tách được cả sợi tóc rời ở đỉnh đầu, đầu chiếm khoảng 70% chiều cao ở khổ 3&times;4 (đo bằng mắt trên ảnh đầu ra). Cùng một lần phân tích có thể xuất ra tờ in 10&times;15 cm với chín ảnh 3&times;4:</p>
+<figure><img src="/assets/img/blog/id-photo-demo-sheet.jpg" alt="Tờ in 10x15 cm xếp chín ảnh thẻ 3x4 nền xanh, mỗi ảnh có viền xám mảnh" width="600" height="900" loading="lazy">
+<figcaption>Tờ in 10&times;15 cm: 3&times;3 ảnh 3&times;4, viền xám mảnh để dễ cắt. Xuất ở 300 DPI.</figcaption></figure>
+
+<h3>Ca nghiêng đầu</h3>
+<p>Ảnh bên dưới là một ảnh tự chụp, đầu nghiêng và quay nhẹ. Công cụ đo góc nghiêng \(-18{,}5^\circ\) và xoay thẳng; đây là ảnh minh hoạ cho phép căn thẳng, không phải ví dụ về một ảnh thẻ hợp lệ (tư thế quay nghiêng không đạt yêu cầu mặt nhìn thẳng của ảnh thẻ thật).</p>
+<div class="figrow">
+<figure><img src="/assets/img/blog/id-photo-hard-original.jpg" alt="Ảnh tự chụp, đầu nghiêng, tóc hồng, ngồi trước màn hình" width="640" height="855" loading="lazy"><figcaption>Ảnh gốc</figcaption></figure>
+<figure><img src="/assets/img/blog/id-photo-hard-out.jpg" alt="Kết quả sau khi xoay thẳng và tách nền xanh, khổ 3x4" width="354" height="472" loading="lazy"><figcaption>Sau khi xoay \(-18{,}5^\circ\), nền xanh</figcaption></figure>
+</div>
+<p class="meta">Nguồn ảnh gốc: &ldquo;Hinh-anh-chan-dung-cua-nha-phat-trien-quan-tri-vien-nguyen-thi-thu-huong.jpg&rdquo;, tác giả Nguyen T Thu Huong (ảnh tự đăng), <a href="https://commons.wikimedia.org/wiki/File:Hinh-anh-chan-dung-cua-nha-phat-trien-quan-tri-vien-nguyen-thi-thu-huong.jpg" rel="nofollow noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/publicdomain/zero/1.0/" rel="nofollow noopener">CC0</a>.</p>
+
+<h3>Bảng thời gian và các ca khác</h3>
+<table>
+<thead><tr><th>Ảnh kiểm thử</th><th>Khổ / nền</th><th>Thời gian</th><th>Kết quả</th></tr></thead>
+<tbody>
+<tr><td>Chân dung NASA 700&times;900</td><td>3&times;4 / xanh</td><td>17,5 s</td><td>tự xoay \(-5{,}4^\circ\), viền sạch; có cảnh báo &ldquo;độ phân giải mặt thấp&rdquo; vì ảnh nhỏ</td></tr>
+<tr><td>Cùng ảnh, xoay thêm \(14^\circ\), 1600 px</td><td>35&times;45 / đỏ</td><td>20,1 s</td><td>đo \(-19{,}3^\circ\) (bằng \(14^\circ\) cộng \(5{,}4^\circ\) nghiêng sẵn có), kết quả thẳng</td></tr>
+<tr><td>Phi hành gia trong bộ đồ trắng</td><td>2&times;2 inch / trắng</td><td>27,3 s</td><td>tách đầu tốt; bộ đồ trắng giữ lại vì là tiền cảnh, mép đồ nhoè nhẹ vào nền trắng</td></tr>
+<tr><td>Ảnh tự chụp nghiêng đầu (ở trên)</td><td>3&times;4 / xanh</td><td>21,6 s</td><td>đo \(-18{,}5^\circ\), xoay thẳng</td></tr>
+<tr><td>Ánh Viên (ở trên)</td><td>3&times;4 / xanh</td><td>18,0 s</td><td>đạt, không phải xoay</td></tr>
+<tr><td>Ánh Viên</td><td>35&times;45 / trắng</td><td>20,0 s</td><td>đạt; còn một quầng sáng rất nhẹ quanh tai và tóc</td></tr>
+<tr><td>Ánh Viên</td><td>3&times;4 / đỏ</td><td>104,8 s</td><td>kết quả đạt; thời gian chênh hẳn các lần khác, chưa xác định nguyên nhân</td></tr>
+<tr><td>Ảnh mèo (không có mặt)</td><td>3&times;4</td><td>6,8 s</td><td>báo lỗi đúng: không tìm thấy khuôn mặt</td></tr>
+</tbody></table>
+<p>Sáu lần chạy cho ảnh có mặt (không kể lần 104,8 s) nằm trong khoảng 17,5-27,3 s, trung vị khoảng 20 s, đo trên một máy thử với WebAssembly một luồng. Đây là số liệu từ một máy, không phải benchmark; máy khác sẽ cho con số khác. Sau khi triển khai, tôi chạy lại một ảnh trên chính shopsmon.com (khổ 4&times;6, nền trắng): mô hình và thư viện tải được từ CDN, tờ in xếp bốn ảnh. Mọi lần chạy không phát sinh lỗi trong console.</p>
+
+<h2>9. Các lỗi đã gặp và cách sửa</h2>
+<table>
+<thead><tr><th>Hiện tượng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr></thead>
+<tbody>
+<tr><td>Trang đơ khi tách nền, công cụ kiểm thử báo timeout</td><td>Suy luận chạy trên luồng chính</td><td><code>ort.env.wasm.proxy = true</code> (Web Worker)</td></tr>
+<tr><td>Đầu chỉ chiếm khoảng 58% thay vì 70%</td><td>Khoảng kẹp đỉnh sọ sai: \([-2{,}1,\,-1{,}45]\cdot H_{ec}\)</td><td>Tính lại thành \([-1{,}6,\,-0{,}95]\cdot H_{ec}\) và ước lượng \(-1{,}17\,H_{ec}\); sau sửa, đầu chiếm khoảng 72% ở ảnh thử</td></tr>
+<tr><td>Alpha sai hoàn toàn với MODNet int8</td><td>Lượng tử hoá làm hỏng mạng matting</td><td>Dùng bản fp16</td></tr>
+<tr><td>Phần tử có thuộc tính <code>hidden</code> vẫn hiện</td><td>CSS <code>display:grid</code> đè lên thuộc tính</td><td>Thêm <code>[hidden]{display:none!important}</code></td></tr>
+<tr><td>Công cụ sinh trang thỉnh thoảng báo lỗi <code>OSError 22</code> khi ghi tệp trên Windows</td><td>Lỗi tạm thời khi tiến trình khác quét tệp</td><td>Vòng thử lại tối đa 8 lần</td></tr>
+<tr><td>Trích dẫn sai tác giả của Blur-Fusion</td><td>Ghi thêm một tác giả không có trong bài</td><td>Kiểm tra DOI, sửa thành một tác giả (M. Forte)</td></tr>
+</tbody></table>
+<p>Lỗi thứ hai đáng kể nhất: nó chỉ lộ ra khi nhìn ảnh đầu ra chứ không lộ ra ở bất kỳ phép kiểm tra tự động nào, vì chương trình vẫn chạy trơn tru và ảnh trông &ldquo;hợp lý&rdquo;. Tôi chỉ phát hiện khi đo tỉ lệ đầu trên ảnh xuất ra và so với giá trị đặt (70%). Bài học: với sản phẩm xử lý ảnh, phải mở ảnh đầu ra và đo, không chỉ kiểm tra &ldquo;không có lỗi&rdquo;.</p>
+
+<h2>10. Giới hạn</h2>
+<ul>
+<li>Nền cùng màu với quần áo (đồ trắng trên nền trắng) có thể khiến một phần nền hoặc quần áo bị nhận nhầm; kết quả ở ca phi hành gia ở trên là ví dụ.</li>
+<li>Trên nền trắng đôi khi còn một quầng sáng rất nhẹ quanh tai và tóc, do alpha ở rìa không tuyệt đối chính xác.</li>
+<li>Ảnh nhỏ cho ảnh thẻ mờ khi phóng; công cụ cảnh báo thay vì tạo chi tiết giả.</li>
+<li>Đỉnh sọ phụ thuộc vào matte nên tóc xù, mũ, khăn trùm đầu làm giảm độ chính xác của tỉ lệ đầu; thanh trượt tỉ lệ đầu cho người dùng chỉnh tay.</li>
+<li>Công cụ không kiểm tra mắt nhắm, miệng há hay kính phản chiếu; cơ quan tiếp nhận có thể từ chối ảnh dù đúng khổ.</li>
+<li>Thời gian xử lý khoảng 15-30 s trên một luồng; tải lần đầu khoảng 37 MB.</li>
+<li>Chưa kiểm thử trên điện thoại thật, Safari và Firefox.</li>
+</ul>
+
+<h2>11. Hướng phát triển</h2>
+<ol>
+<li>WebGPU cho ONNX Runtime Web, hoặc chuyển hosting sang nơi cho phép <code>SharedArrayBuffer</code> để dùng nhiều luồng.</li>
+<li>Thêm tuỳ chọn &ldquo;chất lượng cao&rdquo; với mô hình matting lớn hơn (như BiRefNet), chỉ tải khi chọn.</li>
+<li>Super-resolution nhỏ (ví dụ Real-ESRGAN bản nhẹ) chỉ khi ảnh gốc quá nhỏ.</li>
+<li>Cảnh báo chất lượng trước khi tạo: mắt nhắm, nghiêng đầu nhiều, kính, mũ.</li>
+<li>Thêm khổ theo quy định từng quốc gia và mẫu tờ in.</li>
+</ol>
+
+<h2>12. Quy trình rút ra để dùng lại</h2>
+<ol>
+<li>Chốt ràng buộc (hosting, giấy phép, ngân sách thời gian) trước khi so mô hình.</li>
+<li>Loại sớm thành phần có giấy phép không phù hợp.</li>
+<li>Thử mô hình bằng Python, chốt tiền xử lý và biến thể số (fp32, fp16, int8), rồi mới viết JavaScript.</li>
+<li>Tách pha nặng và pha nhẹ; pha nặng chạy trong worker.</li>
+<li>Kiểm thử đầu-cuối trên trình duyệt thật bằng ảnh có nguồn và giấy phép rõ ràng; mở ảnh đầu ra và đo.</li>
+<li>Kiểm thử ca xấu: không có mặt, ảnh xoay, nền trùng màu, ảnh nhỏ.</li>
+<li>Triển khai, chờ CDN cập nhật, chạy lại thử nghiệm trên bản live.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần công cụ AI chạy ngay trên trình duyệt, hoặc một sản phẩm tương tự cho dữ liệu của bạn?</strong><br>
+Tôi nhận làm với tư cách freelancer. Mô tả ý tưởng trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi cố định.<br><br>
+<a class="btn primary" href="/products/id-photo.html">Dùng thử công cụ</a> <a class="btn ghost" href="mailto:agent.distributed.virtual@gmail.com?subject=Browser%20AI%20tool">Nhận báo giá</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>Z. Ke, J. Sun, K. Li, Q. Yan và R. W. H. Lau. &ldquo;MODNet: Real-Time Trimap-Free Portrait Matting via Objective Decomposition.&rdquo; <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>, 36(1), 2022. <a href="https://doi.org/10.1609/aaai.v36i1.19999">doi:10.1609/aaai.v36i1.19999</a>.</li>
+<li>K. He, J. Sun và X. Tang. &ldquo;Guided Image Filtering.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em>, 35(6), 2013, tr. 1397&ndash;1409.</li>
+<li>M. Forte. &ldquo;Approximate Fast Foreground Colour Estimation.&rdquo; <em>IEEE International Conference on Image Processing (ICIP)</em>, 2021. <a href="https://doi.org/10.1109/ICIP42928.2021.9506164">doi:10.1109/ICIP42928.2021.9506164</a>.</li>
+<li>Google. &ldquo;MediaPipe Face Landmarker.&rdquo; Tài liệu Google AI Edge, <a href="https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker">ai.google.dev/edge/mediapipe</a>.</li>
+<li>Microsoft. &ldquo;ONNX Runtime Web.&rdquo; <a href="https://onnxruntime.ai/docs/tutorials/web/">onnxruntime.ai/docs/tutorials/web</a>.</li>
+</ol>
+<p class="meta">Mã nguồn công cụ chạy ở <a href="/products/id-photo.html">trang sản phẩm</a> (<code>assets/js/idphoto.js</code>). Mọi số đo ở Mục 3 và 8 là kết quả chạy thật của các thử nghiệm mô tả trong bài.</p>
+</article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

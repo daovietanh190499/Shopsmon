@@ -190,3 +190,8 @@ button.chip.on{background:var(--brand);color:var(--btn-text);border-color:var(--
 .spec th{background:var(--bg2)}
 @media(max-width:900px){.idp{grid-template-columns:1fr}.idp-panel{position:static}.prodhero{grid-template-columns:1fr}}
 [hidden]{display:none!important}
+
+article.post .figrow{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start}
+article.post .figrow figure{margin:0;flex:1 1 150px;max-width:240px;padding:8px}
+article.post .figrow img{width:100%;height:auto;border-radius:6px;display:block}
+article.post .figrow figcaption{font-size:13px}

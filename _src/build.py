@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="id-photo-ai", date="2026-11-05", min=18,
+         og="/assets/img/blog/id-photo-cover.png",
+         tag={"vi": "Sản phẩm AI", "en": "AI products"},
+         title={"vi": "Làm ảnh thẻ bằng AI ngay trong trình duyệt: quy trình xây dựng, số đo và các lỗi đã gặp",
+                "en": "Making ID photos with AI in the browser: how it was built, what was measured, what broke"},
+         summary={"vi": "Chọn mô hình theo giấy phép, thử MODNet fp32/fp16/int8 ngoài trình duyệt, hình học xoay và cắt theo mặt, guided filter và Blur-Fusion, kèm số đo và lỗi trên ảnh thật có nguồn CC.",
+                  "en": "Choosing models by licence, testing MODNet fp32/fp16/int8 outside the browser, the geometry of rotation and crop, guided filter and Blur-Fusion, with measurements and bugs on real CC-licensed photos."},
+         seo_title={"vi": "Làm ảnh thẻ bằng AI trong trình duyệt: MediaPipe, MODNet, ONNX Runtime Web | Shopsmon",
+                    "en": "AI ID photos in the browser: MediaPipe, MODNet, ONNX Runtime Web | Shopsmon"},
+         seo_desc={"vi": "Quy trình xây dựng công cụ ảnh thẻ chạy hoàn toàn bằng JavaScript: chọn mô hình theo giấy phép, hình học căn thẳng và cắt, làm sạch viền, số đo thời gian và lỗi đã gặp.",
+                   "en": "How an ID photo tool running entirely in JavaScript was built: choosing models by licence, alignment and crop geometry, edge cleaning, measured timings and the bugs hit."}),
     dict(slug="int8-quantization", date="2026-11-05", min=12, aff="iot",
          og="/assets/img/blog/int8-quantization-cover.png",
          tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
@@ -972,6 +983,7 @@ def product_idphoto(L):
 <li>ONNX Runtime Web &mdash; Microsoft, MIT.</li>
 <li>Guided filter &mdash; He, Sun, Tang, &ldquo;Guided Image Filtering&rdquo;, IEEE TPAMI 35(6), 2013.</li>
 <li>Blur-fusion foreground estimation &mdash; M. Forte, &ldquo;Approximate Fast Foreground Colour Estimation&rdquo;, ICIP 2021.</li>
+<li><a href="{P('/blog/id-photo-ai.html')}">{t('Quy trình xây dựng công cụ, số đo và lỗi đã gặp', 'How the tool was built: measurements and bugs')}</a></li>
 </ul></div></section>
 
 <section><div class="wrap" style="text-align:center"><h2>{t('Cần tích hợp vào hệ thống của bạn?', 'Need it inside your own system?')}</h2>
