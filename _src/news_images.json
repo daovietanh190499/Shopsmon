@@ -126,5 +126,21 @@
    1200,
    628
   ]
+ },
+ "brainchip-akd1500-raspberry-pi-5": {
+  "credit": "CNX Software",
+  "image_url": "https://www.cnx-software.com/wp-content/uploads/2026/11/Brainchip-AKD1500-Raspberry-Pi-5-Dev-Kit.jpg",
+  "orig_size": [
+   1200,
+   664
+  ]
+ },
+ "nordic-nrf71-edge-ai": {
+  "credit": "CircuitDigest",
+  "image_url": "https://circuitdigest.com/sites/default/files/circuitdigest_news_images/nordics-new-nrf71-chip-claims-20x-lower-wi-fi-standby-power-and-adds-an-npu-for-edge-ai.jpg",
+  "orig_size": [
+   750,
+   500
+  ]
  }
 }

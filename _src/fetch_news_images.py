@@ -27,6 +27,14 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 OVERRIDE = {
     "atsign-edgeai": "https://cdn.prod.website-files.com/6a0e0dacd9a0567a4e90580e/6ac3cad5b0b9f389d4e0e765_Intel%20x%20Atsign.webp",
     "nsf-fabaid-data-fabric": "https://computing.unl.edu/sites/unl.edu.engineering.school-of-computing/files/media/image/hcc.jpg",
+    # Source page blocks scripts (403/DNS): use the lead image of another outlet covering the same event.
+    "brainchip-akd1500-raspberry-pi-5": "https://www.cnx-software.com/wp-content/uploads/2026/11/Brainchip-AKD1500-Raspberry-Pi-5-Dev-Kit.jpg",
+    "nordic-nrf71-edge-ai": "https://circuitdigest.com/sites/default/files/circuitdigest_news_images/nordics-new-nrf71-chip-claims-20x-lower-wi-fi-standby-power-and-adds-an-npu-for-edge-ai.jpg",
+}
+# Credit for OVERRIDE images that come from a different outlet than the news source.
+CREDIT_OVERRIDE = {
+    "brainchip-akd1500-raspberry-pi-5": "CNX Software",
+    "nordic-nrf71-edge-ai": "CircuitDigest",
 }
 
 
@@ -72,16 +80,18 @@ def main(only):
         if not only and slug in reg:
             continue
         try:
-            r = requests.get(n["url"], headers=UA, timeout=25)
-            r.raise_for_status()
-            img = OVERRIDE.get(slug) or find_image(r.url, r.text)
+            img = OVERRIDE.get(slug)
+            if not img:
+                r = requests.get(n["url"], headers=UA, timeout=25)
+                r.raise_for_status()
+                img = find_image(r.url, r.text)
             if not img:
                 print(slug, "NO og:image")
                 continue
             ir = requests.get(img, headers={**UA, "Referer": n["url"]}, timeout=30)
             ir.raise_for_status()
             size = to_cover(ir.content, os.path.join(OUT, slug + ".jpg"))
-            reg[slug] = {"credit": n["src"], "image_url": img, "orig_size": list(size)}
+            reg[slug] = {"credit": CREDIT_OVERRIDE.get(slug, n["src"]), "image_url": img, "orig_size": list(size)}
             print(slug, "OK", size, img[:90])
         except Exception as e:  # noqa: BLE001
             print(slug, "FAIL", type(e).__name__, str(e)[:100])
