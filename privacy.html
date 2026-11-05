@@ -28,7 +28,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <body>
 <header class="site"><div class="wrap">
 <a class="logo" href="/">shops<span>mon</span></a>
-<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/blog/">Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/privacy.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/">Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/privacy.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
 </div></header>
 <main>
 <article class="post">
@@ -41,13 +41,14 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <li><strong>Thông tin bạn chủ động gửi</strong> qua email hoặc Facebook Messenger: tên, địa chỉ email, mô tả dự án, tệp hoặc dữ liệu bạn chia sẻ để đánh giá yêu cầu.</li>
 <li><strong>Thông tin thanh toán:</strong> khi bạn thanh toán, giao dịch được xử lý bởi PayPal. Chúng tôi nhận thông tin giao dịch từ PayPal (tên, email, số tiền, mã giao dịch) nhưng <strong>không bao giờ nhìn thấy số thẻ hay thông tin đăng nhập PayPal của bạn</strong>.</li>
 <li><strong>Dữ liệu kỹ thuật:</strong> website là trang tĩnh chạy trên GitHub Pages. Nhà cung cấp hosting có thể ghi nhận địa chỉ IP và thông tin yêu cầu theo chính sách riêng của họ. Chúng tôi không tự vận hành hệ thống phân tích hay theo dõi.</li>
+<li><strong>Ứng dụng web (trang Sản phẩm):</strong> ảnh bạn chọn trong ứng dụng tạo ảnh thẻ được xử lý hoàn toàn trong trình duyệt của bạn và <strong>không được tải lên máy chủ nào</strong>. Ứng dụng tải mô hình AI từ shopsmon.com và thư viện chạy mô hình (ONNX Runtime Web, MediaPipe) từ jsDelivr.</li>
 <li><strong>Lưu trữ trên trình duyệt:</strong> website dùng <code>localStorage</code> của trình duyệt chỉ để ghi nhớ lựa chọn ngôn ngữ và giao diện sáng/tối của bạn. Dữ liệu này nằm trên thiết bị của bạn, không được gửi cho chúng tôi. Website không đặt cookie quảng cáo hay cookie theo dõi.</li>
 </ul>
 
 <h2>2. Dịch vụ của bên thứ ba</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (lưu trữ website).</li>
-<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
+<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này, và ứng dụng tạo ảnh thẻ tải thư viện chạy mô hình từ jsDelivr; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
 <li><strong>Google (Gmail)</strong>: trao đổi qua email.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: nếu bạn tương tác với Facebook Page của Shopsmon, Meta xử lý dữ liệu theo chính sách của Meta.</li>
 <li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết tiếp thị liên kết (affiliate) tới Shopee Việt Nam. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>

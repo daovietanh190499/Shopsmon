@@ -6,6 +6,7 @@ Run: python _src/build.py
 import html
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from news_data import NEWS, CATS  # noqa: E402
@@ -23,6 +24,7 @@ NAV = [
     ("/", {"vi": "Trang chủ", "en": "Home"}),
     ("/services.html", {"vi": "Dịch vụ", "en": "Services"}),
     ("/portfolio.html", {"vi": "Portfolio", "en": "Portfolio"}),
+    ("/products/", {"vi": "Sản phẩm", "en": "Products"}),
     ("/blog/", {"vi": "Blog", "en": "Blog"}),
     ("/news/", {"vi": "Tin tức", "en": "News"}),
     ("/contact.html", {"vi": "Liên hệ", "en": "Contact"}),
@@ -156,8 +158,15 @@ sync();b.addEventListener('click',function(){{var n=d.getAttribute('data-theme')
     if path.endswith("/"):
         out = os.path.join(out, "index.html")
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    with open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(html)
+    for _try in range(8):  # Windows occasionally returns a transient EINVAL while another process scans the file
+        try:
+            with open(out, "w", encoding="utf-8", newline="\n") as f:
+                f.write(html)
+            break
+        except OSError:
+            if _try == 7:
+                raise
+            time.sleep(0.4)
     if register and L == "vi":
         PAGES.append((path, TODAY))
 
@@ -721,13 +730,14 @@ def privacy(L):
 <li><strong>Thông tin bạn chủ động gửi</strong> qua email hoặc Facebook Messenger: tên, địa chỉ email, mô tả dự án, tệp hoặc dữ liệu bạn chia sẻ để đánh giá yêu cầu.</li>
 <li><strong>Thông tin thanh toán:</strong> khi bạn thanh toán, giao dịch được xử lý bởi PayPal. Chúng tôi nhận thông tin giao dịch từ PayPal (tên, email, số tiền, mã giao dịch) nhưng <strong>không bao giờ nhìn thấy số thẻ hay thông tin đăng nhập PayPal của bạn</strong>.</li>
 <li><strong>Dữ liệu kỹ thuật:</strong> website là trang tĩnh chạy trên GitHub Pages. Nhà cung cấp hosting có thể ghi nhận địa chỉ IP và thông tin yêu cầu theo chính sách riêng của họ. Chúng tôi không tự vận hành hệ thống phân tích hay theo dõi.</li>
+<li><strong>Ứng dụng web (trang Sản phẩm):</strong> ảnh bạn chọn trong ứng dụng tạo ảnh thẻ được xử lý hoàn toàn trong trình duyệt của bạn và <strong>không được tải lên máy chủ nào</strong>. Ứng dụng tải mô hình AI từ shopsmon.com và thư viện chạy mô hình (ONNX Runtime Web, MediaPipe) từ jsDelivr.</li>
 <li><strong>Lưu trữ trên trình duyệt:</strong> website dùng <code>localStorage</code> của trình duyệt chỉ để ghi nhớ lựa chọn ngôn ngữ và giao diện sáng/tối của bạn. Dữ liệu này nằm trên thiết bị của bạn, không được gửi cho chúng tôi. Website không đặt cookie quảng cáo hay cookie theo dõi.</li>
 </ul>
 
 <h2>2. Dịch vụ của bên thứ ba</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (lưu trữ website).</li>
-<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
+<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này, và ứng dụng tạo ảnh thẻ tải thư viện chạy mô hình từ jsDelivr; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
 <li><strong>Google (Gmail)</strong>: trao đổi qua email.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: nếu bạn tương tác với Facebook Page của Shopsmon, Meta xử lý dữ liệu theo chính sách của Meta.</li>
 <li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết tiếp thị liên kết (affiliate) tới Shopee Việt Nam. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>
@@ -776,13 +786,14 @@ def privacy(L):
 <li><strong>Information you send voluntarily</strong> by email or Facebook Messenger: name, email address, project description, and any files or data you share so a request can be evaluated.</li>
 <li><strong>Payment information:</strong> payments are processed by PayPal. We receive transaction details from PayPal (name, email, amount, transaction ID) but <strong>never see your card number or PayPal login credentials</strong>.</li>
 <li><strong>Technical data:</strong> the website is static and hosted on GitHub Pages. The hosting provider may log IP addresses and request details under its own policy. We do not run our own analytics or tracking.</li>
+<li><strong>Web apps (Products page):</strong> photos you choose in the ID photo maker are processed entirely in your browser and <strong>are not uploaded to any server</strong>. The app loads its AI models from shopsmon.com and its runtime libraries (ONNX Runtime Web, MediaPipe) from jsDelivr.</li>
 <li><strong>Browser storage:</strong> the website uses the browser&rsquo;s <code>localStorage</code> only to remember your language and light/dark theme choice. This stays on your device and is not sent to us. The site sets no advertising or tracking cookies.</li>
 </ul>
 
 <h2>2. Third-party services</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (website hosting).</li>
-<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, which then receive your IP address and browser details.</li>
+<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, and the ID photo app loads its runtime libraries from jsDelivr, which then receive your IP address and browser details.</li>
 <li><strong>Google (Gmail)</strong>: email correspondence.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: if you interact with the Shopsmon Facebook Page, Meta processes your data under its own policy.</li>
 <li><strong>Shopee (affiliate links)</strong>: some pages contain affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>
@@ -827,6 +838,154 @@ def privacy(L):
            art)
 
 
+# ---------------------------------------------------------------- PRODUCTS
+IDP_SW = [("#ffffff", {"vi": "Trắng", "en": "White"}), ("#2b7bd6", {"vi": "Xanh dương", "en": "Blue"}),
+          ("#9cc9ee", {"vi": "Xanh nhạt", "en": "Light blue"}), ("#d62828", {"vi": "Đỏ", "en": "Red"}),
+          ("#d9d9d9", {"vi": "Xám", "en": "Grey"}), ("#000000", {"vi": "Đen", "en": "Black"})]
+
+
+def idp_thumb():
+    """Inline SVG used on the product card: three ID-photo frames with different backgrounds."""
+    fr = ""
+    for i, c in enumerate(("#ffffff", "#2b7bd6", "#d62828")):
+        x = 14 + i * 98
+        fr += (f'<rect x="{x}" y="14" width="86" height="114" rx="4" fill="{c}" stroke="#c9d3e6"/>'
+               f'<circle cx="{x + 43}" cy="58" r="21" fill="#e8b79a"/>'
+               f'<path d="M{x + 22} 100 q{21} -26 {42} 0 v28 h-{42}z" fill="#3a4a6b"/>'
+               f'<path d="M{x + 22} 52 q{21} -34 {42} 0 q-6 -12 -21 -12 t-21 12z" fill="#2a2a35"/>')
+    return f'<svg viewBox="0 0 300 142" width="300" height="142" role="img" aria-label="ID photo">{fr}</svg>'
+
+
+def products(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    body = f"""
+<div class="hero" style="padding:64px 0 32px"><div class="wrap">
+<h1 style="font-size:clamp(30px,5vw,46px)">{t('Sản phẩm', 'Products')}</h1>
+<p class="lead">{t('Các ứng dụng AI do Shopsmon phát triển, dùng thử miễn phí ngay trên web.', 'AI applications built by Shopsmon, free to try right in the browser.')}</p>
+</div></div>
+<section><div class="wrap"><div class="grid g3">
+<a class="pcard" href="{P('/products/id-photo.html')}">
+<div class="pvis">{idp_thumb()}</div>
+<div class="pbody"><span class="tag" style="font-size:12px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">{t('Ứng dụng web &middot; Miễn phí', 'Web app &middot; Free')}</span>
+<h3>{t('Tạo ảnh thẻ bằng AI', 'AI ID Photo Maker')}</h3>
+<p>{t('Làm nét, tách nền, nhận diện khuôn mặt, căn thẳng và cắt đúng tỉ lệ ảnh thẻ, đổi nền trắng, xanh hoặc màu tùy chọn. Chạy hoàn toàn trên trình duyệt, không tải ảnh lên máy chủ.', 'Sharpen, remove the background, detect the face, straighten and crop to a standard ID-photo size, then switch to a white, blue or custom background. Runs entirely in the browser; photos are never uploaded.')}</p>
+<div class="tags"><span>JavaScript</span><span>WebAssembly</span><span>MediaPipe</span><span>MODNet</span></div>
+<span class="btn primary">{t('Dùng thử miễn phí', 'Try it free')}</span></div></a>
+</div></div></section>
+<section class="band"><div class="wrap" style="text-align:center"><h2>{t('Cần một sản phẩm AI cho doanh nghiệp của bạn?', 'Need an AI product for your business?')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Shopsmon nhận xây dựng ứng dụng AI chạy trên web, chatbot LLM và công cụ tự động hoá theo yêu cầu.', 'Shopsmon builds browser-based AI apps, LLM chatbots and custom automation tools on request.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)}</div></div></section>
+"""
+    layout(L, "/products/",
+           t("Sản phẩm AI miễn phí chạy trên web | Shopsmon", "Free browser-based AI products | Shopsmon"),
+           t("Ứng dụng AI do Shopsmon phát triển: tạo ảnh thẻ bằng AI chạy hoàn toàn trên trình duyệt, dùng thử miễn phí.",
+             "AI applications by Shopsmon: an ID photo maker that runs entirely in the browser, free to try."),
+           body, active="/products/", og_image="/assets/img/products/id-photo-og.png")
+
+
+def product_idphoto(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    opts = "".join(f'<option value="{i}">{lbl}</option>' for i, lbl in (
+        ("3x4", t("3×4 cm (30×40 mm)", "3×4 cm (30×40 mm)")), ("4x6", t("4×6 cm (40×60 mm)", "4×6 cm (40×60 mm)")),
+        ("2x3", "2×3 cm (20×30 mm)"), ("35x45", "3.5×4.5 cm (35×45 mm)"), ("2in", "2×2 inch (51×51 mm)"),
+        ("custom", t("Tùy chỉnh…", "Custom…"))))
+    sw = "".join(f'<button type="button" data-c="{c}" style="background:{c}" title="{n[L]}" aria-label="{n[L]}"{" class=on" if c == "#ffffff" else ""}></button>' for c, n in IDP_SW)
+    body = f"""
+<div class="hero" style="padding:56px 0 28px"><div class="wrap prodhero">
+<div><span class="pill">{t('Sản phẩm AI đầu tiên &middot; Miễn phí', 'First AI product &middot; Free')}</span>
+<h1 style="font-size:clamp(30px,5vw,48px)">{t('Tạo ảnh thẻ bằng AI ngay trên trình duyệt', 'Make ID photos with AI, right in your browser')}</h1>
+<p class="lead">{t('Tải ảnh chân dung lên: ứng dụng nhận diện khuôn mặt, tách nền, căn thẳng, cắt đúng tỉ lệ ảnh thẻ, đổi nền trắng, xanh hoặc màu tùy chọn và làm nét. Ảnh được xử lý trên thiết bị của bạn, không gửi lên máy chủ.', 'Upload a portrait: the app detects the face, removes the background, straightens and crops to a standard ID-photo size, switches to a white, blue or custom background and sharpens the result. Photos are processed on your device and never uploaded.')}</p>
+<div class="cta"><a class="btn primary" href="#app">{t('Dùng thử miễn phí', 'Try it free')}</a><a class="btn ghost" href="#how">{t('Cách hoạt động', 'How it works')}</a></div></div>
+<div style="display:flex;justify-content:center">{idp_thumb()}</div>
+</div></div>
+
+<section id="app" style="padding-top:28px"><div class="wrap"><div class="idp">
+<div class="idp-panel">
+<h3>{t('1. Ảnh chân dung', '1. Portrait photo')}</h3>
+<label class="idp-drop" id="idpDrop"><strong>{t('Chọn ảnh hoặc kéo thả vào đây', 'Choose a photo or drop it here')}</strong><span>{t('JPG, PNG, WebP &middot; tối đa 25 MB &middot; ảnh chính diện, đủ sáng', 'JPG, PNG, WebP &middot; up to 25 MB &middot; front-facing, well lit')}</span>
+<input type="file" id="idpFile" accept="image/jpeg,image/png,image/webp"></label>
+<h3>{t('2. Kích thước', '2. Size')}</h3>
+<select id="idpPreset" aria-label="{t('Kích thước ảnh thẻ', 'ID photo size')}">{opts}</select>
+<div class="two" id="idpCustomRow" hidden><label>{t('Rộng (mm)', 'Width (mm)')}<input type="number" id="idpCw" value="35" min="10" max="100" step="0.5"></label><label>{t('Cao (mm)', 'Height (mm)')}<input type="number" id="idpCh" value="45" min="10" max="150" step="0.5"></label></div>
+<label class="row" for="idpHead"><span>{t('Tỉ lệ đầu (đỉnh đầu đến cằm)', 'Head size (crown to chin)')}</span><output id="idpHeadV">70%</output></label>
+<input type="range" id="idpHead" min="50" max="85" value="70">
+<h3>{t('3. Màu nền', '3. Background colour')}</h3>
+<div class="idp-sw" id="idpSwatches">{sw}<input type="color" id="idpColor" value="#ffffff" aria-label="{t('Màu tùy chọn', 'Custom colour')}"></div>
+<h3>{t('4. Tinh chỉnh', '4. Fine-tune')}</h3>
+<label class="row" for="idpSharp"><span>{t('Độ nét', 'Sharpness')}</span><output id="idpSharpV">0%</output></label>
+<input type="range" id="idpSharp" min="0" max="200" value="80">
+<label class="row" for="idpEdge"><span>{t('Viền chủ thể (thu vào / mở ra)', 'Subject edge (tighten / loosen)')}</span><output id="idpEdgeV">0</output></label>
+<input type="range" id="idpEdge" min="-2" max="3" step="1" value="0">
+<label class="chk"><input type="checkbox" id="idpLevels" checked> {t('Tự cân bằng sáng', 'Auto exposure balance')}</label>
+<p style="margin:14px 0 0"><button type="button" class="btn ghost" id="idpReset" style="padding:8px 14px;font-size:14px">{t('Làm lại', 'Start over')}</button></p>
+</div>
+<div class="idp-stage-wrap">
+<p class="idp-status" id="idpStatus" role="status" aria-live="polite"></p>
+<div class="idp-barwrap" id="idpBarWrap" hidden><div class="idp-bar" id="idpBar"></div></div>
+<div class="idp-stage" id="idpStage" hidden>
+<div class="idp-views">
+<figure><canvas id="idpOrig" width="10" height="10"></canvas><figcaption>{t('Ảnh gốc', 'Original')}</figcaption></figure>
+<figure><canvas id="idpOut" width="10" height="10"></canvas><figcaption>{t('Ảnh thẻ', 'ID photo')}</figcaption></figure>
+</div>
+<p class="idp-info" id="idpInfo"></p>
+<div class="idp-actions"><button type="button" class="btn primary" id="idpPng" disabled>{t('Tải PNG', 'Download PNG')}</button><button type="button" class="btn ghost" id="idpJpg" disabled>{t('Tải JPG', 'Download JPG')}</button></div>
+<div class="idp-sheet"><div class="rowflex"><strong>{t('Tờ in nhiều ảnh', 'Print sheet')}</strong>
+<select id="idpSheetSel" aria-label="{t('Khổ giấy', 'Paper size')}"><option value="4x6">10×15 cm</option><option value="a4">A4</option></select>
+<span class="idp-info" id="idpSheetInfo" style="margin:0"></span>
+<button type="button" class="btn ghost" id="idpSheetBtn" disabled style="padding:8px 14px;font-size:14px">{t('Tải tờ in', 'Download sheet')}</button></div>
+<canvas id="idpSheet" width="10" height="10"></canvas></div>
+</div>
+<div class="idp-empty" id="idpEmpty">{t('Kết quả sẽ hiển thị ở đây. Lần xử lý đầu tiên tải mô hình AI (khoảng 37 MB) rồi lưu trong bộ nhớ đệm của trình duyệt.', 'Your result appears here. The first run downloads the AI models (about 37 MB), which the browser then caches.')}</div>
+</div>
+</div></div></section>
+
+<section class="band" id="how"><div class="wrap"><h2>{t('Quy trình xử lý', 'Processing pipeline')}</h2>
+<p class="sub">{t('Sáu bước, toàn bộ chạy bằng JavaScript và WebAssembly trên thiết bị của bạn.', 'Six steps, all running as JavaScript and WebAssembly on your device.')}</p>
+<ol class="flow">
+<li><b>{t('Nhận diện khuôn mặt', 'Face detection')}</b><span>{t('MediaPipe Face Landmarker: 478 điểm, lấy tâm hai mắt và cằm.', 'MediaPipe Face Landmarker: 478 landmarks; eye centres and chin are used.')}</span></li>
+<li><b>{t('Tách nền', 'Background removal')}</b><span>{t('MODNet (ONNX Runtime Web) tạo alpha matte, tinh chỉnh viền bằng guided filter.', 'MODNet (ONNX Runtime Web) predicts an alpha matte; edges refined with a guided filter.')}</span></li>
+<li><b>{t('Căn thẳng và cắt', 'Straighten and crop')}</b><span>{t('Xoay theo đường nối hai mắt, đặt đỉnh đầu và cằm theo tỉ lệ đầu của khổ ảnh.', 'Rotates along the eye line and places crown and chin according to the head-size ratio.')}</span></li>
+<li><b>{t('Đổi nền', 'New background')}</b><span>{t('Ước lượng màu tiền cảnh (blur-fusion) để loại viền nền cũ, rồi ghép lên màu chọn.', 'Foreground colour estimation (blur-fusion) removes old-background fringes before compositing on the chosen colour.')}</span></li>
+<li><b>{t('Làm nét', 'Sharpening')}</b><span>{t('Unsharp mask với mức gợi ý theo độ nét đo trên vùng mặt.', 'Unsharp mask with a suggested amount based on sharpness measured on the face region.')}</span></li>
+<li><b>{t('Xuất ảnh', 'Export')}</b><span>{t('PNG hoặc JPG 300 DPI, hoặc tờ in 10×15 cm / A4 nhiều ảnh.', '300 DPI PNG or JPG, or a 10×15 cm / A4 sheet with multiple copies.')}</span></li>
+</ol></div></section>
+
+<section><div class="wrap"><div class="grid g2">
+<div class="card"><h3>{t('Khổ ảnh hỗ trợ', 'Supported sizes')}</h3>
+<table class="spec"><tr><th>{t('Khổ', 'Size')}</th><th>{t('Điểm ảnh @300 DPI', 'Pixels @300 DPI')}</th><th>{t('Tỉ lệ đầu mặc định', 'Default head size')}</th></tr>
+<tr><td>2×3 cm</td><td>236×354</td><td>70%</td></tr><tr><td>3×4 cm</td><td>354×472</td><td>70%</td></tr><tr><td>4×6 cm</td><td>472×709</td><td>72%</td></tr>
+<tr><td>3.5×4.5 cm</td><td>413×531</td><td>75%</td></tr><tr><td>2×2 inch</td><td>600×600</td><td>60%</td></tr></table>
+<p style="margin-top:12px">{t('Yêu cầu ảnh thẻ khác nhau theo cơ quan tiếp nhận; tỉ lệ đầu và khổ tùy chỉnh có thể điều chỉnh trong ứng dụng.', 'ID photo requirements differ by receiving authority; head size and custom dimensions can be adjusted in the app.')}</p></div>
+<div class="card"><h3>{t('Quyền riêng tư và yêu cầu', 'Privacy and requirements')}</h3>
+<ul><li>{t('Ảnh được xử lý hoàn toàn trong trình duyệt; không có ảnh nào được tải lên máy chủ.', 'Photos are processed entirely in the browser; no photo is uploaded to a server.')}</li>
+<li>{t('Lần đầu tải khoảng 37 MB (mô hình + runtime), sau đó dùng bộ nhớ đệm.', 'The first run downloads about 37 MB (models + runtime); afterwards the browser cache is used.')}</li>
+<li>{t('Cần trình duyệt có WebAssembly (Chrome, Edge, Firefox, Safari bản gần đây).', 'Requires a browser with WebAssembly (recent Chrome, Edge, Firefox or Safari).')}</li>
+<li>{t('Ảnh chính diện, đủ sáng, một người; khuôn mặt càng lớn trong ảnh gốc thì ảnh thẻ càng nét.', 'Front-facing, well-lit, single person; the larger the face in the source photo, the sharper the ID photo.')}</li></ul></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Công nghệ và nguồn', 'Technology and credits')}</h2>
+<ul class="refs">
+<li>MediaPipe Face Landmarker &mdash; Google AI Edge, Apache-2.0.</li>
+<li>MODNet &mdash; Ke et al., &ldquo;MODNet: Real-Time Trimap-Free Portrait Matting via Objective Decomposition&rdquo;, AAAI 2022, Apache-2.0.</li>
+<li>ONNX Runtime Web &mdash; Microsoft, MIT.</li>
+<li>Guided filter &mdash; He, Sun, Tang, &ldquo;Guided Image Filtering&rdquo;, IEEE TPAMI 35(6), 2013.</li>
+<li>Blur-fusion foreground estimation &mdash; M. Forte, &ldquo;Approximate Fast Foreground Colour Estimation&rdquo;, ICIP 2021.</li>
+</ul></div></section>
+
+<section><div class="wrap" style="text-align:center"><h2>{t('Cần tích hợp vào hệ thống của bạn?', 'Need it inside your own system?')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Shopsmon nhận tùy biến, tích hợp và phát triển ứng dụng AI chạy trên web theo yêu cầu.', 'Shopsmon takes on customisation, integration and custom browser-based AI apps.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)} <a class="btn ghost" href="{P('/products/')}">{t('Tất cả sản phẩm', 'All products')}</a></div></div></section>
+"""
+    layout(L, "/products/id-photo.html",
+           t("Tạo ảnh thẻ bằng AI miễn phí: tách nền, căn thẳng, đổi màu nền | Shopsmon", "Free AI ID photo maker: background removal, straightening, background colour | Shopsmon"),
+           t("Tạo ảnh thẻ 2×3, 3×4, 4×6, 3.5×4.5, 2×2 inch ngay trên trình duyệt: AI tách nền, căn thẳng theo khuôn mặt, đổi nền trắng/xanh, làm nét. Không tải ảnh lên máy chủ.",
+             "Make 2×3, 3×4, 4×6, 3.5×4.5 and 2×2 inch ID photos in your browser: AI background removal, face-based straightening, white or blue background, sharpening. Photos never leave your device."),
+           body, active="/products/", og_image="/assets/img/products/id-photo-og.png",
+           extra_body='<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("idpEmpty"),s=document.getElementById("idpStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/idphoto.js" defer></script>')
+
+
 # =============================================================== BUILD
 import make_covers  # noqa: E402
 make_covers.main()  # draws any missing news cover (deterministic per slug)
@@ -838,6 +997,8 @@ for L in LANGS:
     landing(L)
     landing3d(L)
     landing_tools(L)
+    products(L)
+    product_idphoto(L)
     contact(L)
     blog_index(L)
     news_index(L)

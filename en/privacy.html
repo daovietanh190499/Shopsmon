@@ -28,7 +28,7 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <body>
 <header class="site"><div class="wrap">
 <a class="logo" href="/en/">shops<span>mon</span></a>
-<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/blog/">Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/privacy.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/">Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/privacy.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
 </div></header>
 <main>
 <article class="post">
@@ -41,13 +41,14 @@ var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.que
 <li><strong>Information you send voluntarily</strong> by email or Facebook Messenger: name, email address, project description, and any files or data you share so a request can be evaluated.</li>
 <li><strong>Payment information:</strong> payments are processed by PayPal. We receive transaction details from PayPal (name, email, amount, transaction ID) but <strong>never see your card number or PayPal login credentials</strong>.</li>
 <li><strong>Technical data:</strong> the website is static and hosted on GitHub Pages. The hosting provider may log IP addresses and request details under its own policy. We do not run our own analytics or tracking.</li>
+<li><strong>Web apps (Products page):</strong> photos you choose in the ID photo maker are processed entirely in your browser and <strong>are not uploaded to any server</strong>. The app loads its AI models from shopsmon.com and its runtime libraries (ONNX Runtime Web, MediaPipe) from jsDelivr.</li>
 <li><strong>Browser storage:</strong> the website uses the browser&rsquo;s <code>localStorage</code> only to remember your language and light/dark theme choice. This stays on your device and is not sent to us. The site sets no advertising or tracking cookies.</li>
 </ul>
 
 <h2>2. Third-party services</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (website hosting).</li>
-<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, which then receive your IP address and browser details.</li>
+<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, and the ID photo app loads its runtime libraries from jsDelivr, which then receive your IP address and browser details.</li>
 <li><strong>Google (Gmail)</strong>: email correspondence.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: if you interact with the Shopsmon Facebook Page, Meta processes your data under its own policy.</li>
 <li><strong>Shopee (affiliate links)</strong>: some pages contain affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>

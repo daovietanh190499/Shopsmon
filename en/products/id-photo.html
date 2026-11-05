@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free AI ID photo maker: background removal, straightening, background colour | Shopsmon</title>
+<meta name="description" content="Make 2×3, 3×4, 4×6, 3.5×4.5 and 2×2 inch ID photos in your browser: AI background removal, face-based straightening, white or blue background, sharpening. Photos never leave your device.">
+<link rel="canonical" href="https://shopsmon.com/en/products/id-photo.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/products/id-photo.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/products/id-photo.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/products/id-photo.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Free AI ID photo maker: background removal, straightening, background colour | Shopsmon">
+<meta property="og:description" content="Make 2×3, 3×4, 4×6, 3.5×4.5 and 2×2 inch ID photos in your browser: AI background removal, face-based straightening, white or blue background, sharpening. Photos never leave your device.">
+<meta property="og:url" content="https://shopsmon.com/en/products/id-photo.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/products/id-photo-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/" class=active>Products</a><a href="/en/blog/">Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/products/id-photo.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+
+<div class="hero" style="padding:56px 0 28px"><div class="wrap prodhero">
+<div><span class="pill">First AI product &middot; Free</span>
+<h1 style="font-size:clamp(30px,5vw,48px)">Make ID photos with AI, right in your browser</h1>
+<p class="lead">Upload a portrait: the app detects the face, removes the background, straightens and crops to a standard ID-photo size, switches to a white, blue or custom background and sharpens the result. Photos are processed on your device and never uploaded.</p>
+<div class="cta"><a class="btn primary" href="#app">Try it free</a><a class="btn ghost" href="#how">How it works</a></div></div>
+<div style="display:flex;justify-content:center"><svg viewBox="0 0 300 142" width="300" height="142" role="img" aria-label="ID photo"><rect x="14" y="14" width="86" height="114" rx="4" fill="#ffffff" stroke="#c9d3e6"/><circle cx="57" cy="58" r="21" fill="#e8b79a"/><path d="M36 100 q21 -26 42 0 v28 h-42z" fill="#3a4a6b"/><path d="M36 52 q21 -34 42 0 q-6 -12 -21 -12 t-21 12z" fill="#2a2a35"/><rect x="112" y="14" width="86" height="114" rx="4" fill="#2b7bd6" stroke="#c9d3e6"/><circle cx="155" cy="58" r="21" fill="#e8b79a"/><path d="M134 100 q21 -26 42 0 v28 h-42z" fill="#3a4a6b"/><path d="M134 52 q21 -34 42 0 q-6 -12 -21 -12 t-21 12z" fill="#2a2a35"/><rect x="210" y="14" width="86" height="114" rx="4" fill="#d62828" stroke="#c9d3e6"/><circle cx="253" cy="58" r="21" fill="#e8b79a"/><path d="M232 100 q21 -26 42 0 v28 h-42z" fill="#3a4a6b"/><path d="M232 52 q21 -34 42 0 q-6 -12 -21 -12 t-21 12z" fill="#2a2a35"/></svg></div>
+</div></div>
+
+<section id="app" style="padding-top:28px"><div class="wrap"><div class="idp">
+<div class="idp-panel">
+<h3>1. Portrait photo</h3>
+<label class="idp-drop" id="idpDrop"><strong>Choose a photo or drop it here</strong><span>JPG, PNG, WebP &middot; up to 25 MB &middot; front-facing, well lit</span>
+<input type="file" id="idpFile" accept="image/jpeg,image/png,image/webp"></label>
+<h3>2. Size</h3>
+<select id="idpPreset" aria-label="ID photo size"><option value="3x4">3×4 cm (30×40 mm)</option><option value="4x6">4×6 cm (40×60 mm)</option><option value="2x3">2×3 cm (20×30 mm)</option><option value="35x45">3.5×4.5 cm (35×45 mm)</option><option value="2in">2×2 inch (51×51 mm)</option><option value="custom">Custom…</option></select>
+<div class="two" id="idpCustomRow" hidden><label>Width (mm)<input type="number" id="idpCw" value="35" min="10" max="100" step="0.5"></label><label>Height (mm)<input type="number" id="idpCh" value="45" min="10" max="150" step="0.5"></label></div>
+<label class="row" for="idpHead"><span>Head size (crown to chin)</span><output id="idpHeadV">70%</output></label>
+<input type="range" id="idpHead" min="50" max="85" value="70">
+<h3>3. Background colour</h3>
+<div class="idp-sw" id="idpSwatches"><button type="button" data-c="#ffffff" style="background:#ffffff" title="White" aria-label="White" class=on></button><button type="button" data-c="#2b7bd6" style="background:#2b7bd6" title="Blue" aria-label="Blue"></button><button type="button" data-c="#9cc9ee" style="background:#9cc9ee" title="Light blue" aria-label="Light blue"></button><button type="button" data-c="#d62828" style="background:#d62828" title="Red" aria-label="Red"></button><button type="button" data-c="#d9d9d9" style="background:#d9d9d9" title="Grey" aria-label="Grey"></button><button type="button" data-c="#000000" style="background:#000000" title="Black" aria-label="Black"></button><input type="color" id="idpColor" value="#ffffff" aria-label="Custom colour"></div>
+<h3>4. Fine-tune</h3>
+<label class="row" for="idpSharp"><span>Sharpness</span><output id="idpSharpV">0%</output></label>
+<input type="range" id="idpSharp" min="0" max="200" value="80">
+<label class="row" for="idpEdge"><span>Subject edge (tighten / loosen)</span><output id="idpEdgeV">0</output></label>
+<input type="range" id="idpEdge" min="-2" max="3" step="1" value="0">
+<label class="chk"><input type="checkbox" id="idpLevels" checked> Auto exposure balance</label>
+<p style="margin:14px 0 0"><button type="button" class="btn ghost" id="idpReset" style="padding:8px 14px;font-size:14px">Start over</button></p>
+</div>
+<div class="idp-stage-wrap">
+<p class="idp-status" id="idpStatus" role="status" aria-live="polite"></p>
+<div class="idp-barwrap" id="idpBarWrap" hidden><div class="idp-bar" id="idpBar"></div></div>
+<div class="idp-stage" id="idpStage" hidden>
+<div class="idp-views">
+<figure><canvas id="idpOrig" width="10" height="10"></canvas><figcaption>Original</figcaption></figure>
+<figure><canvas id="idpOut" width="10" height="10"></canvas><figcaption>ID photo</figcaption></figure>
+</div>
+<p class="idp-info" id="idpInfo"></p>
+<div class="idp-actions"><button type="button" class="btn primary" id="idpPng" disabled>Download PNG</button><button type="button" class="btn ghost" id="idpJpg" disabled>Download JPG</button></div>
+<div class="idp-sheet"><div class="rowflex"><strong>Print sheet</strong>
+<select id="idpSheetSel" aria-label="Paper size"><option value="4x6">10×15 cm</option><option value="a4">A4</option></select>
+<span class="idp-info" id="idpSheetInfo" style="margin:0"></span>
+<button type="button" class="btn ghost" id="idpSheetBtn" disabled style="padding:8px 14px;font-size:14px">Download sheet</button></div>
+<canvas id="idpSheet" width="10" height="10"></canvas></div>
+</div>
+<div class="idp-empty" id="idpEmpty">Your result appears here. The first run downloads the AI models (about 37 MB), which the browser then caches.</div>
+</div>
+</div></div></section>
+
+<section class="band" id="how"><div class="wrap"><h2>Processing pipeline</h2>
+<p class="sub">Six steps, all running as JavaScript and WebAssembly on your device.</p>
+<ol class="flow">
+<li><b>Face detection</b><span>MediaPipe Face Landmarker: 478 landmarks; eye centres and chin are used.</span></li>
+<li><b>Background removal</b><span>MODNet (ONNX Runtime Web) predicts an alpha matte; edges refined with a guided filter.</span></li>
+<li><b>Straighten and crop</b><span>Rotates along the eye line and places crown and chin according to the head-size ratio.</span></li>
+<li><b>New background</b><span>Foreground colour estimation (blur-fusion) removes old-background fringes before compositing on the chosen colour.</span></li>
+<li><b>Sharpening</b><span>Unsharp mask with a suggested amount based on sharpness measured on the face region.</span></li>
+<li><b>Export</b><span>300 DPI PNG or JPG, or a 10×15 cm / A4 sheet with multiple copies.</span></li>
+</ol></div></section>
+
+<section><div class="wrap"><div class="grid g2">
+<div class="card"><h3>Supported sizes</h3>
+<table class="spec"><tr><th>Size</th><th>Pixels @300 DPI</th><th>Default head size</th></tr>
+<tr><td>2×3 cm</td><td>236×354</td><td>70%</td></tr><tr><td>3×4 cm</td><td>354×472</td><td>70%</td></tr><tr><td>4×6 cm</td><td>472×709</td><td>72%</td></tr>
+<tr><td>3.5×4.5 cm</td><td>413×531</td><td>75%</td></tr><tr><td>2×2 inch</td><td>600×600</td><td>60%</td></tr></table>
+<p style="margin-top:12px">ID photo requirements differ by receiving authority; head size and custom dimensions can be adjusted in the app.</p></div>
+<div class="card"><h3>Privacy and requirements</h3>
+<ul><li>Photos are processed entirely in the browser; no photo is uploaded to a server.</li>
+<li>The first run downloads about 37 MB (models + runtime); afterwards the browser cache is used.</li>
+<li>Requires a browser with WebAssembly (recent Chrome, Edge, Firefox or Safari).</li>
+<li>Front-facing, well-lit, single person; the larger the face in the source photo, the sharper the ID photo.</li></ul></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>Technology and credits</h2>
+<ul class="refs">
+<li>MediaPipe Face Landmarker &mdash; Google AI Edge, Apache-2.0.</li>
+<li>MODNet &mdash; Ke et al., &ldquo;MODNet: Real-Time Trimap-Free Portrait Matting via Objective Decomposition&rdquo;, AAAI 2022, Apache-2.0.</li>
+<li>ONNX Runtime Web &mdash; Microsoft, MIT.</li>
+<li>Guided filter &mdash; He, Sun, Tang, &ldquo;Guided Image Filtering&rdquo;, IEEE TPAMI 35(6), 2013.</li>
+<li>Blur-fusion foreground estimation &mdash; M. Forte, &ldquo;Approximate Fast Foreground Colour Estimation&rdquo;, ICIP 2021.</li>
+</ul></div></section>
+
+<section><div class="wrap" style="text-align:center"><h2>Need it inside your own system?</h2>
+<p class="sub" style="margin:0 auto 24px">Shopsmon takes on customisation, integration and custom browser-based AI apps.</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Get a free quote</a><a class="btn ghost" href="/en/portfolio.html">See portfolio</a> <a class="btn ghost" href="/en/products/">All products</a></div></div></section>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("idpEmpty"),s=document.getElementById("idpStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/idphoto.js" defer></script>
+</body>
+</html>
