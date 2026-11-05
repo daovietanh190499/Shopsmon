@@ -14,7 +14,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-04"
+TODAY = "2026-11-05"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -30,6 +30,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="int8-quantization", date="2026-11-05", min=12, aff="iot",
+         og="/assets/img/blog/int8-quantization-cover.png",
+         tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
+         title={"vi": "Lượng tử hoá int8 cho edge AI: từ công thức đến sai số đo được",
+                "en": "Int8 quantization for edge AI: from the formula to measured error"},
+         summary={"vi": "Bộ lượng tử hoá affine, phép tính số nguyên của một tầng dense, và thí nghiệm trên 12 seed: int8 per-tensor và per-channel so với số thực, rồi hạ xuống 2 bit.",
+                  "en": "The affine quantizer, the integer arithmetic of a dense layer, and a 12-seed experiment: per-tensor and per-channel int8 against floating point, then down to 2 bits."},
+         seo_title={"vi": "Lượng tử hoá int8 cho edge AI: công thức và sai số đo được | Shopsmon",
+                    "en": "Int8 quantization for edge AI: formula and measured error | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất lượng tử hoá int8 (affine, per-channel), phép tính số nguyên và thí nghiệm NumPy 12 seed đo độ chính xác, SQNR và kích thước mô hình khi giảm số bit.",
+                   "en": "Derivation of int8 quantization (affine, per-channel), the integer arithmetic and a 12-seed NumPy experiment measuring accuracy, SQNR and model size as bits are removed."}),
     dict(slug="gd-conditioning", date="2026-11-04", min=13, aff="ml-books",
          tag={"vi": "Khoa học dữ liệu", "en": "Data science"},
          title={"vi": "Gradient descent và số điều kiện: vì sao bình phương tối thiểu chạy chậm",
@@ -693,7 +704,7 @@ def blog_post(L, p):
         i = art.rfind("</article>")
         art = art[:i] + aff_box(L, p["aff"]) + art[i:]
     layout(L, "/blog/" + p["slug"] + ".html", p["seo_title"][L], p["seo_desc"][L], art,
-           active="/blog/", extra_head=KATEX_HEAD, extra_body=KATEX_BODY)
+           active="/blog/", og_image=p.get("og") or (f"/assets/img/blog/{p['slug']}-cover.png" if os.path.exists(os.path.join(ROOT, "assets", "img", "blog", p["slug"] + "-cover.png")) else "/assets/img/og.png"), extra_head=KATEX_HEAD, extra_body=KATEX_BODY)
 
 
 # ---------------------------------------------------------------- PRIVACY POLICY

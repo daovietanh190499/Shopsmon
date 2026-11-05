@@ -102,5 +102,29 @@
    1920,
    1080
   ]
+ },
+ "kimi-k3-1-pro-open-weights": {
+  "credit": "Hugging Face / Moonshot AI",
+  "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/moonshotai/Kimi-K3.1-Pro.png",
+  "orig_size": [
+   1200,
+   648
+  ]
+ },
+ "kakao-canana-space-ai-agents": {
+  "credit": "MoneyToday",
+  "image_url": "https://thumb.mt.co.kr/cdn-cgi/image/w=1200,h=761,fit=cover,f=auto,quality=high,sharpen=2,g=face/21/2026/11/2026110510405495312_1.jpg",
+  "orig_size": [
+   1200,
+   761
+  ]
+ },
+ "stm32h7p-neural-art-npu": {
+  "credit": "STMicroelectronics",
+  "image_url": "https://img.einnews.com/facebook/1241644/stm32h7p-mcu-series.jpeg",
+  "orig_size": [
+   1200,
+   628
+  ]
  }
 }

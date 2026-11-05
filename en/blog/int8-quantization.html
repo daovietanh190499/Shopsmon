@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Int8 quantization for edge AI: formula and measured error | Shopsmon</title>
+<meta name="description" content="Derivation of int8 quantization (affine, per-channel), the integer arithmetic and a 12-seed NumPy experiment measuring accuracy, SQNR and model size as bits are removed.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/int8-quantization.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/int8-quantization.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/int8-quantization.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/int8-quantization.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Int8 quantization for edge AI: formula and measured error | Shopsmon">
+<meta property="og:description" content="Derivation of int8 quantization (affine, per-channel), the integer arithmetic and a 12-seed NumPy experiment measuring accuracy, SQNR and model size as bits are removed.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/int8-quantization.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/int8-quantization-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/int8-quantization.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-05 &middot; IoT / AIoT &middot; ~12 min read</p>
+<h1>Int8 quantization for edge AI: from the formula to measured error</h1>
+<p class="meta">How an 8-bit integer grid replaces 32-bit floats in a neural network, the arithmetic that runs on the device, and what it costs in accuracy, measured on 12 independent runs of a small vibration-monitoring classifier.</p>
+
+<h2>1. Context</h2>
+<p>A model that fits on a microcontroller has two budgets to respect: flash/RAM for the weights and energy per multiply-accumulate. Storing each weight in 8 bits instead of 32 cuts the weight memory by about four, and integer multiply-accumulate units are cheaper than floating-point ones; Jacob et al. (2018) describe a scheme in which both weights and activations are 8-bit integers and inference uses integer arithmetic only. Microcontrollers announced this month with on-chip neural accelerators, such as the <a href="/en/news/stm32h7p-neural-art-npu.html">STM32H7P with its Neural-ART NPU</a>, are aimed at running models on the device. This article derives the quantizer, shows the integer arithmetic of one dense layer, and measures how much accuracy a post-training int8 conversion costs on a condition-monitoring task, including what happens when the grid is made much coarser.</p>
+
+<h2>2. The affine quantizer</h2>
+<p>A real value \(x\) in a range \([\alpha,\beta]\) is mapped to an integer \(q\) with \(b\) bits, scale \(s\) and zero-point \(z\):</p>
+$$q=\operatorname{clip}\bigl(\operatorname{round}(x/s)+z,\;q_{\min},q_{\max}\bigr),\qquad \hat x=s\,(q-z),\qquad s=\frac{\beta-\alpha}{2^{b}-1},\quad z=\operatorname{round}\!\left(-\frac{\alpha}{s}\right).$$
+<p>With \(\alpha\le0\le\beta\) the value 0 is represented exactly (\(q=z\)), which matters because ReLU outputs and zero padding are exact zeros. For unsigned activations \(q\in[0,255]\). For weights I use the <em>symmetric</em> variant, \(z=0\), \(q\in[-(2^{b-1}-1),\,2^{b-1}-1]\) and \(s=\max|w|/(2^{b-1}-1)\); for \(b=8\) that is \([-127,127]\).</p>
+<p><strong>Error.</strong> Inside the range, rounding moves \(x\) by at most half a step, \(|x-\hat x|\le s/2\). If the rounding error is roughly uniform on \([-s/2,s/2]\) its variance is \(s^2/12\). For a signal that is itself uniform over the whole range \(R=\beta-\alpha\), the variance is \(R^2/12\) and, with \(s\approx R/2^{b}\), the signal-to-quantization-noise ratio is</p>
+$$\mathrm{SQNR}=10\log_{10}\frac{R^2/12}{s^2/12}\approx 10\log_{10}2^{2b}=6.02\,b\ \text{dB}.$$
+<p>So each extra bit buys about 6 dB. Real weights are bell-shaped and the range is set by the largest value, so most weights use only a small part of the grid and the measured SQNR sits below \(6.02\,b\) (Section 7).</p>
+<figure><img src="/assets/img/blog/int8-grid.svg" alt="Left: histogram of layer-1 weights with the seven levels of a 3-bit grid. Right: rounding error of a 3-bit quantizer as a sawtooth bounded by plus and minus s over 2" width="900" height="340">
+<figcaption>Figure 1. Left: layer-1 weights of the trained network of this article and the 7 levels of a 3-bit symmetric grid (red). Right: rounding error of a quantizer with step \(s\); it never leaves \([-s/2,s/2]\).</figcaption></figure>
+
+<h2>3. Integer arithmetic of one dense layer</h2>
+<p>For output \(i\) of a dense layer, \(y_i=\sum_j W_{ij}x_j+b_i\). Substitute \(W_{ij}=s_{w,i}\,q^w_{ij}\) (symmetric, one scale per output row, or the same scale for all rows) and \(x_j=s_x\,(q^x_j-z_x)\):</p>
+$$y_i=s_{w,i}\,s_x\Bigl[\;\sum_j q^w_{ij}\,\bigl(q^x_j-z_x\bigr)+q^b_i\Bigr],\qquad q^b_i=\operatorname{round}\!\left(\frac{b_i}{s_{w,i}\,s_x}\right).$$
+<p>The bracket is an integer computed with 8-bit operands and a 32-bit accumulator. Each term is at most \(127\cdot255=32{,}385\) in magnitude, so a 32-bit signed accumulator cannot overflow for a dot product with fewer than \(2^{31}/32{,}385\approx66{,}000\) terms; the layers here have 64, 32 and 16 inputs. The next layer's input is obtained by multiplying the accumulator by \(M=s_{w,i}s_x/s_y\) and adding the output zero-point; real devices store \(M\) as a fixed-point integer multiplier and a shift (Jacob et al., 2018). In this article's simulation the product by \(M\) is done in floating point, everything before it in integers.</p>
+<p><strong>Granularity.</strong> <em>Per-tensor</em> quantization uses one scale \(s_w\) for the whole matrix; <em>per-channel</em> uses one scale per output row, so a row with small weights is not forced onto the grid of the row with the largest weight. Krishnamoorthi (2018) recommends per-channel weights with per-layer activations as the preferred scheme for hardware. Activation ranges \([\alpha,\beta]\) come from <em>calibration</em>: run a few hundred representative inputs through the float model and record each layer's minimum and maximum.</p>
+
+<h2>4. Implementation</h2>
+<p>The three core functions in NumPy. The <a href="/blog/code/int8_quantization.py">complete script</a> (data generator, training, all three experiments and both figures) is downloadable.</p>
+<pre><code class="language-python">def quant_weights(W, bits, per_channel):
+    """Symmetric signed quantization, zero-point 0. Returns integers and the scale(s), shape (out,)."""
+    qmax = 2 ** (bits - 1) - 1
+    amax = np.abs(W).max(1) if per_channel else np.full(W.shape[0], np.abs(W).max())
+    s = np.maximum(amax, 1e-12) / qmax
+    q = np.clip(np.round(W / s[:, None]), -qmax, qmax).astype(np.int32)
+    return q, s
+
+def act_params(lo, hi, bits=8):
+    """Asymmetric unsigned quantization of a range that always contains 0."""
+    lo, hi = min(lo, 0.0), max(hi, 0.0)
+    s = max(hi - lo, 1e-12) / (2 ** bits - 1)
+    z = int(np.clip(round(-lo / s), 0, 2 ** bits - 1))
+    return s, z
+
+def quant_forward(P, X, wbits=8, per_channel=True, abits=8, cal=None):
+    cal = cal or calibrate(P, X, abits)
+    qmax_a = 2 ** abits - 1
+    s_x, z_x = cal[0]
+    xq = np.clip(np.round(X / s_x) + z_x, 0, qmax_a).astype(np.int32)
+    for i, (W, b) in enumerate(P):
+        wq, s_w = quant_weights(W, wbits, per_channel)
+        bq = np.round(b / (s_w * s_x)).astype(np.int64)                 # int32 bias, scale s_w*s_x
+        acc = (xq - z_x).astype(np.int64) @ wq.T.astype(np.int64) + bq  # integer accumulation
+        y = acc * (s_w * s_x)
+        if i == len(P) - 1:
+            return y
+        y = np.maximum(y, 0)
+        s_x, z_x = cal[i + 1]
+        xq = np.clip(np.round(y / s_x) + z_x, 0, qmax_a).astype(np.int32)
+</code></pre>
+<h3>Sanity check</h3>
+<p>Quantizing 100,000 values drawn uniformly from \([-1.3,2.1]\) to 8 bits gives \(s=0.013333\), \(z=97\) and a maximum round-trip error of 0.006667, equal to \(s/2\) to the printed digits: the bound of Section 2 is attained, not just respected.</p>
+
+<h2>5. Experiment setup</h2>
+<p><strong>Task (synthetic, fully reproducible).</strong> Windows of 128 samples at 1,024 Hz from a rotating machine, three classes: <em>normal</em> (a sine at a rotation frequency drawn from 28&ndash;32 Hz), <em>imbalance</em> (the same plus a second harmonic with amplitude 0.2&ndash;0.6), and <em>bearing fault</em> (the same plus decaying 300 Hz impulses repeating at 3.2&ndash;3.8 times the rotation rate, amplitude 0.5&ndash;1.5). Gaussian noise with standard deviation 0.3 is added and the phase is random. The features are \(\log(1+|\mathrm{FFT}|)\) of the Hann-windowed window, the first 64 bins, standardised with training statistics.</p>
+<p><strong>Model.</strong> MLP 64&rarr;32&rarr;16&rarr;3 with ReLU (2,659 parameters), trained with Adam (learning rate 0.003, batch 128, 40 epochs) in NumPy. For each of 12 seeds (0&ndash;11) a new training set and a new test set of 3,000 windows each, and a new initialisation, are generated. The first 256 training windows calibrate the activation ranges. All reported accuracies are on the 3,000 test windows. The floating-point reference is NumPy float64; memory sizes below count float32 storage.</p>
+
+<h2>6. Experiment 1: int8 against floating point</h2>
+<table>
+<thead><tr><th>Model</th><th>Test accuracy (mean &plusmn; std over 12 seeds)</th><th>Same prediction as float</th><th>Mean relative logit error</th></tr></thead>
+<tbody>
+<tr><td>float (fp64)</td><td>93.83 &plusmn; 0.29 %</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>int8, per-tensor weights</td><td>93.84 &plusmn; 0.31 %</td><td>99.84 %</td><td>0.0092</td></tr>
+<tr><td>int8, per-channel weights</td><td>93.83 &plusmn; 0.28 %</td><td>99.87 %</td><td>0.0080</td></tr>
+</tbody></table>
+<ul>
+<li><strong>int8 is practically lossless here.</strong> Per seed, the accuracy drop against floating point is at most 0.13 points (per-tensor) and 0.07 points (per-channel); the mean drop is &minus;0.011 and 0.000 points, i.e. no measurable change. Predictions agree with the float model on 99.84&ndash;99.87 % of the test windows.</li>
+<li><strong>Per-channel is slightly more accurate numerically</strong> (mean relative logit error 0.0080 against 0.0092, 13 % lower), but at 8 bits the accuracy difference is far below the seed-to-seed spread (0.28&ndash;0.31 points).</li>
+<li><strong>Size:</strong> 2,659 parameters take 10,636 bytes as float32; int8 weights, int32 biases and one float32 scale per output channel take 3,016 bytes, 3.53 times smaller (not exactly 4, because biases and scales stay wide). Per-layer \(\max|W|\) is 1.03, 1.07 and 1.06; in layer 1 the largest row maximum is 2.5 times the smallest.</li>
+</ul>
+
+<h2>7. Experiment 2 and 3: making the grid coarser</h2>
+<p>Same trained networks and same calibration, weights quantized to fewer bits, activations kept at 8 bits.</p>
+<table>
+<thead><tr><th>Weight bits</th><th>Per-tensor accuracy (%)</th><th>Per-channel accuracy (%)</th><th>SQNR per-tensor (dB)</th><th>SQNR per-channel (dB)</th><th>\(6.02\,b\) (dB)</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>93.84 &plusmn; 0.31</td><td>93.83 &plusmn; 0.28</td><td>40.0</td><td>44.1</td><td>48.2</td></tr>
+<tr><td>6</td><td>93.77 &plusmn; 0.24</td><td>93.78 &plusmn; 0.28</td><td>27.7</td><td>31.9</td><td>36.1</td></tr>
+<tr><td>5</td><td>93.72 &plusmn; 0.37</td><td>93.74 &plusmn; 0.26</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>4</td><td>93.35 &plusmn; 0.43</td><td>93.56 &plusmn; 0.39</td><td>14.9</td><td>19.0</td><td>24.1</td></tr>
+<tr><td>3</td><td>91.36 &plusmn; 0.99</td><td>92.68 &plusmn; 0.78</td><td>7.6</td><td>11.7</td><td>18.1</td></tr>
+<tr><td>2</td><td>69.58 &plusmn; 12.36</td><td>82.67 &plusmn; 4.84</td><td>0.9</td><td>3.2</td><td>12.0</td></tr>
+</tbody></table>
+<p>The SQNR columns are measured on the weights of the seed-0 network (all layers pooled); the accuracy columns are mean &plusmn; std over the 12 seeds.</p>
+<figure><img src="/assets/img/blog/int8-bits.svg" alt="Test accuracy versus weight bit-width for per-tensor and per-channel quantization with error bars, and the floating-point reference as a dashed line" width="640" height="420">
+<figcaption>Figure 2. Accuracy against weight bit-width (activations 8-bit), mean &plusmn; std over 12 seeds. Output of the script in this article.</figcaption></figure>
+<ul>
+<li><strong>About 6 dB per bit, with an offset.</strong> Per-tensor SQNR falls from 40.0 dB at 8 bits to 27.7 dB at 6 bits and 14.9 dB at 4 bits, about 6.2&ndash;6.4 dB per bit, but it lies 8.2 dB below \(6.02\,b\) at 8 bits, because the grid is sized for the largest weight. Per-channel quantization recovers 4.1 dB at 8 bits.</li>
+<li><strong>Accuracy is flat down to 5 bits and loses less than half a point at 4 bits</strong> (93.35 and 93.56 % against 93.83 %) for this small task, without any retraining.</li>
+<li><strong>Granularity matters once the grid is coarse.</strong> At 3 bits per-channel keeps 92.68 % against 91.36 % per-tensor; at 2 bits 82.67 &plusmn; 4.84 % against 69.58 &plusmn; 12.36 %, with a much larger spread across seeds for per-tensor.</li>
+</ul>
+<p><strong>Limitations.</strong> The data are synthetic and the task is easy to separate in the frequency domain; the network is tiny (2,659 parameters, dense layers only). Convolutions with batch normalisation and depthwise layers have much larger differences in weight range between channels, which is where Krishnamoorthi (2018) found per-channel scales to matter most; this experiment does not cover them. Only weights were swept; activations stayed at 8 bits with min/max calibration, which is sensitive to outliers in real data. The requantization multiplier is applied in floating point, not as a fixed-point multiply-shift, and no latency or energy was measured: this is a numerical simulation of integer arithmetic, not a benchmark on a device. Whether per-channel scales are available depends on the runtime and the accelerator. Quantization-aware training, which Jacob et al. (2018) pair with the integer scheme, was not tried.</p>
+
+<h2>8. Practical takeaways</h2>
+<ol>
+<li>Start with post-training int8: per-channel symmetric weights, per-tensor asymmetric activations, ranges from a few hundred representative inputs. On this task it changed accuracy by less than 0.15 points on every run.</li>
+<li>Calibrate on data that looks like deployment data. The activation ranges decide the step size of every layer.</li>
+<li>Compare against the float model on the same test set and count agreement, not only accuracy: agreement (99.8 % here) is a sensitive check that nothing broke.</li>
+<li>Expect a loss of 6 dB of weight SQNR per bit removed; go below 8 bits only after measuring on your own task, and prefer per-channel scales when you do.</li>
+<li>Check the memory arithmetic including biases and scales (3.53&times; here, not 4&times;), and check that your runtime supports the granularity you chose.</li>
+</ol>
+
+<div class="cta-box"><strong>Need an edge-AI or IoT data pipeline, a chatbot agent or a custom AI tool?</strong><br>
+I build these as a freelancer. Describe your project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Edge%20AI%20project">Ask for a quote</a> <a class="btn ghost" href="/en/services.html">See services</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>B. Jacob, S. Kligys, B. Chen, M. Zhu, M. Tang, A. Howard, H. Adam and D. Kalenichenko. &ldquo;Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference.&rdquo; <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 2018, pp. 2704&ndash;2713. <a href="https://doi.org/10.1109/CVPR.2018.00286">doi:10.1109/CVPR.2018.00286</a>.</li>
+<li>R. Krishnamoorthi. &ldquo;Quantizing deep convolutional networks for efficient inference: A whitepaper.&rdquo; arXiv:1806.08342, June 2018. <a href="https://arxiv.org/abs/1806.08342">arxiv.org/abs/1806.08342</a>. (Per-channel weights with per-layer activations; post-training 8-bit results; quantization-aware training.)</li>
+<li>P. Warden and D. Situnayake. <em>TinyML: Machine Learning with TensorFlow Lite on Arduino and Ultra-Low-Power Microcontrollers</em>. O&rsquo;Reilly Media, 2020. ISBN 978-1-4920-5204-3.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/int8_quantization.py">int8_quantization.py</a> (Python 3.12, NumPy, Matplotlib; about 80 seconds for 12 seeds). All numbers in Sections 4&ndash;7 are the output of this script.</p>
+<aside class="aff-box"><h3>Common IoT / AIoT parts</h3><p>Boards and sensors commonly used for prototyping: ESP32-S3 for small models, Zigbee and LoRa for sensor networks.</p><ul><li><a href="https://s.shopee.vn/AUvJ7Ugukh" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED</a> <span class="price">₫105.000</span></li><li><a href="https://s.shopee.vn/3B8iO1zd11" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)</a> <span class="price">₫190.000</span></li><li><a href="https://s.shopee.vn/4qGwN7QQYU" rel="sponsored nofollow noopener" target="_blank">SHT40/SHT41/SHT45 temperature &amp; humidity sensor module</a> <span class="price">₫123.640</span></li><li><a href="https://s.shopee.vn/1W0UP1IIvG" rel="sponsored nofollow noopener" target="_blank">LoRa SX1262 UART module (DX-LR30)</a> <span class="price">₫322.300</span></li><li><a href="https://s.shopee.vn/7fb7kNXg67" rel="sponsored nofollow noopener" target="_blank">SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge</a> <span class="price">₫504.900</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>
