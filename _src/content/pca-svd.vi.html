@@ -1,0 +1,140 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-06 &middot; Khoa học dữ liệu / IoT &middot; ~13 phút đọc</p>
+<h1>PCA qua SVD: dẫn xuất, độ ổn định số và nén dữ liệu cảm biến</h1>
+<p class="meta">Vì sao các thành phần chính chính là vector kỳ dị phải của ma trận đã trừ trung bình, vì sao không nên tính qua ma trận hiệp phương sai khi dữ liệu có điều kiện xấu, và PCA nén rồi phát hiện lỗi một mảng 16 cảm biến tốt đến đâu &mdash; đo trên 20 lần chạy độc lập.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Một nút IoT đọc nhiều cảm biến tương quan với nhau (nhiệt độ, độ ẩm, rung ở nhiều vị trí) thường có ít nguồn biến thiên thật hơn số kênh. Khi đó có thể gửi vài điểm số thay cho cả vector đo, và dùng phần dữ liệu <em>không</em> giải thích được bởi các điểm số đó để nhận ra cảm biến hỏng. Phân tích thành phần chính (PCA) là công cụ chuẩn cho cả hai việc: Pearson (1901) xét đường và mặt phẳng khớp nhất với một đám điểm, Hotelling (1933) đặt tên và dẫn xuất theo phương sai, còn Jolliffe và Cadima (2016) tổng quan các biến thể. Bài này dẫn xuất PCA từ SVD, kiểm tra các đẳng thức bằng số, so sánh hai cách tính về độ ổn định, rồi đo trên một mảng cảm biến mô phỏng.</p>
+
+<h2>2. Dẫn xuất</h2>
+<p>Gọi \(X\in\mathbb{R}^{n\times d}\) là \(n\) mẫu của \(d\) kênh, \(\mu\) là vector trung bình theo cột và \(X_c=X-\mathbf 1\mu^\top\) là ma trận đã trừ trung bình. Ma trận hiệp phương sai mẫu là \(S=X_c^\top X_c/(n-1)\). Hướng đơn vị \(v\) làm phương sai của hình chiếu lớn nhất là nghiệm của</p>
+$$\max_{\|v\|=1}\ \operatorname{Var}(X_c v)=\max_{\|v\|=1}\ v^\top S v,$$
+<p>và đó là vector riêng của \(S\) ứng với trị riêng lớn nhất (nhân tử Lagrange cho \(Sv=\lambda v\), phương sai đạt được bằng \(\lambda\)). Hướng thứ hai làm tương tự trong phần bù trực giao, và cứ thế. Viết SVD gọn của \(X_c\):</p>
+$$X_c=U\Sigma V^\top,\qquad U^\top U=V^\top V=I,\quad \Sigma=\operatorname{diag}(\sigma_1\ge\sigma_2\ge\dots\ge0).$$
+<p>Thay vào \(S\): \(S=V\,\dfrac{\Sigma^2}{n-1}\,V^\top\). Vậy các trục chính là các cột của \(V\), phương sai tương ứng là</p>
+$$\lambda_i=\frac{\sigma_i^2}{n-1},$$
+<p>và các điểm số (tọa độ trên các trục) là \(T=X_cV=U\Sigma\). Giữ \(k\) thành phần cho xấp xỉ \(\hat X_k=X_cV_kV_k^\top\) hạng \(k\). Định lý Eckart&ndash;Young (1936) nói \(\hat X_k\) là ma trận hạng không quá \(k\) gần \(X_c\) nhất theo chuẩn Frobenius và</p>
+$$\|X_c-\hat X_k\|_F^2=\sum_{i>k}\sigma_i^2,\qquad \text{tỉ lệ phương sai giải thích}=\frac{\sum_{i\le k}\sigma_i^2}{\sum_i\sigma_i^2}.$$
+<p>Như vậy sai số tái tạo nhìn thấy ngay từ phổ kỳ dị: đồ thị sườn dốc (scree) vừa cho biết nên giữ bao nhiêu thành phần, vừa cho biết sẽ mất bao nhiêu.</p>
+<p><strong>Phần dư và phát hiện lỗi.</strong> Với một mẫu mới \(x\), phần dư là \(r=(I-V_kV_k^\top)(x-\mu)\) và \(Q=\|r\|^2\) (thống kê Q, còn gọi SPE). Jackson và Mudholkar (1979) nghiên cứu cách dùng Q để kiểm soát chất lượng: nếu mô hình \(k\) thành phần còn đúng thì \(Q\) nhỏ, còn một cảm biến lệch khỏi quan hệ tương quan thông thường làm \(Q\) tăng. Nếu lỗi là độ lệch \(\delta\) cộng vào kênh \(c\), phần dư của riêng độ lệch đó có bình phương chuẩn</p>
+$$\delta^2\Bigl(1-\sum_{j\le k}V_{cj}^2\Bigr),$$
+<p>nên kênh có tải lớn trên các thành phần chính (tổng \(\sum_{j\le k}V_{cj}^2\) gần 1) &ldquo;giấu&rdquo; một phần độ lệch trong không gian con và khó phát hiện hơn.</p>
+
+<h2>3. Hai cách tính và độ ổn định số</h2>
+<p>Cách 1: SVD của \(X_c\). Cách 2: lập \(S=X_c^\top X_c/(n-1)\) rồi giải bài toán trị riêng đối xứng. Về đại số chúng bằng nhau, nhưng việc lập \(X_c^\top X_c\) bình phương số điều kiện: \(\kappa(X_c^\top X_c)=\kappa(X_c)^2\). Bộ giải trị riêng đối xứng cho trị riêng với sai số tuyệt đối cỡ \(\varepsilon\,\|S\|\) (\(\varepsilon\approx2{,}2\cdot10^{-16}\) với float64), nên trị kỳ dị \(\sigma_i=\sqrt{\lambda_i}\) nhỏ hơn khoảng \(\sqrt{\varepsilon}\,\sigma_1\approx1{,}5\cdot10^{-8}\sigma_1\) sẽ mất hết chữ số có nghĩa; SVD trực tiếp giữ được sai số tuyệt đối cỡ \(\varepsilon\,\sigma_1\) (Golub và Van Loan, 2013). Điều này liên quan trực tiếp đến bài <a href="@@L@@/blog/gd-conditioning.html">gradient descent và số điều kiện</a>, nơi cùng hiện tượng bình phương \(\kappa\) làm chậm hội tụ.</p>
+<figure><img src="/assets/img/blog/pca-stability.svg" alt="Trị kỳ dị khôi phục được bằng SVD và bằng căn bậc hai của trị riêng M chuyển vị nhân M, so với giá trị thật từ 1 xuống 1e-10; hai cách trùng nhau tới khoảng 1e-8 rồi cách thứ hai lệch" width="560" height="380">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Trị kỳ dị của ma trận 200&times;10 dựng với phổ biết trước từ 1 xuống \(10^{-10}\). Điểm thứ 10 của đường căn bậc hai trị riêng không hiện vì trị riêng tính được là số âm.</figcaption></figure>
+
+<h2>4. Cài đặt</h2>
+<p><a href="/blog/code/pca_svd.py">Script đầy đủ</a> (sinh dữ liệu, bốn thí nghiệm, hai hình; chạy khoảng 2 giây) tải về được. Phần lõi:</p>
+<pre><code class="language-python">def pca_svd(X, k):
+    """PCA of the rows of X via thin SVD of the centred matrix."""
+    mu = X.mean(0)
+    _, s, Vt = np.linalg.svd(X - mu, full_matrices=False)
+    return mu, Vt[:k], s                         # lambda_i = s_i**2 / (n - 1)
+
+def pca_cov(X, k):
+    """PCA via eigendecomposition of the sample covariance (forms X^T X)."""
+    mu = X.mean(0)
+    Xc = X - mu
+    w, V = np.linalg.eigh(Xc.T @ Xc / (len(X) - 1))
+    order = np.argsort(w)[::-1]
+    return mu, V[:, order[:k]].T, w[order]
+
+def reconstruct(X, mu, comps):
+    return (X - mu) @ comps.T @ comps + mu
+
+# Q statistic (SPE) of each row, threshold = 99th percentile of the training Q
+spe = lambda X: np.sum((X - reconstruct(X, mu, comps)) ** 2, 1)
+</code></pre>
+
+<h2>5. Thiết lập thí nghiệm</h2>
+<p><strong>Dữ liệu (tổng hợp, tái lập hoàn toàn).</strong> \(d=16\) kênh cảm biến chịu chi phối bởi \(k=3\) nguồn tiềm ẩn Gaussian độc lập với độ lệch chuẩn 3, 2 và 1. Ma trận tải \(A\in\mathbb{R}^{16\times3}\) lấy Gaussian chuẩn, mỗi kênh có độ lệch riêng (độ lệch chuẩn 2) và nhiễu Gaussian độc lập độ lệch chuẩn 0,3: \(x=Az+\text{offset}+\text{nhiễu}\). Mỗi seed (0&ndash;19) sinh ma trận tải mới, 1.000 mẫu huấn luyện và 1.000 mẫu kiểm tra mới. Mô hình khớp trên tập huấn luyện; mọi sai số báo cáo ở Mục 7 tính trên tập kiểm tra.</p>
+
+<h2>6. Kiểm tra tính đúng (seed 0)</h2>
+<ul>
+<li><strong>Hai cách trùng nhau trên dữ liệu điều kiện tốt.</strong> \(\max_i|\sigma_i^2/(n-1)-\lambda_i|=8{,}5\cdot10^{-14}\) trên cả 16 giá trị và, sau khi chỉnh dấu, vector của 3 thành phần đầu lệch nhau tối đa \(8{,}6\cdot10^{-16}\). Trị riêng đầu của hiệp phương sai là 161,3; 33,41; 9,502 rồi 0,1092; 0,1062; 0,09915: ba thành phần đầu chiếm 99,44 % tổng phương sai và phần còn lại nằm sát phương sai nhiễu \(0{,}3^2=0{,}09\).</li>
+<li><strong>Đẳng thức Eckart&ndash;Young.</strong> \(\|X_c-\hat X_k\|_F^2\) và \(\sum_{i>k}\sigma_i^2\) trùng tới mọi chữ số in ra:
+<table>
+<thead><tr><th>\(k\)</th><th>\(\|X_c-\hat X_k\|_F^2\)</th><th>\(\sum_{i>k}\sigma_i^2\)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>44.014,109772</td><td>44.014,109772</td></tr>
+<tr><td>2</td><td>10.635,719080</td><td>10.635,719080</td></tr>
+<tr><td>3</td><td>1.143,290310</td><td>1.143,290310</td></tr>
+<tr><td>5</td><td>928,087154</td><td>928,087154</td></tr>
+<tr><td>8</td><td>639,974303</td><td>639,974303</td></tr>
+</tbody></table></li>
+</ul>
+
+<h2>7. Thí nghiệm 1: nén và phát hiện lỗi trên dữ liệu giữ lại</h2>
+<figure><img src="/assets/img/blog/pca-sensors.svg" alt="Trái: đồ thị cột các trị riêng của 16 thành phần theo thang log, ba cột đầu cao và phần còn lại sát đường nhiễu 0,09. Phải: sai số bình phương trung bình theo số thành phần, giảm mạnh đến k bằng 3 rồi gần như phẳng, đường huấn luyện và đường giữ lại trùng nhau" width="920" height="350">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Seed 0. Trái: trị riêng của 16 thành phần; đường đỏ là phương sai nhiễu 0,09. Phải: sai số bình phương trung bình mỗi giá trị theo số thành phần \(k\), trên tập huấn luyện và tập giữ lại (\(k=16\) cho sai số bằng 0 và không vẽ).</figcaption></figure>
+<table>
+<thead><tr><th>Đại lượng (\(k=3\), trung bình &plusmn; độ lệch chuẩn trên 20 seed)</th><th>Kết quả</th></tr></thead>
+<tbody>
+<tr><td>RMSE tái tạo mỗi giá trị trên tập giữ lại</td><td>0,2708 &plusmn; 0,0015 (kỳ vọng chỉ có nhiễu: \(0{,}3\sqrt{13/16}=0{,}2704\))</td></tr>
+<tr><td>Lưu trữ</td><td>16 số thực thành 3 điểm số mỗi mẫu (nhỏ hơn 5,33 lần), cộng cơ sở 3&times;16 lưu một lần</td></tr>
+<tr><td>Báo động nhầm trên dữ liệu bình thường giữ lại (ngưỡng = phân vị 99 của Q huấn luyện)</td><td>1,27 % &plusmn; 0,37 % (mục tiêu 1 %)</td></tr>
+</tbody></table>
+<p>Với \(k\) bằng đúng số nguồn thật, phần dư còn lại gần như chỉ là nhiễu: nhiễu có \(d\) thành phần độc lập, phép chiếu giữ lại \(k\) trong số đó nên phần dư chứa trung bình \(\sigma_n^2(d-k)/d\) mỗi giá trị, tức RMSE \(0{,}3\sqrt{13/16}=0{,}2704\), sát với giá trị đo 0,2708. Mức báo động nhầm 1,27 % hơi cao hơn mục tiêu 1 %, phù hợp với việc ngưỡng được ước lượng từ phần dư của chính tập dùng để khớp mô hình.</p>
+<p><strong>Phát hiện lỗi lệch một kênh.</strong> Trên tập kiểm tra, cộng độ lệch \(\delta\) vào một kênh (thử lần lượt cả 16 kênh) rồi tính tỉ lệ mẫu có \(Q\) vượt ngưỡng:</p>
+<table>
+<thead><tr><th>Độ lệch \(\delta\) (so với độ lệch chuẩn nhiễu 0,3)</th><th>Tỉ lệ phát hiện, trung bình trên 16 kênh</th><th>Kênh khó nhất (trung bình trên 20 seed)</th></tr></thead>
+<tbody>
+<tr><td>0,5 (1,7&times;)</td><td>4,0 % &plusmn; 0,6</td><td>2,5 %</td></tr>
+<tr><td>1,0 (3,3&times;)</td><td>23,9 % &plusmn; 2,1</td><td>11,6 %</td></tr>
+<tr><td>2,0 (6,7&times;)</td><td>94,8 % &plusmn; 1,0</td><td>74,2 %</td></tr>
+<tr><td>3,0 (10&times;)</td><td>99,9 % &plusmn; 0,2</td><td>98,7 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Lỗi nhỏ gần như không phát hiện được:</strong> độ lệch 1,7 lần độ lệch chuẩn nhiễu chỉ được phát hiện 4 % số mẫu; từ khoảng 7 lần trở lên tỉ lệ vượt 94 % trung bình.</li>
+<li><strong>Kênh khác nhau cho kết quả khác nhau.</strong> Ở \(\delta=2\), kênh khó nhất chỉ đạt 74,2 % so với 94,8 % trung bình, đúng hướng của công thức \(\delta^2(1-\sum_{j\le k}V_{cj}^2)\) ở Mục 2: phần độ lệch rơi vào không gian con của các thành phần chính không để lại phần dư.</li>
+</ul>
+
+<h2>8. Thí nghiệm 2: khi cách tính qua hiệp phương sai hỏng</h2>
+<p>Dựng ma trận \(M=U\operatorname{diag}(\sigma)V^\top\) cỡ 200&times;10 với \(U,V\) là các ma trận trực giao ngẫu nhiên và \(\sigma\) từ 1 xuống \(10^{-10}\) theo thang log (\(\kappa(M)=10^{10}\), \(\kappa(M^\top M)=10^{20}\)), rồi khôi phục \(\sigma\) bằng hai cách:</p>
+<table>
+<thead><tr><th>\(i\)</th><th>\(\sigma_i\) thật</th><th>Sai số tương đối, SVD của \(M\)</th><th>Sai số tương đối, \(\sqrt{\text{trị riêng}(M^\top M)}\)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1,000e+00</td><td>1,1e-16</td><td>1,1e-16</td></tr>
+<tr><td>2</td><td>7,743e-02</td><td>1,8e-16</td><td>2,5e-15</td></tr>
+<tr><td>3</td><td>5,995e-03</td><td>4,3e-16</td><td>6,1e-13</td></tr>
+<tr><td>4</td><td>4,642e-04</td><td>8,2e-16</td><td>8,9e-12</td></tr>
+<tr><td>5</td><td>3,594e-05</td><td>1,4e-13</td><td>5,3e-09</td></tr>
+<tr><td>6</td><td>2,783e-06</td><td>1,9e-12</td><td>1,5e-06</td></tr>
+<tr><td>7</td><td>2,154e-07</td><td>5,7e-12</td><td>9,1e-05</td></tr>
+<tr><td>8</td><td>1,668e-08</td><td>2,2e-10</td><td>1,1e-01</td></tr>
+<tr><td>9</td><td>1,292e-09</td><td>1,3e-09</td><td>4,9e+00</td></tr>
+<tr><td>10</td><td>1,000e-10</td><td>9,4e-09</td><td>1,0e+00 (trị riêng tính được là &minus;2,93e-17, bị cắt về 0)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>SVD giữ sai số tuyệt đối dưới \(\varepsilon\sigma_1\).</strong> Sai số tương đối tăng khi \(\sigma_i\) nhỏ dần nhưng sai số tuyệt đối vẫn rất nhỏ (cỡ \(10^{-18}\) ở \(i=8\) và \(9\)), đúng với mức \(\varepsilon\sigma_1=2{,}2\cdot10^{-16}\) làm cận.</li>
+<li><strong>Đường qua hiệp phương sai mất độ chính xác từ \(i=6\)</strong> (sai số tương đối \(1{,}5\cdot10^{-6}\)) và hỏng hẳn từ \(i=8\): \(\sigma_8=1{,}7\cdot10^{-8}\) sát ngưỡng \(\sqrt{\varepsilon}\sigma_1=1{,}5\cdot10^{-8}\), sai số 11 %; \(\sigma_9\) sai gấp gần 6 lần; \(\sigma_{10}^2=10^{-20}\) nằm dưới nhiễu số \(\varepsilon\sigma_1^2=2{,}2\cdot10^{-16}\) nên trị riêng tính được là số âm.</li>
+</ul>
+
+<p><strong>Hạn chế.</strong> Dữ liệu là tổng hợp, Gaussian, đúng 3 nguồn tiềm ẩn với nhiễu độc lập cùng độ lớn; cảm biến thật có nhiễu không Gaussian, trôi theo thời gian và phân phối thay đổi theo điều kiện. \(k=3\) được biết trước; thực tế phải chọn \(k\) từ đồ thị sườn dốc hoặc kiểm chứng chéo. Ngưỡng của Q lấy theo phân vị thực nghiệm của tập huấn luyện, không dùng xấp xỉ giải tích của Jackson và Mudholkar; tập huấn luyện được giả định không chứa lỗi. Chỉ thử một loại lỗi (lệch cố định ở một kênh), không thử cảm biến kẹt, trôi chậm hay nhiều kênh hỏng cùng lúc. PCA là tuyến tính; quan hệ phi tuyến giữa các kênh cần phương pháp khác. Thí nghiệm ổn định số dùng ma trận dựng riêng với \(\kappa=10^{10}\), cực đoan hơn dữ liệu cảm biến ở Mục 6 (tỉ số trị kỳ dị lớn nhất trên nhỏ nhất chỉ khoảng 40, nên hai cách tính trùng nhau). Không đo thời gian chạy hay năng lượng trên thiết bị nhúng.</p>
+
+<h2>9. Kết luận thực hành</h2>
+<ol>
+<li>Tính PCA bằng SVD của ma trận đã trừ trung bình; các trục là cột \(V\), phương sai là \(\sigma_i^2/(n-1)\), điểm số là \(U\Sigma\).</li>
+<li>Đọc sai số tái tạo từ phổ kỳ dị: \(\sum_{i>k}\sigma_i^2\) là sai số bình phương tối thiểu cho mọi xấp xỉ hạng \(k\).</li>
+<li>Qua ma trận hiệp phương sai vẫn dùng được khi các trị kỳ dị quan tâm lớn hơn khoảng \(10^{-8}\sigma_1\); dưới ngưỡng đó, dùng SVD.</li>
+<li>Khi đã có mô hình \(k\) thành phần, thống kê Q của phần dư là một bộ phát hiện lỗi cảm biến rẻ: ở đây báo động nhầm 1,3 % và phát hiện hơn 94 % độ lệch bằng 6,7 lần độ lệch chuẩn nhiễu, nhưng chỉ 4 % độ lệch 1,7 lần.</li>
+<li>Kiểm tra từng kênh một: kênh có tải lớn trên các thành phần chính khó phát hiện lỗi hơn đáng kể.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần quy trình dữ liệu edge-AI/IoT, chatbot agent hoặc công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm với tư cách freelancer. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=Data%20pipeline%20project">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/services.html">Xem dịch vụ</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>K. Pearson. &ldquo;On lines and planes of closest fit to systems of points in space.&rdquo; <em>The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science</em>, loạt 6, tập 2, số 11, 1901, tr. 559&ndash;572. <a href="https://doi.org/10.1080/14786440109462720">doi:10.1080/14786440109462720</a>.</li>
+<li>H. Hotelling. &ldquo;Analysis of a complex of statistical variables into principal components.&rdquo; <em>Journal of Educational Psychology</em> 24(6), 1933, tr. 417&ndash;441. <a href="https://doi.org/10.1037/h0071325">doi:10.1037/h0071325</a>.</li>
+<li>C. Eckart và G. Young. &ldquo;The approximation of one matrix by another of lower rank.&rdquo; <em>Psychometrika</em> 1(3), 1936, tr. 211&ndash;218. <a href="https://doi.org/10.1007/BF02288367">doi:10.1007/BF02288367</a>.</li>
+<li>J. E. Jackson và G. S. Mudholkar. &ldquo;Control procedures for residuals associated with principal component analysis.&rdquo; <em>Technometrics</em> 21(3), 1979, tr. 341&ndash;349. <a href="https://doi.org/10.1080/00401706.1979.10489779">doi:10.1080/00401706.1979.10489779</a>.</li>
+<li>I. T. Jolliffe và J. Cadima. &ldquo;Principal component analysis: a review and recent developments.&rdquo; <em>Philosophical Transactions of the Royal Society A</em> 374(2065), 20150202, 2016. <a href="https://doi.org/10.1098/rsta.2015.0202">doi:10.1098/rsta.2015.0202</a>.</li>
+<li>G. H. Golub và C. F. Van Loan. <em>Matrix Computations</em>, xuất bản lần 4. Johns Hopkins University Press, 2013. ISBN 978-1-4214-0794-4.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/pca_svd.py">pca_svd.py</a> (Python 3.12, NumPy, Matplotlib; khoảng 2 giây). Mọi con số ở Mục 6&ndash;8 là đầu ra của script này.</p>
+</article>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA through the SVD: numerical stability and sensor data compression | Shopsmon</title>
+<meta name="description" content="Derivation of PCA from the SVD, the Eckart–Young identity, SVD versus covariance for numerical stability, and compression plus Q-statistic fault detection on a simulated sensor array, with NumPy code.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/pca-svd.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/pca-svd.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/pca-svd.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/pca-svd.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="PCA through the SVD: numerical stability and sensor data compression | Shopsmon">
+<meta property="og:description" content="Derivation of PCA from the SVD, the Eckart–Young identity, SVD versus covariance for numerical stability, and compression plus Q-statistic fault detection on a simulated sensor array, with NumPy code.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/pca-svd.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/pca-svd-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/pca-svd.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-06 &middot; Data science / IoT &middot; ~13 min read</p>
+<h1>PCA through the SVD: derivation, numerical stability and compressing sensor data</h1>
+<p class="meta">Why the principal components are the right singular vectors of the centred data matrix, why forming the covariance matrix is a bad idea for badly conditioned data, and how well PCA compresses a 16-sensor array and flags a faulty sensor &mdash; measured over 20 independent runs.</p>
+
+<h2>1. Background</h2>
+<p>An IoT node that reads several correlated sensors (temperature, humidity, vibration at several positions) usually has fewer real sources of variation than channels. A few scores can then be sent instead of the whole measurement vector, and the part of the data that those scores <em>cannot</em> explain can be used to spot a faulty sensor. Principal component analysis (PCA) is the standard tool for both: Pearson (1901) studied the lines and planes of closest fit to a cloud of points, Hotelling (1933) named the method and derived it through variances, and Jolliffe and Cadima (2016) review the variants. This post derives PCA from the SVD, checks the identities numerically, compares two ways of computing it for stability, and measures the result on a simulated sensor array.</p>
+
+<h2>2. Derivation</h2>
+<p>Let \(X\in\mathbb{R}^{n\times d}\) hold \(n\) samples of \(d\) channels, \(\mu\) the column mean and \(X_c=X-\mathbf 1\mu^\top\) the centred matrix. The sample covariance is \(S=X_c^\top X_c/(n-1)\). The unit direction \(v\) that maximises the variance of the projection solves</p>
+$$\max_{\|v\|=1}\ \operatorname{Var}(X_c v)=\max_{\|v\|=1}\ v^\top S v,$$
+<p>and it is the eigenvector of \(S\) with the largest eigenvalue (a Lagrange multiplier gives \(Sv=\lambda v\), and the variance attained is \(\lambda\)). The second direction is found the same way in the orthogonal complement, and so on. Write the thin SVD of \(X_c\):</p>
+$$X_c=U\Sigma V^\top,\qquad U^\top U=V^\top V=I,\quad \Sigma=\operatorname{diag}(\sigma_1\ge\sigma_2\ge\dots\ge0).$$
+<p>Substituting into \(S\) gives \(S=V\,\dfrac{\Sigma^2}{n-1}\,V^\top\). The principal axes are therefore the columns of \(V\), their variances are</p>
+$$\lambda_i=\frac{\sigma_i^2}{n-1},$$
+<p>and the scores (coordinates along the axes) are \(T=X_cV=U\Sigma\). Keeping \(k\) components gives the rank-\(k\) approximation \(\hat X_k=X_cV_kV_k^\top\). The Eckart&ndash;Young theorem (1936) states that \(\hat X_k\) is the matrix of rank at most \(k\) closest to \(X_c\) in the Frobenius norm, and</p>
+$$\|X_c-\hat X_k\|_F^2=\sum_{i>k}\sigma_i^2,\qquad \text{explained variance ratio}=\frac{\sum_{i\le k}\sigma_i^2}{\sum_i\sigma_i^2}.$$
+<p>The reconstruction error can therefore be read off the singular spectrum: the scree plot shows both how many components to keep and what is lost.</p>
+<p><strong>Residuals and fault detection.</strong> For a new sample \(x\), the residual is \(r=(I-V_kV_k^\top)(x-\mu)\) and \(Q=\|r\|^2\) (the Q statistic, also called SPE). Jackson and Mudholkar (1979) study the use of this statistic for process control: if the \(k\)-component model still holds, \(Q\) is small, while a sensor that departs from the usual correlation structure inflates \(Q\). If the fault is an offset \(\delta\) added to channel \(c\), the squared norm of the residual due to the offset alone is</p>
+$$\delta^2\Bigl(1-\sum_{j\le k}V_{cj}^2\Bigr),$$
+<p>so a channel with large loadings on the principal components (\(\sum_{j\le k}V_{cj}^2\) close to 1) &ldquo;hides&rdquo; part of the offset inside the subspace and is harder to detect.</p>
+
+<h2>3. Two ways to compute it, and numerical stability</h2>
+<p>Route 1: the SVD of \(X_c\). Route 2: form \(S=X_c^\top X_c/(n-1)\) and solve a symmetric eigenproblem. They are algebraically identical, but forming \(X_c^\top X_c\) squares the condition number: \(\kappa(X_c^\top X_c)=\kappa(X_c)^2\). A symmetric eigensolver returns eigenvalues with absolute error of order \(\varepsilon\,\|S\|\) (\(\varepsilon\approx2.2\cdot10^{-16}\) in float64), so singular values \(\sigma_i=\sqrt{\lambda_i}\) below about \(\sqrt{\varepsilon}\,\sigma_1\approx1.5\cdot10^{-8}\sigma_1\) lose all significant digits; the SVD applied directly keeps an absolute error of order \(\varepsilon\,\sigma_1\) (Golub and Van Loan, 2013). This is the same squaring of \(\kappa\) that slows gradient descent in the post on <a href="/en/blog/gd-conditioning.html">gradient descent and the condition number</a>.</p>
+<figure><img src="/assets/img/blog/pca-stability.svg" alt="Singular values recovered by the SVD and by the square root of the eigenvalues of M transpose M, against the true values from 1 down to 1e-10; the two agree down to about 1e-8, after which the second route departs" width="560" height="380">
+<figcaption>Figure 1. Singular values of a 200&times;10 matrix built with a known spectrum from 1 down to \(10^{-10}\). The 10th point of the square-root-of-eigenvalue curve is missing because the computed eigenvalue is negative.</figcaption></figure>
+
+<h2>4. Implementation</h2>
+<p>The <a href="/blog/code/pca_svd.py">full script</a> (data generation, four experiments, two figures; about 2 seconds) is available for download. The core:</p>
+<pre><code class="language-python">def pca_svd(X, k):
+    """PCA of the rows of X via thin SVD of the centred matrix."""
+    mu = X.mean(0)
+    _, s, Vt = np.linalg.svd(X - mu, full_matrices=False)
+    return mu, Vt[:k], s                         # lambda_i = s_i**2 / (n - 1)
+
+def pca_cov(X, k):
+    """PCA via eigendecomposition of the sample covariance (forms X^T X)."""
+    mu = X.mean(0)
+    Xc = X - mu
+    w, V = np.linalg.eigh(Xc.T @ Xc / (len(X) - 1))
+    order = np.argsort(w)[::-1]
+    return mu, V[:, order[:k]].T, w[order]
+
+def reconstruct(X, mu, comps):
+    return (X - mu) @ comps.T @ comps + mu
+
+# Q statistic (SPE) of each row, threshold = 99th percentile of the training Q
+spe = lambda X: np.sum((X - reconstruct(X, mu, comps)) ** 2, 1)
+</code></pre>
+
+<h2>5. Experimental setup</h2>
+<p><strong>Data (synthetic, fully reproducible).</strong> \(d=16\) sensor channels driven by \(k=3\) independent Gaussian latent sources with standard deviations 3, 2 and 1. The loading matrix \(A\in\mathbb{R}^{16\times3}\) is standard Gaussian, each channel has its own offset (standard deviation 2) and independent Gaussian noise of standard deviation 0.3: \(x=Az+\text{offset}+\text{noise}\). Each seed (0&ndash;19) draws a new loading matrix, 1,000 training samples and 1,000 new test samples. The model is fitted on the training set; every error reported in Section 7 is computed on the test set.</p>
+
+<h2>6. Sanity checks (seed 0)</h2>
+<ul>
+<li><strong>The two routes agree on well-conditioned data.</strong> \(\max_i|\sigma_i^2/(n-1)-\lambda_i|=8.5\cdot10^{-14}\) over all 16 values and, after fixing signs, the first 3 component vectors differ by at most \(8.6\cdot10^{-16}\). The leading covariance eigenvalues are 161.3, 33.41, 9.502, then 0.1092, 0.1062, 0.09915: the first three components carry 99.44 % of the total variance and the rest lie close to the noise variance \(0.3^2=0.09\).</li>
+<li><strong>The Eckart&ndash;Young identity.</strong> \(\|X_c-\hat X_k\|_F^2\) and \(\sum_{i>k}\sigma_i^2\) agree to every printed digit:
+<table>
+<thead><tr><th>\(k\)</th><th>\(\|X_c-\hat X_k\|_F^2\)</th><th>\(\sum_{i>k}\sigma_i^2\)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>44,014.109772</td><td>44,014.109772</td></tr>
+<tr><td>2</td><td>10,635.719080</td><td>10,635.719080</td></tr>
+<tr><td>3</td><td>1,143.290310</td><td>1,143.290310</td></tr>
+<tr><td>5</td><td>928.087154</td><td>928.087154</td></tr>
+<tr><td>8</td><td>639.974303</td><td>639.974303</td></tr>
+</tbody></table></li>
+</ul>
+
+<h2>7. Experiment 1: compression and fault detection on held-out data</h2>
+<figure><img src="/assets/img/blog/pca-sensors.svg" alt="Left: bar chart of the 16 eigenvalues on a log scale, the first three tall and the rest close to the 0.09 noise line. Right: mean squared error against the number of components, dropping sharply up to k equal to 3 and then nearly flat, with the training and held-out curves coinciding" width="920" height="350">
+<figcaption>Figure 2. Seed 0. Left: eigenvalues of the 16 components; the red line is the noise variance 0.09. Right: mean squared error per value against the number of components \(k\), on the training and held-out sets (\(k=16\) gives zero error and is not drawn).</figcaption></figure>
+<table>
+<thead><tr><th>Quantity (\(k=3\), mean &plusmn; standard deviation over 20 seeds)</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Held-out reconstruction RMSE per value</td><td>0.2708 &plusmn; 0.0015 (noise-only expectation: \(0.3\sqrt{13/16}=0.2704\))</td></tr>
+<tr><td>Storage</td><td>16 floats become 3 scores per sample (5.33&times; smaller), plus a 3&times;16 basis stored once</td></tr>
+<tr><td>False-alarm rate on normal held-out data (threshold = 99th percentile of training Q)</td><td>1.27 % &plusmn; 0.37 % (target 1 %)</td></tr>
+</tbody></table>
+<p>With \(k\) equal to the true number of sources, what remains in the residual is almost pure noise: the noise has \(d\) independent components, the projection keeps \(k\) of them, so the residual holds on average \(\sigma_n^2(d-k)/d\) per value, an RMSE of \(0.3\sqrt{13/16}=0.2704\), close to the measured 0.2708. The false-alarm rate of 1.27 % is slightly above the 1 % target, consistent with the threshold being estimated from the residuals of the same set used to fit the model.</p>
+<p><strong>Detecting a one-channel offset fault.</strong> On the test set, an offset \(\delta\) is added to one channel (each of the 16 channels is tried in turn) and the fraction of samples whose \(Q\) exceeds the threshold is recorded:</p>
+<table>
+<thead><tr><th>Offset \(\delta\) (relative to noise std 0.3)</th><th>Detection rate, mean over 16 channels</th><th>Hardest channel (mean over 20 seeds)</th></tr></thead>
+<tbody>
+<tr><td>0.5 (1.7&times;)</td><td>4.0 % &plusmn; 0.6</td><td>2.5 %</td></tr>
+<tr><td>1.0 (3.3&times;)</td><td>23.9 % &plusmn; 2.1</td><td>11.6 %</td></tr>
+<tr><td>2.0 (6.7&times;)</td><td>94.8 % &plusmn; 1.0</td><td>74.2 %</td></tr>
+<tr><td>3.0 (10&times;)</td><td>99.9 % &plusmn; 0.2</td><td>98.7 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Small faults are almost invisible:</strong> an offset of 1.7 noise standard deviations is detected in only 4 % of samples; from about 7 times upward the mean rate exceeds 94 %.</li>
+<li><strong>Channels differ.</strong> At \(\delta=2\), the hardest channel reaches only 74.2 % against a 94.8 % average, in the direction of the formula \(\delta^2(1-\sum_{j\le k}V_{cj}^2)\) in Section 2: the part of the offset that falls in the principal subspace leaves no residual.</li>
+</ul>
+
+<h2>8. Experiment 2: when the covariance route breaks</h2>
+<p>Build \(M=U\operatorname{diag}(\sigma)V^\top\) of size 200&times;10 with random orthogonal \(U,V\) and \(\sigma\) log-spaced from 1 down to \(10^{-10}\) (\(\kappa(M)=10^{10}\), \(\kappa(M^\top M)=10^{20}\)), then recover \(\sigma\) both ways:</p>
+<table>
+<thead><tr><th>\(i\)</th><th>true \(\sigma_i\)</th><th>Relative error, SVD of \(M\)</th><th>Relative error, \(\sqrt{\text{eig}(M^\top M)}\)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1.000e+00</td><td>1.1e-16</td><td>1.1e-16</td></tr>
+<tr><td>2</td><td>7.743e-02</td><td>1.8e-16</td><td>2.5e-15</td></tr>
+<tr><td>3</td><td>5.995e-03</td><td>4.3e-16</td><td>6.1e-13</td></tr>
+<tr><td>4</td><td>4.642e-04</td><td>8.2e-16</td><td>8.9e-12</td></tr>
+<tr><td>5</td><td>3.594e-05</td><td>1.4e-13</td><td>5.3e-09</td></tr>
+<tr><td>6</td><td>2.783e-06</td><td>1.9e-12</td><td>1.5e-06</td></tr>
+<tr><td>7</td><td>2.154e-07</td><td>5.7e-12</td><td>9.1e-05</td></tr>
+<tr><td>8</td><td>1.668e-08</td><td>2.2e-10</td><td>1.1e-01</td></tr>
+<tr><td>9</td><td>1.292e-09</td><td>1.3e-09</td><td>4.9e+00</td></tr>
+<tr><td>10</td><td>1.000e-10</td><td>9.4e-09</td><td>1.0e+00 (computed eigenvalue is &minus;2.93e-17, clipped to 0)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>The SVD keeps the absolute error below \(\varepsilon\sigma_1\).</strong> The relative error grows as \(\sigma_i\) shrinks but the absolute error stays tiny (of order \(10^{-18}\) at \(i=8\) and \(9\)), consistent with \(\varepsilon\sigma_1=2.2\cdot10^{-16}\) as a bound.</li>
+<li><strong>The covariance route loses accuracy from \(i=6\)</strong> (relative error \(1.5\cdot10^{-6}\)) and fails outright from \(i=8\): \(\sigma_8=1.7\cdot10^{-8}\) sits at the threshold \(\sqrt{\varepsilon}\sigma_1=1.5\cdot10^{-8}\) with an 11 % error; \(\sigma_9\) is off by nearly a factor of 6; \(\sigma_{10}^2=10^{-20}\) lies below the numerical noise \(\varepsilon\sigma_1^2=2.2\cdot10^{-16}\), so the computed eigenvalue is negative.</li>
+</ul>
+
+<p><strong>Limitations.</strong> The data are synthetic and Gaussian, with exactly 3 latent sources and independent noise of equal size; real sensors have non-Gaussian noise, drift and distributions that change with conditions. \(k=3\) is known in advance; in practice \(k\) must be chosen from the scree plot or by cross-validation. The Q threshold is the empirical percentile of the training set, not the analytic approximation of Jackson and Mudholkar, and the training set is assumed free of faults. Only one fault type was tried (a constant offset on one channel), not stuck sensors, slow drift or several failing channels at once. PCA is linear; nonlinear relations between channels need other methods. The stability experiment uses a purpose-built matrix with \(\kappa=10^{10}\), far more extreme than the sensor data of Section 6 (the ratio of largest to smallest singular value is only about 40, so the two routes agree). No run time or energy was measured on an embedded device.</p>
+
+<h2>9. Practical conclusions</h2>
+<ol>
+<li>Compute PCA by the SVD of the centred matrix; the axes are the columns of \(V\), the variances are \(\sigma_i^2/(n-1)\), the scores are \(U\Sigma\).</li>
+<li>Read the reconstruction error off the singular spectrum: \(\sum_{i>k}\sigma_i^2\) is the minimum squared error over all rank-\(k\) approximations.</li>
+<li>The covariance route is fine when the singular values of interest exceed about \(10^{-8}\sigma_1\); below that, use the SVD.</li>
+<li>Once a \(k\)-component model exists, the Q statistic of the residual is a cheap sensor-fault detector: here 1.3 % false alarms and over 94 % detection of an offset of 6.7 noise standard deviations, but only 4 % for 1.7.</li>
+<li>Check channel by channel: a channel with large loadings on the principal components is considerably harder to monitor.</li>
+</ol>
+
+<div class="cta-box"><strong>Need an edge-AI/IoT data pipeline, an agent chatbot or a custom AI tool?</strong><br>
+I take projects as a freelancer. Describe yours in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Data%20pipeline%20project">Get a quote</a> <a class="btn ghost" href="/en/services.html">See services</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>K. Pearson. &ldquo;On lines and planes of closest fit to systems of points in space.&rdquo; <em>The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science</em>, series 6, vol. 2, no. 11, 1901, pp. 559&ndash;572. <a href="https://doi.org/10.1080/14786440109462720">doi:10.1080/14786440109462720</a>.</li>
+<li>H. Hotelling. &ldquo;Analysis of a complex of statistical variables into principal components.&rdquo; <em>Journal of Educational Psychology</em> 24(6), 1933, pp. 417&ndash;441. <a href="https://doi.org/10.1037/h0071325">doi:10.1037/h0071325</a>.</li>
+<li>C. Eckart and G. Young. &ldquo;The approximation of one matrix by another of lower rank.&rdquo; <em>Psychometrika</em> 1(3), 1936, pp. 211&ndash;218. <a href="https://doi.org/10.1007/BF02288367">doi:10.1007/BF02288367</a>.</li>
+<li>J. E. Jackson and G. S. Mudholkar. &ldquo;Control procedures for residuals associated with principal component analysis.&rdquo; <em>Technometrics</em> 21(3), 1979, pp. 341&ndash;349. <a href="https://doi.org/10.1080/00401706.1979.10489779">doi:10.1080/00401706.1979.10489779</a>.</li>
+<li>I. T. Jolliffe and J. Cadima. &ldquo;Principal component analysis: a review and recent developments.&rdquo; <em>Philosophical Transactions of the Royal Society A</em> 374(2065), 20150202, 2016. <a href="https://doi.org/10.1098/rsta.2015.0202">doi:10.1098/rsta.2015.0202</a>.</li>
+<li>G. H. Golub and C. F. Van Loan. <em>Matrix Computations</em>, 4th edition. Johns Hopkins University Press, 2013. ISBN 978-1-4214-0794-4.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/pca_svd.py">pca_svd.py</a> (Python 3.12, NumPy, Matplotlib; about 2 seconds). Every number in Sections 6&ndash;8 is the output of this script.</p>
+<aside class="aff-box"><h3>Further reading</h3><p>Vietnamese-language books on Python, machine learning and data.</p><ul><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Advanced Python programming (Vietnamese book)</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Designing Machine Learning Systems (Vietnamese edition)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/3g4yyvPH69" rel="sponsored nofollow noopener" target="_blank">Data Strategy (Vietnamese edition)</a> <span class="price">₫169.100</span></li><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">2-book combo (Vietnamese): AI Agent in practice &amp; Applied AI Agents</a> <span class="price">₫249.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

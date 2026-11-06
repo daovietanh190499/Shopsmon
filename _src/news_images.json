@@ -142,5 +142,29 @@
    750,
    500
   ]
+ },
+ "openai-gpt-6-cyber": {
+  "credit": "Reuters / The Indian Express",
+  "image_url": "https://images.indianexpress.com/2026/10/OpenAI-resumes-training-AI.jpg",
+  "orig_size": [
+   1600,
+   900
+  ]
+ },
+ "nordic-sub-ghz-edge-ai": {
+  "credit": "Nordic Semiconductor",
+  "image_url": "https://nos-p-001.sitecorecontenthub.cloud/api/public/content/4347855092e84727adda91c32ec71f75?v=605bd076",
+  "orig_size": [
+   500,
+   417
+  ]
+ },
+ "qualcomm-spacex-starlink-mobile-5g": {
+  "credit": "Qualcomm",
+  "image_url": "https://s7d1.scene7.com/is/image/dmqualcommprod/SpaceXAnnouncement",
+  "orig_size": [
+   1108,
+   615
+  ]
  }
 }

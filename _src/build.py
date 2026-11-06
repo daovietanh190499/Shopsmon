@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="pca-svd", date="2026-11-06", min=13, aff="ml-books",
+         og="/assets/img/blog/pca-svd-cover.png",
+         tag={"vi": "Khoa học dữ liệu / IoT", "en": "Data science / IoT"},
+         title={"vi": "PCA qua SVD: dẫn xuất, độ ổn định số và nén dữ liệu cảm biến",
+                "en": "PCA through the SVD: derivation, numerical stability and compressing sensor data"},
+         summary={"vi": "Thành phần chính là vector kỳ dị phải, đẳng thức Eckart–Young kiểm tra bằng số, vì sao không nên qua ma trận hiệp phương sai khi điều kiện xấu, và nén rồi phát hiện lỗi mảng 16 cảm biến trên 20 seed.",
+                  "en": "Principal components as right singular vectors, the Eckart–Young identity checked numerically, why the covariance route fails on badly conditioned data, and compressing a 16-sensor array and detecting faults over 20 seeds."},
+         seo_title={"vi": "PCA qua SVD: độ ổn định số và nén dữ liệu cảm biến | Shopsmon",
+                    "en": "PCA through the SVD: numerical stability and sensor data compression | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất PCA từ SVD, đẳng thức Eckart–Young, so sánh SVD với ma trận hiệp phương sai về độ ổn định số, nén và phát hiện lỗi bằng thống kê Q trên mảng cảm biến mô phỏng, kèm code NumPy.",
+                   "en": "Derivation of PCA from the SVD, the Eckart–Young identity, SVD versus covariance for numerical stability, and compression plus Q-statistic fault detection on a simulated sensor array, with NumPy code."}),
     dict(slug="id-photo-ai", date="2026-11-05", min=18,
          og="/assets/img/blog/id-photo-cover.png",
          tag={"vi": "Sản phẩm AI", "en": "AI products"},

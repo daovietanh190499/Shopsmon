@@ -25,6 +25,10 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 
 # Pages without og:image: use the article's own lead image.
 OVERRIDE = {
+    # Lead image shown on the source article (the VentureBeat/OpenAI pages block scripts).
+    "openai-gpt-6-cyber": "https://images.indianexpress.com/2026/10/OpenAI-resumes-training-AI.jpg",
+    "nordic-sub-ghz-edge-ai": "https://nos-p-001.sitecorecontenthub.cloud/api/public/content/4347855092e84727adda91c32ec71f75?v=605bd076",
+    "qualcomm-spacex-starlink-mobile-5g": "https://s7d1.scene7.com/is/image/dmqualcommprod/SpaceXAnnouncement",
     "atsign-edgeai": "https://cdn.prod.website-files.com/6a0e0dacd9a0567a4e90580e/6ac3cad5b0b9f389d4e0e765_Intel%20x%20Atsign.webp",
     "nsf-fabaid-data-fabric": "https://computing.unl.edu/sites/unl.edu.engineering.school-of-computing/files/media/image/hcc.jpg",
     # Source page blocks scripts (403/DNS): use the lead image of another outlet covering the same event.
@@ -33,6 +37,8 @@ OVERRIDE = {
 }
 # Credit for OVERRIDE images that come from a different outlet than the news source.
 CREDIT_OVERRIDE = {
+    "openai-gpt-6-cyber": "Reuters / The Indian Express",
+    "qualcomm-spacex-starlink-mobile-5g": "Qualcomm",
     "brainchip-akd1500-raspberry-pi-5": "CNX Software",
     "nordic-nrf71-edge-ai": "CircuitDigest",
 }
@@ -56,9 +62,19 @@ def to_cover(data, dest):
     im = Image.open(io.BytesIO(data))
     im = im.convert("RGB")
     w, h = im.size
-    if w < 600 or h < 300:
+    if w < 480 or h < 300:
         raise ValueError(f"too small {w}x{h}")
     target = 1200 / 630
+    if w < 600:
+        # Small official image: show it whole, scaled to the cover height, over a blurred copy of itself.
+        from PIL import ImageFilter
+        bg = im.resize((1200, 630), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
+        fh = 630
+        fw = int(w * fh / h)
+        fg = im.resize((fw, fh), Image.LANCZOS)
+        bg.paste(fg, ((1200 - fw) // 2, 0))
+        bg.save(dest, "JPEG", quality=84, optimize=True)
+        return (w, h)
     if w / h > target:
         nw = int(h * target)
         im = im.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))

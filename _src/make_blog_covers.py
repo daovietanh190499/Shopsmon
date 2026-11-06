@@ -13,7 +13,9 @@ CARDS = {
     "eight-point-normalization": ("Eight-point algorithm", "Why Hartley normalisation matters  |  SVD, NumPy", "#22c55e"),
     "zhang-calibration": ("Camera calibration", "Zhang's chessboard method  |  homography, SVD", "#f59e0b"),
     "gd-conditioning": ("Gradient descent & conditioning", "Why least squares gets slow  |  kappa, CG, NumPy", "#a855f7"),
+    "pca-svd": ("PCA through the SVD", "Stability and sensor data compression  |  NumPy", "#14b8a6"),
 }
+ONLY = set(__import__("sys").argv[1:])
 
 
 def art(ax, slug, col):
@@ -26,6 +28,8 @@ def art(ax, slug, col):
 
 
 for slug, (title, sub, col) in CARDS.items():
+    if ONLY and slug not in ONLY:
+        continue
     fig = plt.figure(figsize=(12, 6.3), dpi=100)
     fig.patch.set_facecolor("#0f172a")
     ax = fig.add_axes([0.07, 0.08, 0.86, 0.48]); ax.set_facecolor("#0f172a")
