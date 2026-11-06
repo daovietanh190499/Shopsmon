@@ -454,6 +454,7 @@ def services(L):
 <h2>{t('3. Công cụ AI theo yêu cầu', '3. Custom AI tools')}</h2>
 <p class="sub">{t('Phần mềm nhỏ, tập trung, loại bỏ một công việc lặp đi lặp lại.', 'Small, focused software that removes a repetitive task.')}</p>
 <p><a href="{P('/solutions/custom-ai-tools.html')}">{t('Xem trang dịch vụ công cụ AI đầy đủ', 'Read the full custom AI tools page')} &rarr;</a></p>
+<p><a href="{P('/solutions/ai-consulting.html')}">{t('Chưa chắc nên bắt đầu từ đâu? Xem trang tư vấn AI cho doanh nghiệp', 'Not sure where to start? See the AI consulting for business page')} &rarr;</a></p>
 <div class="grid g2">
 <div class="card"><h3>{t('Ví dụ', 'Examples')}</h3><ul>
 <li>{t('Trích xuất trường dữ liệu từ hoá đơn, biểu mẫu hoặc email vào bảng tính', 'Extract fields from invoices, forms or emails into a spreadsheet')}</li>
@@ -630,6 +631,65 @@ def landing_tools(L):
            t("Công cụ AI theo yêu cầu: trích xuất, phân loại, tự động hoá | Shopsmon", "Custom AI tools: extraction, classification, automation | Shopsmon"),
            t("Xây dựng công cụ AI gọn nhẹ cho quy trình của bạn: trích xuất tài liệu, phân loại, làm sạch dữ liệu, báo cáo và tự động hoá. Đo độ chính xác trên dữ liệu của bạn, demo trước, bàn giao mã nguồn.",
              "Lightweight custom AI tools for your workflow: document extraction, classification, data cleaning, reporting and automation. Accuracy measured on your data, demo first, source handed over."),
+           body, active="/services.html")
+
+
+def landing_consulting(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    body = f"""
+<div class="hero"><div class="wrap">
+<span class="pill">{t('Tư vấn AI cho doanh nghiệp', 'AI consulting for business')}</span>
+<h1>{t('Xác định đúng chỗ nên dùng AI trong doanh nghiệp của bạn &mdash; trước khi tốn tiền xây dựng.', 'Find where AI actually fits in your business &mdash; before you pay to build anything.')}</h1>
+<p class="lead">{t('Một buổi trao đổi ngắn, sau đó là bản đánh giá bằng văn bản: quy trình nào đáng tự động hoá, cần dữ liệu gì, rủi ro nằm ở đâu, và một bản thử nghiệm nhỏ với tiêu chí đo rõ ràng. Nếu AI không phù hợp với việc của bạn, tôi sẽ nói như vậy.', 'A short conversation, then a written assessment: which processes are worth automating, what data is needed, where the risks are, and a small pilot with clear success measures. If AI is not a good fit for your task, I will say so.')}</p>
+<div class="cta">{cta_btns(L)}</div></div></div>
+
+<section><div class="wrap"><h2>{t('Bản đánh giá gồm những gì', 'What the assessment covers')}</h2><p class="sub">{t('Sáu phần, viết cho người ra quyết định chứ không chỉ cho kỹ sư.', 'Six parts, written for decision makers as well as engineers.')}</p>
+<div class="grid g3">
+<div class="card"><h3>{t('Danh sách use-case', 'Use-case list')}</h3><p>{t('Liệt kê các quy trình đang tốn thời gian, ước tính tác động (số lượng, thời gian, tỉ lệ lỗi) và xếp thứ tự theo giá trị và độ khó.', 'The time-consuming processes, an estimate of impact (volume, time, error rate) and a ranking by value and difficulty.')}</p></div>
+<div class="card"><h3>{t('Dữ liệu và tài liệu', 'Data and documents')}</h3><p>{t('Dữ liệu đã có chưa, nằm ở đâu, chất lượng ra sao, mức độ nhạy cảm, và cần thu thêm gì để đo được kết quả.', 'What data exists, where it lives, its quality and sensitivity, and what must still be collected to measure results.')}</p></div>
+<div class="card"><h3>{t('Thiết kế bản thử nghiệm', 'Pilot design')}</h3><p>{t('Phạm vi nhỏ, tiêu chí nghiệm thu đo trên ví dụ thật được giữ lại, và bước kiểm tra của con người ở chỗ có rủi ro.', 'A small scope, acceptance criteria measured on held-out real examples, and a human-review step where it is risky.')}</p></div>
+<div class="card"><h3>{t('Rủi ro và quyền riêng tư', 'Risk and privacy')}</h3><p>{t('Dữ liệu được gửi tới đâu, ai truy cập được, nhà cung cấp mô hình nào, và cách xử lý khi mô hình trả lời sai.', 'Where data is sent, who can access it, which model provider is used, and what happens when the model is wrong.')}</p></div>
+<div class="card"><h3>{t('Chi phí vận hành', 'Running costs')}</h3><p>{t('Ước tính chi phí gọi mô hình (API hoặc tự chạy) theo khối lượng thực tế, bên cạnh công sức xây dựng.', 'An estimate of model costs (API or self-hosted) at your real volume, alongside the build effort.')}</p></div>
+<div class="card"><h3>{t('Lộ trình', 'Roadmap')}</h3><p>{t('Các bước tiếp theo theo phạm vi cố định: làm bản thử nghiệm, mở rộng, hoặc dừng lại nếu số đo không đạt.', 'Next steps at fixed scope: build the pilot, scale it, or stop if the measurements do not justify it.')}</p></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Use-case thường gặp', 'Common use cases')}</h2><p class="sub">{t('Những việc mà doanh nghiệp nhỏ và vừa hay hỏi tới.', 'The requests small and mid-sized businesses ask about most.')}</p>
+<div class="grid g2">
+<div class="card"><ul>
+<li>{t('Chatbot trả lời câu hỏi khách hàng dựa trên tài liệu và chính sách của chính doanh nghiệp', 'A chatbot that answers customer questions from the business own documents and policies')} &mdash; <a href="{P('/solutions/llm-chatbot-agent.html')}">{t('trang chatbot &amp; agent', 'chatbot &amp; agent page')}</a></li>
+<li>{t('Tìm kiếm và hỏi đáp trên tài liệu nội bộ (quy trình, hợp đồng, sổ tay)', 'Search and question answering over internal documents (procedures, contracts, handbooks)')}</li>
+<li>{t('Đọc hoá đơn, biểu mẫu, email và đưa dữ liệu vào bảng tính', 'Reading invoices, forms and emails into a spreadsheet')} &mdash; <a href="{P('/solutions/custom-ai-tools.html')}">{t('công cụ AI theo yêu cầu', 'custom AI tools')}</a></li></ul></div>
+<div class="card"><ul>
+<li>{t('Phân loại ticket, phản hồi và đánh giá của khách hàng', 'Sorting tickets, customer feedback and reviews')}</li>
+<li>{t('Báo cáo định kỳ tự động tổng hợp từ nhiều nguồn', 'Recurring reports compiled automatically from several sources')}</li>
+<li>{t('Giám sát cảm biến/IoT và phát hiện bất thường trên dữ liệu thiết bị', 'Sensor/IoT monitoring and anomaly detection on device data')} &mdash; <a href="{P('/blog/pca-svd.html')}">{t('ví dụ kỹ thuật trên blog', 'technical example on the blog')}</a></li></ul></div>
+</div></div></section>
+
+<section><div class="wrap"><h2>{t('Quy trình', 'Process')}</h2><p class="sub">{t('Bốn bước, mỗi bước có đầu ra cụ thể.', 'Four steps, each with a concrete output.')}</p>
+<div class="grid g3 steps">
+<div class="card"><h3>{t('1. Trao đổi ngắn', '1. Short conversation')}</h3><p>{t('Bạn mô tả doanh nghiệp, quy trình đang gặp khó và kỳ vọng. Tôi hỏi lại những điểm chưa rõ.', 'You describe the business, the process that hurts and what you hope for. I ask about anything unclear.')}</p></div>
+<div class="card"><h3>{t('2. Thu thập ví dụ', '2. Collect examples')}</h3><p>{t('Bạn gửi vài chục ví dụ thật (đã ẩn thông tin nhạy cảm) và mô tả kết quả đúng trông như thế nào.', 'You send a few dozen real examples (sensitive data removed) and describe what a correct result looks like.')}</p></div>
+<div class="card"><h3>{t('3. Báo cáo đánh giá', '3. Written assessment')}</h3><p>{t('Bạn nhận bản đánh giá sáu phần ở trên kèm đề xuất bản thử nghiệm có phạm vi và giá cố định.', 'You receive the six-part assessment above with a pilot proposal at fixed scope and price.')}</p></div>
+</div>
+<p style="margin-top:20px">{t('Bước tuỳ chọn tiếp theo: xây bản thử nghiệm, đo trên dữ liệu của bạn, rồi bàn giao mã nguồn, tài liệu và buổi hướng dẫn. Thanh toán bằng hoá đơn PayPal.', 'Optional next step: build the pilot, measure it on your data, then hand over source code, documentation and a walkthrough. Payment by PayPal invoice.')}</p></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Câu hỏi thường gặp', 'Frequently asked questions')}</h2>
+<div class="grid g2">
+<div class="card"><h3>{t('Doanh nghiệp nhỏ, ít dữ liệu có làm được không?', 'Can a small business with little data do this?')}</h3><p>{t('Nhiều tác vụ (trích xuất, phân loại, hỏi đáp trên tài liệu) dùng mô hình có sẵn chứ không cần huấn luyện mô hình riêng. Điều cần có là vài chục ví dụ thật để đo kết quả.', 'Many tasks (extraction, classification, question answering over documents) use existing models rather than training a custom one. What is needed is a few dozen real examples to measure results.')}</p></div>
+<div class="card"><h3>{t('Dữ liệu của tôi có bị gửi ra ngoài không?', 'Will my data leave my premises?')}</h3><p>{t('Tuỳ thiết kế: dùng API của nhà cung cấp mô hình hoặc chạy mô hình trên máy của bạn. Tôi nói rõ dữ liệu đi đâu trước khi bắt đầu; xem', 'It depends on the design: a model provider API or a model running on your own machine. I state where data goes before starting; see the')} <a href="{P('/privacy.html')}">{t('Chính sách bảo mật', 'Privacy Policy')}</a>.</p></div>
+<div class="card"><h3>{t('AI có thay thế nhân viên không?', 'Does AI replace staff?')}</h3><p>{t('Tôi thiết kế theo hướng hỗ trợ, có bước người duyệt ở chỗ rủi ro. Không phù hợp với quyết định tự động về y tế, pháp lý, tín dụng hoặc việc làm mà không có con người giám sát.', 'I design for assistance, with a human-review step where it is risky. Not a fit for automated decisions on health, legal, credit or employment matters without human oversight.')}</p></div>
+<div class="card"><h3>{t('Giá và thời gian thế nào?', 'How much and how long?')}</h3><p>{t('Phụ thuộc phạm vi, nên tôi báo giá và thời gian cố định sau khi hiểu yêu cầu. Hai ba câu mô tả là đủ để bắt đầu.', 'It depends on scope, so I give a fixed price and timeline once I understand the request. Two or three sentences are enough to start.')}</p></div>
+</div></div></section>
+
+<section><div class="wrap" style="text-align:center"><h2>{t('Kể cho tôi nghe quy trình bạn muốn cải thiện', 'Tell me about the process you want to improve')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Tôi sẽ phản hồi bằng câu hỏi làm rõ và đề xuất bước tiếp theo.', 'I will reply with clarifying questions and a proposed next step.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)}</div></div></section>
+"""
+    layout(L, "/solutions/ai-consulting.html",
+           t("Tư vấn AI cho doanh nghiệp: đánh giá use-case, thử nghiệm, rủi ro | Shopsmon", "AI consulting for business: use-case assessment, pilot, risk | Shopsmon"),
+           t("Tư vấn ứng dụng AI cho doanh nghiệp: đánh giá use-case, dữ liệu, bản thử nghiệm có tiêu chí đo, rủi ro và chi phí vận hành. Báo giá phạm vi cố định, bàn giao mã nguồn và tài liệu.",
+             "AI consulting for businesses: use-case assessment, data review, a pilot with measurable criteria, risk and running costs. Fixed-scope quote, source code and documentation handed over."),
            body, active="/services.html")
 
 
@@ -1020,6 +1080,7 @@ for L in LANGS:
     landing(L)
     landing3d(L)
     landing_tools(L)
+    landing_consulting(L)
     products(L)
     product_idphoto(L)
     contact(L)
