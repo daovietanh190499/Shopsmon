@@ -228,7 +228,7 @@ try:
 except FileNotFoundError:
     NEWS_IMG = {}
 
-# Shopee Affiliate links (owner's account; collected 2026-11-04, see states/affiliate.md). `price` is the listing price seen that day.
+# Shopee Affiliate links (owner's account; collected 2026-11-04, prices re-checked 2026-11-08, see states/affiliate.md). `price` is the listing price seen on that check.
 AFF = {
     "agent-combo": dict(link="https://s.shopee.vn/LoX19EmMH", price="₫249.000",
                         vi="Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng", en="2-book combo (Vietnamese): AI Agent in practice &amp; Applied AI Agents"),
@@ -236,11 +236,13 @@ AFF = {
                        vi="Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)", en="Designing Machine Learning Systems (Vietnamese edition)"),
     "python-adv": dict(link="https://s.shopee.vn/8fTew5J4vr", price="₫289.000",
                        vi="Đường vào lập trình Python nâng cao", en="Advanced Python programming (Vietnamese book)"),
+    "agent-3book": dict(link="https://s.shopee.vn/8fTlnamYq6", price="₫184.030",
+                        vi="Combo 3 sách: OpenClaw tự động hoá công việc, AI Agent thực chiến &amp; AI Agent ứng dụng", en="3-book combo (Vietnamese): OpenClaw work automation, AI Agent in practice &amp; Applied AI Agents"),
     "agent-book": dict(link="https://s.shopee.vn/7puXwtWBxq", price="₫179.000",
                        vi="Thiết lập cỗ máy xây kênh tự động 24/24 từ trợ lý AI và AI Agent", en="Setting up a 24/7 automated channel with AI assistants and AI agents (Vietnamese book)"),
     "esp32-ai": dict(link="https://s.shopee.vn/AUvJ7Ugukh", price="₫105.000",
                      vi="Bo mạch ESP32-S3 MINI Xiaozhi AI &ndash; robot thoại, màn hình OLED 0,96 inch", en="ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED"),
-    "esp32-n16r8": dict(link="https://s.shopee.vn/3B8iO1zd11", price="₫190.000",
+    "esp32-n16r8": dict(link="https://s.shopee.vn/3B8iO1zd11", price="₫170.000",
                         vi="ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, Flash 16 MB + PSRAM 8 MB (board AI/IoT)", en="ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)"),
     "sht40": dict(link="https://s.shopee.vn/4qGwN7QQYU", price="₫123.640",
                   vi="Mô-đun cảm biến nhiệt độ &amp; độ ẩm SHT40/SHT41/SHT45", en="SHT40/SHT41/SHT45 temperature &amp; humidity sensor module"),
@@ -261,12 +263,12 @@ AFF_BOXES = {
         title={"vi": "Đọc thêm: sách về agent LLM và hệ thống ML", "en": "Further reading: books on LLM agents and ML systems"},
         intro={"vi": "Sách tiếng Việt về agent LLM, Python và hệ thống học máy.",
                "en": "Vietnamese-language books on LLM agents, Python and machine-learning systems."},
-        items=["agent-combo", "ml-systems", "python-adv", "agent-book"]),
+        items=["agent-combo", "agent-3book", "ml-systems", "python-adv", "agent-book"]),
     "iot": dict(
         title={"vi": "Linh kiện IoT / AIoT phổ biến", "en": "Common IoT / AIoT parts"},
-        intro={"vi": "Board và cảm biến thường dùng để làm nguyên mẫu: ESP32-S3 chạy mô hình nhỏ, Zigbee và LoRa cho mạng cảm biến.",
-               "en": "Boards and sensors commonly used for prototyping: ESP32-S3 for small models, Zigbee and LoRa for sensor networks."},
-        items=["esp32-ai", "esp32-n16r8", "sht40", "lora", "sonoff-zb"]),
+        intro={"vi": "Board và cảm biến thường dùng để làm nguyên mẫu: ESP32-S3 chạy mô hình nhỏ, cảm biến nhiệt độ/độ ẩm và cầu nối Zigbee cho mạng cảm biến.",
+               "en": "Boards and sensors commonly used for prototyping: ESP32-S3 for small models, a temperature/humidity sensor and a Zigbee bridge for sensor networks."},
+        items=["esp32-ai", "esp32-n16r8", "sht40", "sonoff-zb"]),
     "calib": dict(
         title={"vi": "Thiết bị để tự hiệu chuẩn camera", "en": "Hardware for calibrating your own camera"},
         intro={"vi": "Webcam USB và một bàn cờ in trên giấy phẳng là đủ để làm lại thí nghiệm trong bài. Nên cố định lấy nét khi chụp vì tiêu cự đổi theo lấy nét.",
