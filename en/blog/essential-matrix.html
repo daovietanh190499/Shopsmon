@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Essential matrix decomposition: four poses and the cheirality test | Shopsmon</title>
+<meta name="description" content="Derivation of the essential-matrix decomposition into four (R, t) pairs, the twisted pair and the cheirality test, with NumPy code and measured errors versus noise, baseline and number of matches.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/essential-matrix.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/essential-matrix.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/essential-matrix.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/essential-matrix.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Essential matrix decomposition: four poses and the cheirality test | Shopsmon">
+<meta property="og:description" content="Derivation of the essential-matrix decomposition into four (R, t) pairs, the twisted pair and the cheirality test, with NumPy code and measured errors versus noise, baseline and number of matches.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/essential-matrix.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/essential-matrix-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/essential-matrix.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-08 &middot; 3D reconstruction &middot; ~13 min read</p>
+<h1>From the essential matrix to camera motion: four solutions and one test</h1>
+<p class="meta">Decomposing \(E\) into rotation and translation, why there are exactly four candidates, how the cheirality test picks one, and what noise, baseline and the number of matches do to the result.</p>
+
+<h2>1. Context</h2>
+<p>Two earlier articles on this blog covered the pieces on either side of this one: the <a href="/en/blog/eight-point-normalization.html">eight-point algorithm</a> estimates a matrix from point matches, and <a href="/en/blog/triangulation-dlt.html">triangulation</a> turns two views plus two cameras into a 3D point. This article is the step in between. When the camera intrinsics \(K\) are known (for example after a <a href="/en/blog/zhang-calibration.html">chessboard calibration</a>), the matrix you estimate is the <strong>essential matrix</strong> \(E\), and the question becomes: <em>what motion of the camera does \(E\) encode?</em></p>
+<p>The answer has a catch that trips up many first implementations: \(E\) does not give you one rotation and one translation. It gives you <strong>four</strong>, and the data that tells them apart is not in \(E\) at all. It is in the 3D points.</p>
+
+<h2>2. What the essential matrix is</h2>
+<p>Take the first camera as the world frame, so a point has coordinates \(\mathbf X\) in camera 1 and \(\mathbf X'=R\mathbf X+\mathbf t\) in camera 2. Work in <em>normalised</em> image coordinates, \(\hat{\mathbf x}=K^{-1}\mathbf x=(X/Z,\,Y/Z,\,1)^\top\), which removes the intrinsics. The three vectors \(\mathbf X'\), \(R\mathbf X\) and \(\mathbf t\) are coplanar (they lie in the epipolar plane), so the triple product vanishes:</p>
+$$\hat{\mathbf x}'^\top\,[\mathbf t]_\times R\,\hat{\mathbf x}=0,\qquad E=[\mathbf t]_\times R,\qquad [\mathbf t]_\times=\begin{bmatrix}0&-t_3&t_2\\ t_3&0&-t_1\\ -t_2&t_1&0\end{bmatrix}.$$
+<p>Two facts about \(E\) matter for what follows.</p>
+<ul>
+<li><strong>Its singular values are \((s,s,0)\).</strong> A cross-product matrix has rank 2 and two equal singular values \(\|\mathbf t\|\), and multiplying by a rotation does not change singular values. Huang and Faugeras (1989) proved the converse: any \(3\times3\) matrix with singular values \((s,s,0)\) can be written as a skew-symmetric matrix times a rotation.</li>
+<li><strong>Scale is lost.</strong> \(E\) is only defined up to a scalar, so \(\mathbf t\) is recovered only as a <em>direction</em>. With two images alone you cannot tell a small scene seen with a short baseline from a large one seen with a long baseline.</li>
+</ul>
+<p>In practice \(E\) comes from the same eight-point system as before, built from normalised coordinates, with Hartley normalisation applied on top. The raw estimate will not have singular values \((s,s,0)\) because of noise, so the last step of estimation is to replace the singular values by \((s,s,0)\), with \(s\) the mean of the two largest. That is the closest valid essential matrix in the Frobenius sense (see Hartley &amp; Zisserman, Section 9.6, in the references).</p>
+
+<h2>3. Decomposition: why four</h2>
+<p>Let \(E=U\,\mathrm{diag}(1,1,0)\,V^\top\) be an SVD, with \(U,V\) rotations (flip the sign of a column if a determinant comes out as \(-1\); this is harmless because the third singular value is zero). Define</p>
+$$W=\begin{bmatrix}0&-1&0\\ 1&0&0\\ 0&0&1\end{bmatrix}.$$
+<p>Then the candidates are</p>
+$$R_1=UWV^\top,\qquad R_2=UW^\top V^\top,\qquad \mathbf t=\pm\mathbf u_3,$$
+<p>where \(\mathbf u_3\) is the third column of \(U\). Combining two rotations with two signs gives the four pairs \((R_1,+\mathbf t)\), \((R_1,-\mathbf t)\), \((R_2,+\mathbf t)\), \((R_2,-\mathbf t)\) (Hartley &amp; Zisserman, Result 9.19). All four produce exactly the same \(E\), hence exactly the same epipolar geometry. No amount of image-plane arithmetic can prefer one.</p>
+<p>The two signs of \(\mathbf t\) are the familiar ambiguity: the second camera is on one side of the first, or the other (and, equivalently, the scene is mirrored through the first camera centre). The two rotations are the less obvious part. Compute their ratio:</p>
+$$R_2R_1^\top=U\,(W^\top)^2\,U^\top=U\,\mathrm{diag}(-1,-1,1)\,U^\top .$$
+<p>That is a rotation by <strong>180&deg; about \(\mathbf u_3\)</strong>, which is the baseline direction. This is the &ldquo;twisted pair&rdquo; of Hartley &amp; Zisserman: the second camera is flipped over around the line joining the two camera centres. Both views would still agree on the epipolar constraint, because a rotation about the baseline maps every epipolar plane to itself.</p>
+
+<h2>4. Choosing one: the cheirality test</h2>
+<p>What separates the four is physical: a real scene point must be <strong>in front of both cameras</strong>, that is, have positive depth in each. This is called the <em>cheirality</em> constraint (Hartley, 1998, uses it under the name &ldquo;chirality&rdquo;). The procedure:</p>
+<ol>
+<li>For each of the four candidates, build \(P=[I\mid\mathbf 0]\) and \(P'=[R\mid\mathbf t]\) and triangulate every match.</li>
+<li>Count the points with positive depth in camera 1 <em>and</em> in camera 2.</li>
+<li>Keep the candidate with the highest count. With clean data, exactly one candidate has all points in front; the other three have none, or a mix.</li>
+</ol>
+<p>Using all matches, not a single one, makes the test robust: one badly matched point can fall behind a camera for the right answer, but it will not flip the majority.</p>
+
+<h2>5. Implementation</h2>
+<p>The core, in NumPy. The <a href="/blog/code/essential_matrix.py">complete script</a>, including the scene generator, the experiments and the figures, is downloadable.</p>
+<pre><code class="language-python">import numpy as np
+
+W = np.array([[0.0, -1, 0], [1, 0, 0], [0, 0, 1]])
+
+def decompose(E):
+    """The four candidate (R, t) of an essential matrix; |t| = 1."""
+    U, _, Vt = np.linalg.svd(E)
+    if np.linalg.det(U) &lt; 0:  U[:, 2] *= -1     # make U, V proper rotations
+    if np.linalg.det(Vt) &lt; 0: Vt[2] *= -1
+    R1 = U @ W @ Vt
+    R2 = U @ W.T @ Vt
+    t = U[:, 2]
+    return [(R1, t), (R1, -t), (R2, t), (R2, -t)]
+
+def count_in_front(R, t, n1, n2):
+    """Cheirality: points with positive depth in BOTH cameras (n1, n2: normalised coords)."""
+    X = triangulate(R, t, n1, n2)            # linear DLT, P1 = [I|0], P2 = [R|t]
+    z1 = X[:, 2]
+    z2 = (X @ R.T + t)[:, 2]
+    return int(np.sum((z1 &gt; 0) &amp; (z2 &gt; 0)))
+
+def recover_pose(n1, n2):
+    E = estimate_E(n1, n2)                   # normalised 8-point + (s, s, 0) projection
+    cands = decompose(E)
+    counts = [count_in_front(R, t, n1, n2) for R, t in cands]
+    return cands[int(np.argmax(counts))]</code></pre>
+
+<h3>Sanity checks</h3>
+<p>With noise-free matches (seed 0, 50 points) the recovered pose is exact up to rounding: rotation error 1.7&times;10<sup>-6</sup> degrees, translation-direction error 0, and 50 of 50 points in front. The tiny non-zero rotation figure is most likely the <code>arccos</code> in the angle formula amplifying round-off of order 10<sup>-16</sup> to about 10<sup>-8</sup> radians; I did not investigate further because it is five orders of magnitude below any noise effect measured below.</p>
+<p>The estimated \(E\) in the noisy demo below has singular values \((1,1,0)\) after normalisation, as the projection step forces.</p>
+
+<h2>6. The four candidates on real output</h2>
+<p><strong>Setup (synthetic, seeded).</strong> Intrinsics \(f_x=f_y=800\) px, principal point \((320,240)\). 50 random 3D points in front of camera 1 at depths 4&ndash;8. Camera 2 is rotated by a random axis by 12.39&deg; (here) and placed at distance 1.00 from camera 1, mostly to its side. Each pixel coordinate gets independent Gaussian noise, \(\sigma=0.5\) px in this demo. The demo output of the script:</p>
+<table>
+<thead><tr><th>Candidate</th><th>Points in front of both cameras (of 50)</th><th>Rotation error (&deg;)</th><th>Translation-direction error (&deg;)</th></tr></thead>
+<tbody>
+<tr><td>\((R_1,+\mathbf t)\)</td><td>0</td><td>179.949</td><td>0.757</td></tr>
+<tr><td>\((R_1,-\mathbf t)\)</td><td>0</td><td>179.949</td><td>179.243</td></tr>
+<tr><td><strong>\((R_2,+\mathbf t)\)</strong></td><td><strong>50</strong></td><td><strong>0.175</strong></td><td><strong>0.757</strong></td></tr>
+<tr><td>\((R_2,-\mathbf t)\)</td><td>0</td><td>0.175</td><td>179.243</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/essential-candidates.svg" alt="Four top-down panels showing the triangulated points for each of the four candidate poses; only the panel for R2 with +t has all points in front of both cameras" width="1000" height="290">
+<figcaption>Figure 1. Triangulated points (top-down view, X vs. Z) for each of the four candidates in the demo. Green: in front of both cameras; red: behind at least one. Only one panel is physically plausible.</figcaption></figure>
+<h3>What the numbers say</h3>
+<ul>
+<li><strong>Each wrong candidate is wrong in exactly one way.</strong> Rotation error is 179.949&deg; for the \(R_1\) pairs and 0.175&deg; for the \(R_2\) pairs; translation error is 0.757&deg; for \(+\mathbf t\) and 179.243&deg; for \(-\mathbf t\). The winner is the only one that is right in both.</li>
+<li><strong>Cheirality is a decisive test here.</strong> 50 points in front for the correct pair, 0 for the other three. It is not a close vote.</li>
+<li><strong>The twisted pair is exactly what the algebra predicts.</strong> I computed \(R_2R_1^\top\) from the output: its angle is 180.000&deg;, and the angle between its axis and the estimated baseline direction is 0.000&deg;.</li>
+</ul>
+
+<h2>7. Experiment: noise, baseline, number of matches</h2>
+<p>The demo is one scene. For the rest I ran 200 independent seeded scenes per row (random points, rotation angle of 7.5&ndash;15&deg;, random baseline direction), 50 matches unless stated, and report the median error with the 10th and 90th percentiles. &ldquo;Correct branch&rdquo; means the candidate chosen by the cheirality test had rotation error below 5&deg; <em>and</em> translation-direction error below 30&deg;, so it is the right one of the four and not merely close in rotation.</p>
+
+<h3>7.1 Image noise (baseline 1)</h3>
+<table>
+<thead><tr><th>\(\sigma\) (px)</th><th>Rotation error, median (p10&ndash;p90) &deg;</th><th>Translation direction, median (p10&ndash;p90) &deg;</th><th>Correct branch</th></tr></thead>
+<tbody>
+<tr><td>0.00</td><td>0.000 (0.000&ndash;0.000)</td><td>0.00 (0.00&ndash;0.00)</td><td>100.0 %</td></tr>
+<tr><td>0.25</td><td>0.124 (0.059&ndash;0.262)</td><td>0.42 (0.14&ndash;1.03)</td><td>100.0 %</td></tr>
+<tr><td>0.50</td><td>0.249 (0.102&ndash;0.499)</td><td>0.91 (0.28&ndash;2.38)</td><td>100.0 %</td></tr>
+<tr><td>1.00</td><td>0.480 (0.181&ndash;1.029)</td><td>1.83 (0.54&ndash;4.90)</td><td>100.0 %</td></tr>
+<tr><td>2.00</td><td>1.066 (0.507&ndash;1.949)</td><td>3.66 (1.41&ndash;8.93)</td><td>100.0 %</td></tr>
+<tr><td>4.00</td><td>2.139 (0.882&ndash;3.730)</td><td>7.24 (2.27&ndash;19.02)</td><td>96.0 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Errors grow close to linearly with noise.</strong> Doubling \(\sigma\) roughly doubles the median rotation error (0.249 &rarr; 0.480 &rarr; 1.066 &rarr; 2.139&deg;).</li>
+<li><strong>Translation direction is about 3.4&ndash;3.8&times; worse than rotation</strong> at every noise level from 0.25 to 4 px. The direction of \(\mathbf t\) is simply harder to pin down from the epipolar constraint than the rotation.</li>
+<li><strong>The wrong-branch failures appear only at the largest noise</strong> (4% of scenes at 4 px, none below).</li>
+</ul>
+
+<h3>7.2 Baseline (noise 1 px)</h3>
+<table>
+<thead><tr><th>Baseline</th><th>Rotation error, median (p10&ndash;p90) &deg;</th><th>Translation direction, median (p10&ndash;p90) &deg;</th><th>Correct branch</th></tr></thead>
+<tbody>
+<tr><td>0.00 (pure rotation)</td><td>0.375 (0.136&ndash;0.868)</td><td>undefined (\(\mathbf t=0\))</td><td>rotation within 5&deg;: 100.0 %</td></tr>
+<tr><td>0.02</td><td>0.417 (0.188&ndash;0.941)</td><td>73.69 (27.62&ndash;136.73)</td><td>11.5 %</td></tr>
+<tr><td>0.05</td><td>0.512 (0.245&ndash;0.958)</td><td>48.31 (16.05&ndash;137.57)</td><td>32.0 %</td></tr>
+<tr><td>0.10</td><td>0.565 (0.238&ndash;1.100)</td><td>21.27 (6.69&ndash;78.16)</td><td>65.0 %</td></tr>
+<tr><td>0.25</td><td>0.544 (0.265&ndash;1.028)</td><td>7.86 (2.74&ndash;19.71)</td><td>99.0 %</td></tr>
+<tr><td>0.50</td><td>0.535 (0.225&ndash;0.957)</td><td>3.51 (1.11&ndash;9.99)</td><td>100.0 %</td></tr>
+<tr><td>1.00</td><td>0.542 (0.246&ndash;0.993)</td><td>1.48 (0.56&ndash;4.25)</td><td>100.0 %</td></tr>
+<tr><td>2.00</td><td>0.509 (0.198&ndash;0.994)</td><td>0.88 (0.25&ndash;2.23)</td><td>100.0 %</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/essential-errors.svg" alt="Two log-scale panels: median rotation and translation-direction error with 10 to 90 percent bands, versus pixel noise on the left and versus baseline on the right" width="1000" height="343">
+<figcaption>Figure 2. Median rotation and translation-direction error (log scale, 10&ndash;90 % band, 200 scenes per point) versus pixel noise (left) and versus baseline (right); the tick labels are the values in the tables above, spaced evenly (\(\sigma=0\) is not shown on a log axis). Rotation barely depends on the baseline; the translation direction is poor when the baseline is small relative to the scene depth.</figcaption></figure>
+<ul>
+<li><strong>Rotation does not care about the baseline.</strong> Its median error stays between 0.38&deg; and 0.57&deg; from baseline 0 (a camera that only rotates) to baseline 2.</li>
+<li><strong>The translation direction does.</strong> At baseline 0.02 (about 0.3% of the typical scene depth of 6) the median direction error is 74&deg;, no better than a guess, and only 11.5% of scenes pick the right branch. At 0.25 the median is 7.9&deg;; at 1.0 it is 1.5&deg;. This is the same phenomenon as in the triangulation article, seen from the other side: with a tiny baseline there is almost no parallax, and the parallax is the only information about \(\mathbf t\).</li>
+<li><strong>Practical consequence:</strong> when the camera mostly rotates (a handheld pan, a gimbal) the rotation from \(E\) is still useful, while the translation and the 3D points are not. Systems that deal with such motion typically fit a homography or a pure-rotation model instead and switch to \(E\) only once there is enough parallax.</li>
+</ul>
+
+<h3>7.3 Number of matches (noise 1 px, baseline 1)</h3>
+<table>
+<thead><tr><th>N</th><th>Rotation error, median (p10&ndash;p90) &deg;</th><th>Translation direction, median (p10&ndash;p90) &deg;</th><th>Correct branch</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>7.749 (2.299&ndash;19.695)</td><td>29.62 (4.92&ndash;113.12)</td><td>28.0 %</td></tr>
+<tr><td>12</td><td>1.889 (0.636&ndash;4.920)</td><td>6.99 (1.58&ndash;24.64)</td><td>86.5 %</td></tr>
+<tr><td>20</td><td>0.959 (0.434&ndash;2.057)</td><td>3.24 (0.84&ndash;9.39)</td><td>99.5 %</td></tr>
+<tr><td>50</td><td>0.480 (0.181&ndash;1.029)</td><td>1.83 (0.54&ndash;4.90)</td><td>100.0 %</td></tr>
+<tr><td>200</td><td>0.235 (0.090&ndash;0.443)</td><td>0.74 (0.24&ndash;1.80)</td><td>100.0 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Eight matches is the algebraic minimum, not a practical one.</strong> At \(N=8\) with 1 px noise the right branch is chosen in only 28% of scenes and the median rotation error is 7.7&deg;. At \(N=12\) it is 86.5% and 1.9&deg;; at \(N=20\), 99.5% and 1.0&deg;.</li>
+<li><strong>Beyond that, error falls like \(1/\sqrt N\).</strong> Going from 50 to 200 matches (&times;4) halves the median rotation error (0.480 &rarr; 0.235&deg;), as expected for averaging independent noise.</li>
+</ul>
+
+<h2>8. Limitations</h2>
+<p>These are synthetic scenes with isotropic Gaussian pixel noise, exact intrinsics \(K\), no lens distortion and <strong>no outlier matches</strong>. Real feature matches contain outliers, which the linear eight-point estimate does not tolerate at all; in practice the estimation is wrapped in RANSAC. Nist&eacute;r&rsquo;s (2004) five-point algorithm is the usual minimal solver for this, because it needs only five matches per hypothesis and so needs far fewer RANSAC iterations than eight. Errors in \(K\) will add to the figures above. The points were placed 4&ndash;8 units from the camera, so the baseline numbers describe a baseline-to-depth ratio, not absolute units. I measured pose errors only; I did not test degenerate scene configurations such as all points lying on a plane, where the eight-point estimate is itself ill-defined.</p>
+
+<h2>9. Practical takeaways</h2>
+<ol>
+<li>\(E\) gives four \((R,\mathbf t)\) candidates, never one: two rotations that differ by 180&deg; about the baseline, and two signs of \(\mathbf t\). Test all four.</li>
+<li>Use cheirality on all matches (positive depth in both cameras), not on a single point.</li>
+<li>Translation is a direction only. The scale must come from somewhere else: a known distance, an IMU, a stereo rig.</li>
+<li>If the baseline is small compared to the scene depth, trust the rotation and distrust the translation. In the experiment above, a baseline of about 0.3% of the depth gave a median translation error of 74&deg;.</li>
+<li>Use well over eight matches (at least 20 in the experiment above) and wrap the estimation in RANSAC for real data.</li>
+</ol>
+
+<div class="cta-box"><strong>Need 3D reconstruction, a chatbot agent or a custom AI tool?</strong><br>
+I build these as a freelancer. Describe your project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=3D%20reconstruction%20project">Ask for a quote</a> <a class="btn ghost" href="/en/services.html">See services</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>H. C. Longuet-Higgins. &ldquo;A computer algorithm for reconstructing a scene from two projections.&rdquo; <em>Nature</em> 293:133&ndash;135, 10 September 1981. <a href="https://doi.org/10.1038/293133a0">doi:10.1038/293133a0</a>.</li>
+<li>T. S. Huang and O. D. Faugeras. &ldquo;Some properties of the E matrix in two-view motion estimation.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 11(12):1310&ndash;1312, December 1989. <a href="https://doi.org/10.1109/34.41368">doi:10.1109/34.41368</a>.</li>
+<li>R. I. Hartley. &ldquo;In defense of the eight-point algorithm.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 19(6):580&ndash;593, June 1997. <a href="https://doi.org/10.1109/34.601246">doi:10.1109/34.601246</a>.</li>
+<li>R. I. Hartley. &ldquo;Chirality.&rdquo; <em>International Journal of Computer Vision</em> 26(1):41&ndash;61, 1998. <a href="https://doi.org/10.1023/A:1007984508483">doi:10.1023/A:1007984508483</a>.</li>
+<li>D. Nist&eacute;r. &ldquo;An efficient solution to the five-point relative pose problem.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 26(6):756&ndash;770, June 2004. <a href="https://doi.org/10.1109/TPAMI.2004.17">doi:10.1109/TPAMI.2004.17</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Section 9.6 &ldquo;The essential matrix&rdquo;, Result 9.19; Chapter 11 for the normalised eight-point algorithm.) <a href="https://www.cambridge.org/9780521540513">Publisher page</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/essential_matrix.py">essential_matrix.py</a> (Python 3.12, NumPy, Matplotlib). All numbers in Sections 5&ndash;7 are the output of this script.</p>
+<aside class="aff-box"><h3>Hardware for calibrating your own camera</h3><p>A USB webcam and a chessboard printed on flat paper are enough to repeat the experiment. Lock the focus while capturing, since focal length changes with focus.</p><ul><li><a href="https://s.shopee.vn/8VAEjvGDOM" rel="sponsored nofollow noopener" target="_blank">Full HD webcam with mic for PC/laptop</a> <span class="price">₫178.000</span></li><li><a href="https://s.shopee.vn/40hpNfO0O7" rel="sponsored nofollow noopener" target="_blank">4K/2K webcam with mic for PC/laptop</a> <span class="price">₫164.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

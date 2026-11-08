@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-05"
+TODAY = "2026-11-08"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="essential-matrix", date="2026-11-08", min=13, aff="calib",
+         og="/assets/img/blog/essential-matrix-cover.png",
+         tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
+         title={"vi": "Từ ma trận thiết yếu đến chuyển động camera: bốn nghiệm và một phép thử",
+                "en": "From the essential matrix to camera motion: four solutions and one test"},
+         summary={"vi": "Tách E thành R và t bằng SVD, vì sao luôn có bốn ứng viên (cặp xoắn là phép quay 180° quanh baseline), phép thử cheirality, và thí nghiệm 200 cảnh về nhiễu, baseline và số điểm khớp.",
+                  "en": "Splitting E into R and t with an SVD, why there are always four candidates (the twisted pair is a 180° rotation about the baseline), the cheirality test, and a 200-scene experiment on noise, baseline and number of matches."},
+         seo_title={"vi": "Ma trận thiết yếu: phân rã R, t và phép thử cheirality | Shopsmon",
+                    "en": "Essential matrix decomposition: four poses and the cheirality test | Shopsmon"},
+         seo_desc={"vi": "Dẫn xuất phân rã ma trận thiết yếu thành bốn cặp (R, t), cặp xoắn và phép thử cheirality, kèm code NumPy và thí nghiệm đo sai số theo nhiễu, baseline và số điểm khớp.",
+                   "en": "Derivation of the essential-matrix decomposition into four (R, t) pairs, the twisted pair and the cheirality test, with NumPy code and measured errors versus noise, baseline and number of matches."}),
     dict(slug="pca-svd", date="2026-11-06", min=13, aff="ml-books",
          og="/assets/img/blog/pca-svd-cover.png",
          tag={"vi": "Khoa học dữ liệu / IoT", "en": "Data science / IoT"},

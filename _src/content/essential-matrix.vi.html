@@ -1,0 +1,173 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-08 &middot; Tái tạo 3D &middot; ~13 phút đọc</p>
+<h1>Từ ma trận thiết yếu đến chuyển động camera: bốn nghiệm và một phép thử</h1>
+<p class="meta">Tách \(E\) thành phép quay và phép tịnh tiến, vì sao có đúng bốn ứng viên, phép thử cheirality chọn một nghiệm ra sao, và nhiễu, baseline, số điểm khớp ảnh hưởng thế nào đến kết quả.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Hai bài trước trên blog này nằm ở hai phía của bài này: <a href="@@L@@/blog/eight-point-normalization.html">thuật toán 8 điểm</a> ước lượng một ma trận từ các cặp điểm khớp, còn <a href="@@L@@/blog/triangulation-dlt.html">tam giác hoá</a> biến hai góc nhìn cùng hai camera thành một điểm 3D. Bài này là bước ở giữa. Khi đã biết ma trận nội tại \(K\) (ví dụ sau khi <a href="@@L@@/blog/zhang-calibration.html">hiệu chuẩn bằng bàn cờ</a>), ma trận bạn ước lượng là <strong>ma trận thiết yếu</strong> (essential matrix) \(E\), và câu hỏi trở thành: <em>\(E\) mã hoá chuyển động nào của camera?</em></p>
+<p>Câu trả lời có một cái bẫy mà nhiều bản cài đặt đầu tiên mắc phải: \(E\) không cho một phép quay và một phép tịnh tiến. Nó cho <strong>bốn</strong>, và dữ liệu giúp phân biệt chúng hoàn toàn không nằm trong \(E\). Nó nằm ở các điểm 3D.</p>
+
+<h2>2. Ma trận thiết yếu là gì</h2>
+<p>Lấy camera thứ nhất làm hệ quy chiếu, một điểm có toạ độ \(\mathbf X\) trong camera 1 và \(\mathbf X'=R\mathbf X+\mathbf t\) trong camera 2. Làm việc với toạ độ ảnh <em>chuẩn hoá</em> \(\hat{\mathbf x}=K^{-1}\mathbf x=(X/Z,\,Y/Z,\,1)^\top\) để loại bỏ tham số nội tại. Ba vectơ \(\mathbf X'\), \(R\mathbf X\) và \(\mathbf t\) đồng phẳng (cùng nằm trong mặt phẳng epipolar) nên tích hỗn hợp của chúng bằng 0:</p>
+$$\hat{\mathbf x}'^\top\,[\mathbf t]_\times R\,\hat{\mathbf x}=0,\qquad E=[\mathbf t]_\times R,\qquad [\mathbf t]_\times=\begin{bmatrix}0&-t_3&t_2\\ t_3&0&-t_1\\ -t_2&t_1&0\end{bmatrix}.$$
+<p>Hai tính chất của \(E\) quan trọng cho phần sau.</p>
+<ul>
+<li><strong>Các giá trị kỳ dị là \((s,s,0)\).</strong> Ma trận tích có hướng có hạng 2 và hai giá trị kỳ dị bằng nhau, đều bằng \(\|\mathbf t\|\); nhân với một phép quay không đổi các giá trị kỳ dị. Huang và Faugeras (1989) đã chứng minh chiều ngược lại: mọi ma trận \(3\times3\) có giá trị kỳ dị \((s,s,0)\) đều viết được dưới dạng ma trận phản đối xứng nhân một phép quay.</li>
+<li><strong>Mất thang đo.</strong> \(E\) chỉ xác định sai khác một hằng số, nên \(\mathbf t\) chỉ khôi phục được dưới dạng <em>hướng</em>. Chỉ với hai ảnh, bạn không thể phân biệt một cảnh nhỏ chụp với baseline ngắn và một cảnh lớn chụp với baseline dài.</li>
+</ul>
+<p>Trong thực tế \(E\) đến từ cùng hệ phương trình 8 điểm như bài trước, dựng từ toạ độ chuẩn hoá và có thêm chuẩn hoá Hartley. Do nhiễu, ước lượng thô sẽ không có giá trị kỳ dị \((s,s,0)\), nên bước cuối của ước lượng là thay các giá trị kỳ dị bằng \((s,s,0)\), với \(s\) là trung bình của hai giá trị lớn nhất. Đó là ma trận thiết yếu hợp lệ gần nhất theo chuẩn Frobenius (xem Hartley &amp; Zisserman, mục 9.6, trong phần tài liệu tham khảo).</p>
+
+<h2>3. Phân rã: vì sao là bốn</h2>
+<p>Giả sử \(E=U\,\mathrm{diag}(1,1,0)\,V^\top\) là một phân rã SVD, với \(U,V\) là các phép quay (đổi dấu một cột nếu định thức ra \(-1\); việc này vô hại vì giá trị kỳ dị thứ ba bằng không). Đặt</p>
+$$W=\begin{bmatrix}0&-1&0\\ 1&0&0\\ 0&0&1\end{bmatrix}.$$
+<p>Khi đó các ứng viên là</p>
+$$R_1=UWV^\top,\qquad R_2=UW^\top V^\top,\qquad \mathbf t=\pm\mathbf u_3,$$
+<p>với \(\mathbf u_3\) là cột thứ ba của \(U\). Ghép hai phép quay với hai dấu cho bốn cặp \((R_1,+\mathbf t)\), \((R_1,-\mathbf t)\), \((R_2,+\mathbf t)\), \((R_2,-\mathbf t)\) (Hartley &amp; Zisserman, Result 9.19). Cả bốn cho đúng cùng một \(E\), nghĩa là cùng một hình học epipolar. Không phép tính nào trên mặt phẳng ảnh có thể ưu tiên một cặp.</p>
+<p>Hai dấu của \(\mathbf t\) là sự nhập nhằng quen thuộc: camera thứ hai nằm ở bên này hay bên kia camera thứ nhất (tương đương, cảnh bị lật đối xứng qua tâm camera thứ nhất). Hai phép quay thì ít hiển nhiên hơn. Hãy tính tỉ số của chúng:</p>
+$$R_2R_1^\top=U\,(W^\top)^2\,U^\top=U\,\mathrm{diag}(-1,-1,1)\,U^\top .$$
+<p>Đó là phép quay <strong>180&deg; quanh \(\mathbf u_3\)</strong>, tức hướng của baseline. Đây là &ldquo;cặp xoắn&rdquo; (twisted pair) của Hartley &amp; Zisserman: camera thứ hai bị lật quanh đường nối hai tâm camera. Cả hai góc nhìn vẫn thoả ràng buộc epipolar, vì phép quay quanh baseline ánh xạ mỗi mặt phẳng epipolar về chính nó.</p>
+
+<h2>4. Chọn một nghiệm: phép thử cheirality</h2>
+<p>Thứ phân biệt bốn nghiệm là vật lý: một điểm cảnh thật phải nằm <strong>phía trước cả hai camera</strong>, nghĩa là có độ sâu dương trong mỗi camera. Ràng buộc này gọi là <em>cheirality</em> (Hartley, 1998, dùng tên &ldquo;chirality&rdquo;). Quy trình:</p>
+<ol>
+<li>Với mỗi trong bốn ứng viên, dựng \(P=[I\mid\mathbf 0]\) và \(P'=[R\mid\mathbf t]\) rồi tam giác hoá mọi cặp điểm khớp.</li>
+<li>Đếm số điểm có độ sâu dương trong camera 1 <em>và</em> camera 2.</li>
+<li>Giữ ứng viên có số đếm cao nhất. Với dữ liệu sạch, đúng một ứng viên có mọi điểm ở phía trước; ba ứng viên còn lại không có điểm nào, hoặc lẫn lộn.</li>
+</ol>
+<p>Dùng tất cả các điểm khớp thay vì một điểm làm phép thử bền vững: một điểm khớp sai có thể rơi ra sau camera ngay cả với nghiệm đúng, nhưng nó không đảo được đa số.</p>
+
+<h2>5. Cài đặt</h2>
+<p>Phần lõi bằng NumPy. <a href="/blog/code/essential_matrix.py">Script đầy đủ</a>, gồm bộ sinh cảnh, các thí nghiệm và hình vẽ, có thể tải về.</p>
+<pre><code class="language-python">import numpy as np
+
+W = np.array([[0.0, -1, 0], [1, 0, 0], [0, 0, 1]])
+
+def decompose(E):
+    """The four candidate (R, t) of an essential matrix; |t| = 1."""
+    U, _, Vt = np.linalg.svd(E)
+    if np.linalg.det(U) &lt; 0:  U[:, 2] *= -1     # make U, V proper rotations
+    if np.linalg.det(Vt) &lt; 0: Vt[2] *= -1
+    R1 = U @ W @ Vt
+    R2 = U @ W.T @ Vt
+    t = U[:, 2]
+    return [(R1, t), (R1, -t), (R2, t), (R2, -t)]
+
+def count_in_front(R, t, n1, n2):
+    """Cheirality: points with positive depth in BOTH cameras (n1, n2: normalised coords)."""
+    X = triangulate(R, t, n1, n2)            # linear DLT, P1 = [I|0], P2 = [R|t]
+    z1 = X[:, 2]
+    z2 = (X @ R.T + t)[:, 2]
+    return int(np.sum((z1 &gt; 0) &amp; (z2 &gt; 0)))
+
+def recover_pose(n1, n2):
+    E = estimate_E(n1, n2)                   # normalised 8-point + (s, s, 0) projection
+    cands = decompose(E)
+    counts = [count_in_front(R, t, n1, n2) for R, t in cands]
+    return cands[int(np.argmax(counts))]</code></pre>
+
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Với các điểm khớp không nhiễu (seed 0, 50 điểm) pose khôi phục chính xác đến sai số làm tròn: sai số góc quay 1,7&times;10<sup>-6</sup> độ, sai số hướng tịnh tiến bằng 0, và 50/50 điểm nằm phía trước. Con số quay khác không rất nhỏ này nhiều khả năng do hàm <code>arccos</code> trong công thức góc khuếch đại sai số làm tròn cỡ 10<sup>-16</sup> lên khoảng 10<sup>-8</sup> radian; tôi không điều tra thêm vì nó nhỏ hơn năm bậc độ lớn so với mọi tác động của nhiễu đo bên dưới.</p>
+<p>Trong demo có nhiễu bên dưới, \(E\) ước lượng có giá trị kỳ dị \((1,1,0)\) sau khi chuẩn hoá, đúng như bước chiếu ép buộc.</p>
+
+<h2>6. Bốn ứng viên trên kết quả thật</h2>
+<p><strong>Thiết lập (dữ liệu tổng hợp, có seed).</strong> Tiêu cự \(f_x=f_y=800\) px, điểm chính \((320,240)\). 50 điểm 3D ngẫu nhiên phía trước camera 1 ở độ sâu 4&ndash;8. Camera 2 quay quanh một trục ngẫu nhiên một góc 12,39&deg; (trong demo này) và đặt cách camera 1 một khoảng 1,00, chủ yếu lệch sang bên. Mỗi toạ độ pixel nhận nhiễu Gauss độc lập, \(\sigma=0{,}5\) px trong demo. Kết quả demo của script:</p>
+<table>
+<thead><tr><th>Ứng viên</th><th>Số điểm phía trước cả hai camera (trên 50)</th><th>Sai số góc quay (&deg;)</th><th>Sai số hướng tịnh tiến (&deg;)</th></tr></thead>
+<tbody>
+<tr><td>\((R_1,+\mathbf t)\)</td><td>0</td><td>179,949</td><td>0,757</td></tr>
+<tr><td>\((R_1,-\mathbf t)\)</td><td>0</td><td>179,949</td><td>179,243</td></tr>
+<tr><td><strong>\((R_2,+\mathbf t)\)</strong></td><td><strong>50</strong></td><td><strong>0,175</strong></td><td><strong>0,757</strong></td></tr>
+<tr><td>\((R_2,-\mathbf t)\)</td><td>0</td><td>0,175</td><td>179,243</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/essential-candidates.svg" alt="Bốn khung nhìn từ trên xuống cho các điểm tam giác hoá của bốn ứng viên pose; chỉ khung R2 với +t có mọi điểm nằm phía trước cả hai camera" width="1000" height="290">
+<figcaption>Hình 1. Các điểm tam giác hoá (nhìn từ trên xuống, X theo Z) cho từng ứng viên trong demo. Xanh lá: phía trước cả hai camera; đỏ: nằm sau ít nhất một camera. Chỉ một khung là hợp lý về vật lý.</figcaption></figure>
+<h3>Các con số cho thấy gì</h3>
+<ul>
+<li><strong>Mỗi ứng viên sai chỉ sai đúng một kiểu.</strong> Sai số góc quay là 179,949&deg; với hai cặp \(R_1\) và 0,175&deg; với hai cặp \(R_2\); sai số hướng tịnh tiến là 0,757&deg; với \(+\mathbf t\) và 179,243&deg; với \(-\mathbf t\). Nghiệm thắng là cặp duy nhất đúng cả hai.</li>
+<li><strong>Cheirality phân định rõ ràng ở đây.</strong> 50 điểm phía trước với cặp đúng, 0 với ba cặp còn lại. Đây không phải cuộc bỏ phiếu sít sao.</li>
+<li><strong>Cặp xoắn đúng như đại số dự đoán.</strong> Tôi tính \(R_2R_1^\top\) từ kết quả: góc của nó là 180,000&deg;, và góc giữa trục của nó với hướng baseline ước lượng là 0,000&deg;.</li>
+</ul>
+
+<h2>7. Thí nghiệm: nhiễu, baseline, số điểm khớp</h2>
+<p>Demo chỉ là một cảnh. Với phần còn lại tôi chạy 200 cảnh độc lập có seed cho mỗi dòng (điểm ngẫu nhiên, góc quay 7,5&ndash;15&deg;, hướng baseline ngẫu nhiên), 50 điểm khớp nếu không nói khác, và báo cáo sai số trung vị cùng phân vị 10 và 90. &ldquo;Đúng nhánh&rdquo; nghĩa là ứng viên được cheirality chọn có sai số góc quay dưới 5&deg; <em>và</em> sai số hướng tịnh tiến dưới 30&deg;, tức là đúng một trong bốn nghiệm chứ không chỉ gần đúng về góc quay.</p>
+
+<h3>7.1 Nhiễu ảnh (baseline 1)</h3>
+<table>
+<thead><tr><th>\(\sigma\) (px)</th><th>Sai số góc quay, trung vị (p10&ndash;p90) &deg;</th><th>Hướng tịnh tiến, trung vị (p10&ndash;p90) &deg;</th><th>Đúng nhánh</th></tr></thead>
+<tbody>
+<tr><td>0,00</td><td>0,000 (0,000&ndash;0,000)</td><td>0,00 (0,00&ndash;0,00)</td><td>100,0 %</td></tr>
+<tr><td>0,25</td><td>0,124 (0,059&ndash;0,262)</td><td>0,42 (0,14&ndash;1,03)</td><td>100,0 %</td></tr>
+<tr><td>0,50</td><td>0,249 (0,102&ndash;0,499)</td><td>0,91 (0,28&ndash;2,38)</td><td>100,0 %</td></tr>
+<tr><td>1,00</td><td>0,480 (0,181&ndash;1,029)</td><td>1,83 (0,54&ndash;4,90)</td><td>100,0 %</td></tr>
+<tr><td>2,00</td><td>1,066 (0,507&ndash;1,949)</td><td>3,66 (1,41&ndash;8,93)</td><td>100,0 %</td></tr>
+<tr><td>4,00</td><td>2,139 (0,882&ndash;3,730)</td><td>7,24 (2,27&ndash;19,02)</td><td>96,0 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Sai số tăng gần tuyến tính theo nhiễu.</strong> Nhân đôi \(\sigma\) thì sai số góc quay trung vị xấp xỉ nhân đôi (0,249 &rarr; 0,480 &rarr; 1,066 &rarr; 2,139&deg;).</li>
+<li><strong>Hướng tịnh tiến kém hơn góc quay khoảng 3,4&ndash;3,8 lần</strong> ở mọi mức nhiễu từ 0,25 đến 4 px. Hướng của \(\mathbf t\) đơn giản là khó xác định hơn góc quay khi chỉ dựa vào ràng buộc epipolar.</li>
+<li><strong>Chọn sai nhánh chỉ xuất hiện ở mức nhiễu lớn nhất</strong> (4 % số cảnh ở 4 px, không có ở các mức thấp hơn).</li>
+</ul>
+
+<h3>7.2 Baseline (nhiễu 1 px)</h3>
+<table>
+<thead><tr><th>Baseline</th><th>Sai số góc quay, trung vị (p10&ndash;p90) &deg;</th><th>Hướng tịnh tiến, trung vị (p10&ndash;p90) &deg;</th><th>Đúng nhánh</th></tr></thead>
+<tbody>
+<tr><td>0,00 (chỉ quay)</td><td>0,375 (0,136&ndash;0,868)</td><td>không xác định (\(\mathbf t=0\))</td><td>góc quay trong 5&deg;: 100,0 %</td></tr>
+<tr><td>0,02</td><td>0,417 (0,188&ndash;0,941)</td><td>73,69 (27,62&ndash;136,73)</td><td>11,5 %</td></tr>
+<tr><td>0,05</td><td>0,512 (0,245&ndash;0,958)</td><td>48,31 (16,05&ndash;137,57)</td><td>32,0 %</td></tr>
+<tr><td>0,10</td><td>0,565 (0,238&ndash;1,100)</td><td>21,27 (6,69&ndash;78,16)</td><td>65,0 %</td></tr>
+<tr><td>0,25</td><td>0,544 (0,265&ndash;1,028)</td><td>7,86 (2,74&ndash;19,71)</td><td>99,0 %</td></tr>
+<tr><td>0,50</td><td>0,535 (0,225&ndash;0,957)</td><td>3,51 (1,11&ndash;9,99)</td><td>100,0 %</td></tr>
+<tr><td>1,00</td><td>0,542 (0,246&ndash;0,993)</td><td>1,48 (0,56&ndash;4,25)</td><td>100,0 %</td></tr>
+<tr><td>2,00</td><td>0,509 (0,198&ndash;0,994)</td><td>0,88 (0,25&ndash;2,23)</td><td>100,0 %</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/essential-errors.svg" alt="Hai khung thang log: sai số trung vị của góc quay và hướng tịnh tiến cùng dải 10 đến 90 phần trăm, theo nhiễu pixel (trái) và theo baseline (phải)" width="1000" height="343">
+<figcaption>Hình 2. Sai số trung vị của góc quay và hướng tịnh tiến (thang log, dải 10&ndash;90 %, 200 cảnh mỗi điểm) theo nhiễu pixel (trái) và theo baseline (phải); nhãn trục là các giá trị trong các bảng ở trên, đặt cách đều nhau (\(\sigma=0\) không vẽ được trên trục log). Góc quay hầu như không phụ thuộc baseline; hướng tịnh tiến kém khi baseline nhỏ so với độ sâu cảnh.</figcaption></figure>
+<ul>
+<li><strong>Góc quay không quan tâm đến baseline.</strong> Sai số trung vị của nó nằm trong khoảng 0,38&deg; đến 0,57&deg; từ baseline 0 (camera chỉ quay) đến baseline 2.</li>
+<li><strong>Hướng tịnh tiến thì có.</strong> Ở baseline 0,02 (khoảng 0,3 % độ sâu cảnh điển hình là 6) sai số hướng trung vị là 74&deg;, không hơn đoán mò, và chỉ 11,5 % số cảnh chọn đúng nhánh. Ở 0,25 trung vị là 7,9&deg;; ở 1,0 là 1,5&deg;. Đây là cùng hiện tượng như trong bài tam giác hoá, nhìn từ phía bên kia: baseline rất nhỏ thì hầu như không có thị sai, mà thị sai là thông tin duy nhất về \(\mathbf t\).</li>
+<li><strong>Hệ quả thực tế:</strong> khi camera chủ yếu quay (xoay tay cầm, gimbal), góc quay từ \(E\) vẫn dùng được, còn phép tịnh tiến và các điểm 3D thì không. Các hệ thống xử lý chuyển động như vậy thường khớp homography hoặc mô hình quay thuần, và chỉ chuyển sang \(E\) khi đã đủ thị sai.</li>
+</ul>
+
+<h3>7.3 Số điểm khớp (nhiễu 1 px, baseline 1)</h3>
+<table>
+<thead><tr><th>N</th><th>Sai số góc quay, trung vị (p10&ndash;p90) &deg;</th><th>Hướng tịnh tiến, trung vị (p10&ndash;p90) &deg;</th><th>Đúng nhánh</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>7,749 (2,299&ndash;19,695)</td><td>29,62 (4,92&ndash;113,12)</td><td>28,0 %</td></tr>
+<tr><td>12</td><td>1,889 (0,636&ndash;4,920)</td><td>6,99 (1,58&ndash;24,64)</td><td>86,5 %</td></tr>
+<tr><td>20</td><td>0,959 (0,434&ndash;2,057)</td><td>3,24 (0,84&ndash;9,39)</td><td>99,5 %</td></tr>
+<tr><td>50</td><td>0,480 (0,181&ndash;1,029)</td><td>1,83 (0,54&ndash;4,90)</td><td>100,0 %</td></tr>
+<tr><td>200</td><td>0,235 (0,090&ndash;0,443)</td><td>0,74 (0,24&ndash;1,80)</td><td>100,0 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Tám điểm khớp là mức tối thiểu về đại số, không phải mức tối thiểu thực tế.</strong> Với \(N=8\) và nhiễu 1 px, chỉ 28 % số cảnh chọn đúng nhánh và sai số góc quay trung vị là 7,7&deg;. Với \(N=12\) là 86,5 % và 1,9&deg;; với \(N=20\) là 99,5 % và 1,0&deg;.</li>
+<li><strong>Sau đó sai số giảm theo \(1/\sqrt N\).</strong> Từ 50 lên 200 điểm khớp (gấp 4) làm sai số góc quay trung vị giảm một nửa (0,480 &rarr; 0,235&deg;), đúng như kỳ vọng khi lấy trung bình nhiễu độc lập.</li>
+</ul>
+
+<h2>8. Hạn chế</h2>
+<p>Đây là các cảnh tổng hợp với nhiễu pixel Gauss đẳng hướng, tham số nội tại \(K\) chính xác, không méo ống kính và <strong>không có điểm khớp ngoại lai</strong>. Điểm khớp thật có ngoại lai, mà ước lượng 8 điểm tuyến tính hoàn toàn không chịu nổi; trong thực tế việc ước lượng được bọc trong RANSAC. Thuật toán 5 điểm của Nist&eacute;r (2004) là bộ giải tối thiểu thường dùng cho việc này, vì mỗi giả thuyết chỉ cần 5 điểm khớp nên cần ít vòng lặp RANSAC hơn nhiều so với 8. Sai số của \(K\) sẽ cộng thêm vào các con số trên. Các điểm được đặt cách camera 4&ndash;8 đơn vị, nên số liệu baseline mô tả tỉ số baseline trên độ sâu, không phải đơn vị tuyệt đối. Tôi chỉ đo sai số pose; tôi không thử các cấu hình cảnh suy biến như mọi điểm nằm trên một mặt phẳng, nơi bản thân ước lượng 8 điểm đã không xác định tốt.</p>
+
+<h2>9. Điều rút ra</h2>
+<ol>
+<li>\(E\) cho bốn ứng viên \((R,\mathbf t)\), không bao giờ một: hai phép quay hơn kém nhau 180&deg; quanh baseline, và hai dấu của \(\mathbf t\). Hãy thử cả bốn.</li>
+<li>Dùng cheirality trên mọi điểm khớp (độ sâu dương trong cả hai camera), không dùng một điểm.</li>
+<li>Phép tịnh tiến chỉ là một hướng. Thang đo phải đến từ nơi khác: một khoảng cách đã biết, IMU, hoặc cặp stereo cố định.</li>
+<li>Nếu baseline nhỏ so với độ sâu cảnh, hãy tin góc quay và nghi ngờ phép tịnh tiến. Trong thí nghiệm trên, baseline bằng khoảng 0,3 % độ sâu cho sai số tịnh tiến trung vị 74&deg;.</li>
+<li>Dùng nhiều hơn hẳn tám điểm khớp (ít nhất 20 trong thí nghiệm trên) và bọc ước lượng trong RANSAC với dữ liệu thật.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần tái tạo 3D, chatbot agent hoặc công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này theo hình thức freelance. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi làm rõ và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20t%C3%A1i%20t%E1%BA%A1o%203D">Xin báo giá</a> <a class="btn ghost" href="@@L@@/services.html">Xem dịch vụ</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>H. C. Longuet-Higgins. &ldquo;A computer algorithm for reconstructing a scene from two projections.&rdquo; <em>Nature</em> 293:133&ndash;135, 10/9/1981. <a href="https://doi.org/10.1038/293133a0">doi:10.1038/293133a0</a>.</li>
+<li>T. S. Huang and O. D. Faugeras. &ldquo;Some properties of the E matrix in two-view motion estimation.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 11(12):1310&ndash;1312, 12/1989. <a href="https://doi.org/10.1109/34.41368">doi:10.1109/34.41368</a>.</li>
+<li>R. I. Hartley. &ldquo;In defense of the eight-point algorithm.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 19(6):580&ndash;593, 6/1997. <a href="https://doi.org/10.1109/34.601246">doi:10.1109/34.601246</a>.</li>
+<li>R. I. Hartley. &ldquo;Chirality.&rdquo; <em>International Journal of Computer Vision</em> 26(1):41&ndash;61, 1998. <a href="https://doi.org/10.1023/A:1007984508483">doi:10.1023/A:1007984508483</a>.</li>
+<li>D. Nist&eacute;r. &ldquo;An efficient solution to the five-point relative pose problem.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 26(6):756&ndash;770, 6/2004. <a href="https://doi.org/10.1109/TPAMI.2004.17">doi:10.1109/TPAMI.2004.17</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. (Mục 9.6 &ldquo;The essential matrix&rdquo;, Result 9.19; Chương 11 cho thuật toán 8 điểm chuẩn hoá.) <a href="https://www.cambridge.org/9780521540513">Trang nhà xuất bản</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/essential_matrix.py">essential_matrix.py</a> (Python 3.12, NumPy, Matplotlib). Mọi con số trong các mục 5&ndash;7 là kết quả chạy của script này.</p>
+</article>

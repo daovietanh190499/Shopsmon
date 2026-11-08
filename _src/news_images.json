@@ -166,5 +166,29 @@
    1108,
    615
   ]
+ },
+ "anthropic-agent-memory-dreaming": {
+  "credit": "Anthropic",
+  "image_url": "https://www-cdn.anthropic.com/images/4zrzovbb/website/6ab2663a2c0bd6a41409d90136a59a5d72995ea5-1200x630.jpg",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "infineon-aurix-rc1-risc-v": {
+  "credit": "Infineon",
+  "image_url": "https://assets.infineon.com/is/image/infineon/aurix-rc1-visual-hi-res.jpg",
+  "orig_size": [
+   1280,
+   461
+  ]
+ },
+ "u-blox-sam-m11n-gnss": {
+  "credit": "u-blox",
+  "image_url": "https://content.u-blox.com/sites/default/files/2026-06/SAM-M11N-top-bottom.png",
+  "orig_size": [
+   1500,
+   1500
+  ]
  }
 }

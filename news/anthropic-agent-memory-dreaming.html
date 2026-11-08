@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anthropic công bố cách Claude dùng bộ nhớ agent: ghi chú, wiki và “dreaming” ngoại tuyến nâng điểm wiki từ 13% lên 48% | Shopsmon</title>
+<meta name="description" content="Theo bài kỹ thuật của Anthropic (Lance Martin, đăng 6/11/2026), bộ nhớ của agent là kiến thức Claude thu được từ trải nghiệm và giữ lại giữa các phiên…">
+<link rel="canonical" href="https://shopsmon.com/news/anthropic-agent-memory-dreaming.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/news/anthropic-agent-memory-dreaming.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/news/anthropic-agent-memory-dreaming.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/news/anthropic-agent-memory-dreaming.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Anthropic công bố cách Claude dùng bộ nhớ agent: ghi chú, wiki và “dreaming” ngoại tuyến nâng điểm wiki từ 13% lên 48% | Shopsmon">
+<meta property="og:description" content="Theo bài kỹ thuật của Anthropic (Lance Martin, đăng 6/11/2026), bộ nhớ của agent là kiến thức Claude thu được từ trải nghiệm và giữ lại giữa các phiên…">
+<meta property="og:url" content="https://shopsmon.com/news/anthropic-agent-memory-dreaming.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/news/anthropic-agent-memory-dreaming.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/">Blog</a><a href="/news/" class=active>Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/news/anthropic-agent-memory-dreaming.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post newspost">
+<p class="crumbs"><a href="/news/">Tin tức</a> &rsaquo; <a href="/news/#ai">AI & LLM</a></p>
+<span class="tag cat-ai">AI & LLM</span>
+<h1>Anthropic công bố cách Claude dùng bộ nhớ agent: ghi chú, wiki và “dreaming” ngoại tuyến nâng điểm wiki từ 13% lên 48%</h1>
+<p class="meta">2026-11-06 &middot; Nguồn: <a href="https://www.anthropic.com/research/components-of-agent-memory" rel="noopener nofollow" target="_blank">Anthropic</a></p>
+<figure class="cover"><img src="/assets/img/news/anthropic-agent-memory-dreaming.jpg" width="1200" height="630" alt="Anthropic công bố cách Claude dùng bộ nhớ agent: ghi chú, wiki và “dreaming” ngoại tuyến nâng điểm wiki từ 13% lên 48%"><figcaption>Ảnh: Anthropic</figcaption></figure>
+<p class="standfirst">Theo bài kỹ thuật của Anthropic (Lance Martin, đăng 6/11/2026), bộ nhớ của agent là kiến thức Claude thu được từ trải nghiệm và giữ lại giữa các phiên dưới dạng ngữ cảnh đọc lại được; không gồm thay đổi trọng số, học trong ngữ cảnh hay nén ngữ cảnh. Bài mô tả bốn thành phần: ghi chú bộ nhớ, các biểu diễn như wiki, ngữ cảnh được nạp sẵn vào đầu mỗi phiên và &ldquo;dreaming&rdquo; &mdash; quá trình chạy ngoại tuyến đọc lại nhật ký phiên và ghi chú để sửa sai, gộp mục trùng, dựng liên kết và đưa ghi chú quan trọng lên tầng nạp sẵn. Trên CL-Bench 1.0 (hỏi đáp tra cứu cơ sở dữ liệu; mỗi câu hỏi một phiên mới, chỉ có thư mục bộ nhớ được giữ lại), Anthropic cho biết Claude Opus 5, Opus 5.5 và Sonnet 5.5 &ldquo;khép được vòng lặp&rdquo; học: ghi quy tắc đã kiểm chứng kèm lý do biết quy tắc đúng. Ở Pokémon Red, sau khoảng 10.000 bước Sonnet 3.7 đã ghi 413 tệp bộ nhớ trong 225 thư mục và đạt một huy hiệu, còn Fable 5 ghi chín tệp trong hai thư mục cùng một tệp <code>global.md</code> và đạt bốn huy hiệu; Opus 5.5 giữ một thư mục ghi chú nhỏ, viết lại khi chơi và hoàn thành trò chơi. Khi đặt luật &ldquo;chỉ ghi các thất bại&rdquo;, Opus 5 và Opus 4.7 mất phần lớn mức cải thiện do bộ nhớ mang lại; theo Anthropic, với mô hình mạnh thì để mô hình tự đánh giá điều đáng nhớ hiệu quả hơn luật đặt sẵn, còn hướng dẫn giúp nhiều nhất cho mô hình cũ (Sonnet 4.6 gần gấp đôi điểm khi được nhắc đọc bộ nhớ và kiểm chứng giả thuyết). Về dreaming: trên kho tài liệu nội bộ của Stainless (khoảng 350.000 tệp, khoảng 420 triệu token) với 25 câu hỏi, khi tăng dreaming từ 2 lên 128 phiên, điểm khi chỉ dùng wiki tăng từ 13% lên 48%; khi kết hợp tìm kiếm và wiki, điểm tăng từ 54% lên 61% (chỉ tìm kiếm: 53%) và tiết kiệm khoảng 20.000 token mỗi câu hỏi. Với 24 câu hỏi về một thương vụ sáp nhập, Claude đạt 87% khi tra wiki so với 73% khi chỉ tìm kiếm; ở một tác vụ LAB khác wiki không cho thấy cải thiện rõ rệt, và ở một tác vụ nữa wiki lớn hơn cả tài liệu gốc. Trong bài kiểm tra hợp đồng, khi nhiều agent cùng ghi một bảng chung chỉ 41/57 dữ kiện (72%) còn lại; khi mỗi hợp đồng có một trang do một agent viết, giữ đủ 57/57. Anthropic nêu tầng nạp sẵn phải nhỏ (Claude Code chỉ nạp 200 dòng đầu hoặc 25 KB đầu của <code>MEMORY.md</code>) và dreaming cần tài nguyên tính toán.</p>
+<p class="srcline">Nguồn: <a href="https://www.anthropic.com/research/components-of-agent-memory" rel="noopener nofollow" target="_blank">Anthropic</a></p>
+<aside class="aff-box"><h3>Đọc thêm: sách về agent LLM và hệ thống ML</h3><p>Sách tiếng Việt về agent LLM, Python và hệ thống học máy.</p><ul><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫249.000</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Đường vào lập trình Python nâng cao</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/7puXwtWBxq" rel="sponsored nofollow noopener" target="_blank">Thiết lập cỗ máy xây kênh tự động 24/24 từ trợ lý AI và AI Agent</a> <span class="price">₫179.000</span></li></ul></aside>
+<div class="cta-box"><h3 style="margin-top:0">Cần chatbot hoặc agent LLM cho doanh nghiệp?</h3><p>Mô tả ngắn yêu cầu của bạn; bạn sẽ nhận câu hỏi làm rõ và đề xuất phạm vi trước khi bắt đầu.</p>
+<p><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Gửi yêu cầu</a> <a class="btn ghost" href="/solutions/llm-chatbot-agent.html">Xem dịch vụ</a></p></div>
+<h2>Tin liên quan</h2>
+<div class="newsgrid related"><a class="ncard" href="/news/openai-gpt-6-cyber.html"><img src="/assets/img/news/openai-gpt-6-cyber.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-05</span><h3>OpenAI ra mắt GPT-6 Cyber: mô hình bảo mật xếp mức “Critical”, giá API 20/100 USD mỗi triệu token</h3></div></a><a class="ncard" href="/news/kimi-k3-1-pro-open-weights.html"><img src="/assets/img/news/kimi-k3-1-pro-open-weights.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-05</span><h3>Moonshot AI mở trọng số Kimi K3.1 Pro: mô hình MoE 2,8 nghìn tỷ tham số, ngữ cảnh 1 triệu token</h3></div></a><a class="ncard" href="/news/kakao-canana-space-ai-agents.html"><img src="/assets/img/news/kakao-canana-space-ai-agents.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-05</span><h3>Kakao giới thiệu Canana Space, Canvas và AI Crew: đưa agent AI vào KakaoTalk của 50 triệu người dùng</h3></div></a></div>
+</article>
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>

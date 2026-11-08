@@ -34,6 +34,10 @@ OVERRIDE = {
     # Source page blocks scripts (403/DNS): use the lead image of another outlet covering the same event.
     "brainchip-akd1500-raspberry-pi-5": "https://www.cnx-software.com/wp-content/uploads/2026/11/Brainchip-AKD1500-Raspberry-Pi-5-Dev-Kit.jpg",
     "nordic-nrf71-edge-ai": "https://circuitdigest.com/sites/default/files/circuitdigest_news_images/nordics-new-nrf71-chip-claims-20x-lower-wi-fi-standby-power-and-adds-an-npu-for-edge-ai.jpg",
+    # The press-release page only exposes the site logo; use the product visual from Infineon's own AURIX RC1 pages.
+    "infineon-aurix-rc1-risc-v": "https://assets.infineon.com/is/image/infineon/aurix-rc1-visual-hi-res.jpg",
+    # Press-release mirror has only a site logo; use the module image from the manufacturer's product page.
+    "u-blox-sam-m11n-gnss": "https://content.u-blox.com/sites/default/files/2026-06/SAM-M11N-top-bottom.png",
 }
 # Credit for OVERRIDE images that come from a different outlet than the news source.
 CREDIT_OVERRIDE = {
@@ -41,6 +45,8 @@ CREDIT_OVERRIDE = {
     "qualcomm-spacex-starlink-mobile-5g": "Qualcomm",
     "brainchip-akd1500-raspberry-pi-5": "CNX Software",
     "nordic-nrf71-edge-ai": "CircuitDigest",
+    "infineon-aurix-rc1-risc-v": "Infineon",
+    "u-blox-sam-m11n-gnss": "u-blox",
 }
 
 
@@ -60,13 +66,17 @@ def find_image(page_url, html):
 
 def to_cover(data, dest):
     im = Image.open(io.BytesIO(data))
+    if im.mode in ("RGBA", "LA", "P"):
+        im = im.convert("RGBA")
+        white = Image.new("RGBA", im.size, (255, 255, 255, 255))
+        im = Image.alpha_composite(white, im)  # transparent product shots: white background, not black
     im = im.convert("RGB")
     w, h = im.size
     if w < 480 or h < 300:
         raise ValueError(f"too small {w}x{h}")
     target = 1200 / 630
-    if w < 600:
-        # Small official image: show it whole, scaled to the cover height, over a blurred copy of itself.
+    if w < 600 or w / h < 1.25:
+        # Small or near-square official image: show it whole, scaled to the cover height, over a blurred copy of itself.
         from PIL import ImageFilter
         bg = im.resize((1200, 630), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
         fh = 630
