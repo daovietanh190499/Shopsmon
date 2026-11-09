@@ -996,8 +996,8 @@ def products(L):
 <div class="pvis">{ocr_thumb()}</div>
 <div class="pbody"><span class="tag" style="font-size:12px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">{t('Ứng dụng web &middot; Miễn phí', 'Web app &middot; Free')}</span>
 <h3>{t('OCR ảnh thành văn bản bằng AI', 'AI Image-to-Text OCR')}</h3>
-<p>{t('Tải ảnh tài liệu, biên lai hoặc ảnh chụp lên: AI đọc chữ tiếng Việt có dấu và dựng lại đúng cấu trúc tiêu đề, đoạn, danh sách, bảng, cột. Xuất văn bản, Markdown, JSON, CSV. Chạy hoàn toàn trên trình duyệt, không tải ảnh lên máy chủ.', 'Upload a document, receipt or photo: the AI reads Vietnamese (with tone marks) and English text and rebuilds the structure: headings, paragraphs, lists, tables and columns. Export text, Markdown, JSON or CSV. Runs entirely in the browser; images are never uploaded.')}</p>
-<div class="tags"><span>JavaScript</span><span>WebAssembly</span><span>Tesseract</span><span>PaddleOCR</span></div>
+<p>{t('Tải ảnh tài liệu, biên lai hoặc ảnh chụp lên: AI (PP-OCRv6) đọc chữ đa ngôn ngữ (Anh, Pháp, Đức, Tây Ban Nha, Trung, Nhật, Hàn, Nga, Thái, Hindi, Hy Lạp… và tiếng Việt có dấu) rồi dựng lại cấu trúc tiêu đề, đoạn, danh sách, bảng, cột. Xuất văn bản, Markdown, JSON, CSV. Chạy hoàn toàn trên trình duyệt, không tải ảnh lên máy chủ.', 'Upload a document, receipt or photo: the AI (PP-OCRv6) reads multilingual text (English, French, German, Spanish, Chinese, Japanese, Korean, Russian, Thai, Hindi, Greek... and Vietnamese with tone marks) and rebuilds the structure: headings, paragraphs, lists, tables and columns. Export text, Markdown, JSON or CSV. Runs entirely in the browser; images are never uploaded.')}</p>
+<div class="tags"><span>JavaScript</span><span>WebAssembly</span><span>PP-OCRv6</span><span>Tesseract</span></div>
 <span class="btn primary">{t('Dùng thử miễn phí', 'Try it free')}</span></div></a>
 </div></div></section>
 <section class="band"><div class="wrap" style="text-align:center"><h2>{t('Cần một sản phẩm AI cho doanh nghiệp của bạn?', 'Need an AI product for your business?')}</h2>
@@ -1124,16 +1124,34 @@ OCR_BENCH = [
     ("ui_small", {"vi": "Ảnh chụp màn hình chữ nhỏ", "en": "Small-text screenshot"}, "0.0%", "0.0%"),
 ]
 
+# Clean synthetic lines rendered in Chrome and read through the page's own pipeline (see reports/web-product-ocr-2026-11-09.md).
+OCR_BENCH2 = [
+    ({"vi": "Anh", "en": "English"}, "PP-OCRv6", "0.0%"),
+    ({"vi": "Pháp, Đức, Tây Ban Nha, Ba Lan", "en": "French, German, Spanish, Polish"}, "PP-OCRv6", "0.0%"),
+    ({"vi": "Thổ Nhĩ Kỳ", "en": "Turkish"}, "PP-OCRv6", "2.7%"),
+    ({"vi": "Trung giản thể, Trung phồn thể", "en": "Chinese Simplified, Traditional"}, "PP-OCRv6", "0.0%"),
+    ({"vi": "Nhật", "en": "Japanese"}, "PP-OCRv6", "0.0%"),
+    ({"vi": "Hàn", "en": "Korean"}, "PP-OCRv5", "0.0%"),
+    ({"vi": "Nga (Kirin)", "en": "Russian (Cyrillic)"}, "PP-OCRv5", "0.0%"),
+    ({"vi": "Thái", "en": "Thai"}, "PP-OCRv5", "0.0%"),
+    ({"vi": "Hindi (Devanagari)", "en": "Hindi (Devanagari)"}, "PP-OCRv5", "1.0%"),
+    ({"vi": "Hy Lạp", "en": "Greek"}, "PP-OCRv5", "0.0%"),
+    ({"vi": "Ả Rập (thử nghiệm, rơi chữ số)", "en": "Arabic (experimental, drops digits)"}, "PP-OCRv5", "16.1%"),
+    ({"vi": "Tiếng Việt qua Tự động (PP-OCRv6 nhận ra, Tesseract đọc)", "en": "Vietnamese through Automatic (PP-OCRv6 spots it, Tesseract reads it)"}, "Tesseract vie", "0.0%"),
+    ({"vi": "Tiếng Việt nếu để PP-OCRv6 tự đọc (không dùng)", "en": "Vietnamese if PP-OCRv6 read it itself (not used)"}, "PP-OCRv6", "8.8%"),
+]
+
 
 def product_ocr(L):
     t = lambda vi, en: vi if L == "vi" else en
     P = lambda x: pth(L, x)
     bench = "".join(f"<tr><td>{n[L]}</td><td>{a}</td><td>{b}</td></tr>" for _, n, a, b in OCR_BENCH)
+    bench2 = "".join(f"<tr><td>{n[L]}</td><td>{m}</td><td>{c}</td></tr>" for n, m, c in OCR_BENCH2)
     body = f"""
 <div class="hero" style="padding:56px 0 28px"><div class="wrap prodhero">
 <div><span class="pill">{t('Sản phẩm AI thứ hai &middot; Miễn phí', 'Second AI product &middot; Free')}</span>
 <h1 style="font-size:clamp(30px,5vw,48px)">{t('OCR ảnh thành văn bản đúng cấu trúc, ngay trên trình duyệt', 'Image-to-text OCR that keeps the structure, right in your browser')}</h1>
-<p class="lead">{t('Tải ảnh tài liệu, biên lai, ảnh chụp màn hình hoặc ảnh chụp giấy tờ: AI đọc chữ tiếng Việt có dấu và tiếng Anh, rồi dựng lại tiêu đề, đoạn văn, danh sách, bảng và bố cục nhiều cột ở tab Kết quả. Ảnh được xử lý trên thiết bị của bạn, không gửi lên máy chủ.', 'Upload a document, receipt, screenshot or a photo of a paper: the AI reads Vietnamese (with tone marks) and English text, then rebuilds headings, paragraphs, lists, tables and multi-column layouts in the Result tab. Images are processed on your device and never uploaded.')}</p>
+<p class="lead">{t('Tải ảnh tài liệu, biên lai, ảnh chụp màn hình hoặc ảnh chụp giấy tờ: AI PP-OCRv6 đọc chữ đa ngôn ngữ (Latin, Trung, Nhật, Hàn, Nga, Thái, Hindi, Hy Lạp, Ả Rập thử nghiệm) cùng tiếng Việt có dấu, rồi dựng lại tiêu đề, đoạn văn, danh sách, bảng và bố cục nhiều cột ở tab Kết quả. Ảnh được xử lý trên thiết bị của bạn, không gửi lên máy chủ.', 'Upload a document, receipt, screenshot or a photo of a paper: the PP-OCRv6 AI reads multilingual text (Latin, Chinese, Japanese, Korean, Russian, Thai, Hindi, Greek, experimental Arabic) plus Vietnamese with tone marks, then rebuilds headings, paragraphs, lists, tables and multi-column layouts in the Result tab. Images are processed on your device and never uploaded.')}</p>
 <div class="cta"><a class="btn primary" href="#app">{t('Dùng thử miễn phí', 'Try it free')}</a><a class="btn ghost" href="#how">{t('Cách hoạt động', 'How it works')}</a></div></div>
 <div style="display:flex;justify-content:center">{ocr_thumb()}</div>
 </div></div>
@@ -1148,8 +1166,9 @@ def product_ocr(L):
 <canvas id="ocrPrev" class="ocr-prev" hidden aria-label="{t('Ảnh gốc', 'Source image')}"></canvas>
 <div class="idp-actions" style="margin-top:8px"><button type="button" class="btn ghost" id="ocrRotL" style="padding:6px 12px;font-size:14px" disabled aria-label="{t('Xoay trái', 'Rotate left')}">&#8634; {t('Xoay trái', 'Left')}</button><button type="button" class="btn ghost" id="ocrRotR" style="padding:6px 12px;font-size:14px" disabled aria-label="{t('Xoay phải', 'Rotate right')}">&#8635; {t('Xoay phải', 'Right')}</button></div>
 <h3>{t('2. Ngôn ngữ', '2. Language')}</h3>
-<select id="ocrLang" aria-label="{t('Ngôn ngữ', 'Language')}"><option value="vie">{t('Tiếng Việt (có dấu) + chữ Latin', 'Vietnamese (tone marks) + Latin')}</option><option value="eng">English</option></select>
-<h3>{t('3. Chế độ', '3. Mode')}</h3>
+<select id="ocrLang" aria-label="{t('Ngôn ngữ', 'Language')}"><option value="auto">{t('Tự động (đa ngôn ngữ + tiếng Việt)', 'Automatic (multilingual + Vietnamese)')}</option><option value="vie">{t('Tiếng Việt có dấu (Tesseract)', 'Vietnamese with tone marks (Tesseract)')}</option><option value="ko">{t('한국어 Hàn (PP-OCRv5)', 'Korean 한국어 (PP-OCRv5)')}</option><option value="ru">{t('Chữ Kirin: Nga, Ukraina, Belarus (PP-OCRv5)', 'Cyrillic: Russian, Ukrainian, Belarusian (PP-OCRv5)')}</option><option value="th">{t('ไทย Thái (PP-OCRv5)', 'Thai ไทย (PP-OCRv5)')}</option><option value="hi">{t('हिन्दी Hindi, Devanagari (PP-OCRv5)', 'Hindi / Devanagari हिन्दी (PP-OCRv5)')}</option><option value="el">{t('Ελληνικά Hy Lạp (PP-OCRv5)', 'Greek Ελληνικά (PP-OCRv5)')}</option><option value="ar">{t('العربية Ả Rập, thử nghiệm (PP-OCRv5)', 'Arabic العربية, experimental (PP-OCRv5)')}</option></select>
+<p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">{t('Tự động dùng PP-OCRv6 cho chữ Latin (Anh, Pháp, Đức, Tây Ban Nha, Thổ Nhĩ Kỳ, Ba Lan…), Trung giản thể/phồn thể, Nhật; thấy tiếng Việt có dấu thì chuyển sang bộ đọc tiếng Việt. Chữ Hàn, Kirin, Thái, Hindi, Hy Lạp, Ả Rập: chọn ngôn ngữ ở trên.', 'Automatic uses PP-OCRv6 for Latin script (English, French, German, Spanish, Turkish, Polish...), Simplified/Traditional Chinese and Japanese, and switches to the Vietnamese reader when it sees tone-marked Vietnamese. For Korean, Cyrillic, Thai, Hindi, Greek or Arabic, pick the language above.')}</p>
+<h3>{t('3. Chế độ (chỉ cho tiếng Việt)', '3. Mode (Vietnamese only)')}</h3>
 <select id="ocrMode" aria-label="{t('Chế độ', 'Mode')}"><option value="auto">{t('Tự động (khuyên dùng)', 'Automatic (recommended)')}</option><option value="doc">{t('Tài liệu, ảnh scan, ảnh chụp màn hình', 'Document, scan, screenshot')}</option><option value="photo">{t('Ảnh chụp: nghiêng, nhiều nền, biên lai', 'Photo: tilted, busy background, receipt')}</option></select>
 <h3>{t('4. Tuỳ chọn kết quả', '4. Result options')}</h3>
 <label class="chk"><input type="checkbox" id="ocrTables" checked> {t('Nhận diện bảng và cột', 'Detect tables and columns')}</label>
@@ -1169,7 +1188,7 @@ def product_ocr(L):
 <div id="ocrPane-json" hidden><pre class="ocr-json" id="ocrJson"></pre></div>
 <div class="idp-actions"><button type="button" class="btn primary" id="ocrCopy">{t('Sao chép', 'Copy')}</button><button type="button" class="btn ghost" id="ocrDlTxt">{t('Tải .txt', 'Download .txt')}</button><button type="button" class="btn ghost" id="ocrDlMd">{t('Tải .md', 'Download .md')}</button><button type="button" class="btn ghost" id="ocrDlJson">{t('Tải .json', 'Download .json')}</button><button type="button" class="btn ghost" id="ocrDlCsv" hidden>{t('Tải bảng .csv', 'Download tables .csv')}</button></div>
 </div>
-<div class="idp-empty" id="ocrEmpty">{t('Kết quả sẽ hiển thị ở đây. Lần đầu tải bộ nhận dạng tiếng Việt (khoảng 6 MB), sau đó được lưu trong bộ nhớ đệm của trình duyệt. Chế độ ảnh chụp tải thêm khoảng 26 MB.', 'Your result appears here. The first run downloads the Vietnamese recogniser (about 6 MB), which the browser then caches. Photo mode downloads about 26 MB more.')}</div>
+<div class="idp-empty" id="ocrEmpty">{t('Kết quả sẽ hiển thị ở đây. Lần đầu tải PP-OCRv6 (khoảng 41 MB: tìm chữ 9 MB, nhận dạng 20 MB, thư viện 11 MB), ngôn ngữ Hàn, Nga, Thái, Hindi, Hy Lạp, Ả Rập tải thêm mô hình 8 đến 13 MB, riêng tiếng Việt tải thêm khoảng 6 MB. Mọi thứ được lưu trong bộ nhớ đệm của trình duyệt.', 'Your result appears here. The first run downloads PP-OCRv6 (about 41 MB: detection 9 MB, recognition 20 MB, runtime 11 MB). Korean, Russian, Thai, Hindi, Greek and Arabic add one 8 to 13 MB model; Vietnamese adds about 6 MB. The browser caches everything.')}</div>
 </div>
 </div></div></section>
 
@@ -1177,36 +1196,41 @@ def product_ocr(L):
 <p class="sub">{t('Sáu bước, toàn bộ chạy bằng JavaScript và WebAssembly trên thiết bị của bạn.', 'Six steps, all running as JavaScript and WebAssembly on your device.')}</p>
 <ol class="flow">
 <li><b>{t('Làm sạch ảnh', 'Image clean-up')}</b><span>{t('Đọc EXIF, giới hạn kích thước, chia cho nền giấy ước lượng để xoá bóng đổ, kéo giãn tương phản.', 'EXIF orientation, size cap, division by an estimated paper background to remove shadows, contrast stretch.')}</span></li>
-<li><b>{t('Chỉnh nghiêng', 'Deskew')}</b><span>{t('Đo góc nghiêng bằng projection profile (±10°) rồi xoay thẳng dòng chữ.', 'Skew measured with a projection profile (±10°), then the text lines are rotated level.')}</span></li>
-<li><b>{t('Tìm dòng chữ', 'Find text lines')}</b><span>{t('Chế độ ảnh chụp dùng PaddleOCR (PP-OCRv6 detection) trong Web Worker để lấy từng dòng chữ ở mọi góc.', 'Photo mode uses PaddleOCR (PP-OCRv6 detection) in a Web Worker to get every text line at any angle.')}</span></li>
-<li><b>{t('Đọc chữ tiếng Việt', 'Read the text')}</b><span>{t('Tesseract.js (LSTM, tessdata_best &quot;vie&quot;) đọc đủ dấu thanh và dấu mũ; chạy song song nhiều worker.', 'Tesseract.js (LSTM, tessdata_best &quot;vie&quot;) reads every tone mark and diacritic; several workers run in parallel.')}</span></li>
+<li><b>{t('Chỉnh nghiêng', 'Deskew')}</b><span>{t('Trang tài liệu tiếng Việt: đo góc nghiêng bằng projection profile (±10°) rồi xoay thẳng. Các ngôn ngữ khác: bộ tìm chữ trả về khung nghiêng nên không cần xoay ảnh.', 'Vietnamese document pages: skew measured with a projection profile (±10°), then rotated level. Other languages: the detector returns tilted boxes, so the image is not rotated.')}</span></li>
+<li><b>{t('Tìm dòng chữ', 'Find text lines')}</b><span>{t('PaddleOCR.js chạy PP-OCRv6 detection trong Web Worker (ONNX Runtime Web + OpenCV.js) để lấy từng dòng chữ ở mọi góc.', 'PaddleOCR.js runs PP-OCRv6 detection in a Web Worker (ONNX Runtime Web + OpenCV.js) to get every text line at any angle.')}</span></li>
+<li><b>{t('Nhận dạng chữ', 'Recognise the text')}</b><span>{t('PP-OCRv6 recognition đọc Latin (Anh, Pháp, Đức, Tây Ban Nha, Thổ Nhĩ Kỳ, Ba Lan…), Trung giản thể và phồn thể, Nhật. Chữ Hàn, Kirin, Thái, Hindi, Hy Lạp, Ả Rập dùng bộ nhận dạng PP-OCRv5 tương ứng. Tiếng Việt có dấu được chuyển sang Tesseract.js (tessdata_best &quot;vie&quot;).', 'PP-OCRv6 recognition reads Latin (English, French, German, Spanish, Turkish, Polish...), Simplified and Traditional Chinese, and Japanese. Korean, Cyrillic, Thai, Hindi, Greek and Arabic use the matching PP-OCRv5 recogniser. Vietnamese with tone marks is handed to Tesseract.js (tessdata_best &quot;vie&quot;).')}</span></li>
 <li><b>{t('Dựng lại bố cục', 'Rebuild layout')}</b><span>{t('Từ ô chữ sang hàng, cột (khe trống dọc), bảng (cột thẳng hàng), danh sách, tiêu đề và đoạn.', 'From text boxes to rows, columns (vertical gutters), tables (aligned cells), lists, headings and paragraphs.')}</span></li>
 <li><b>{t('Xuất kết quả', 'Export')}</b><span>{t('Văn bản, Markdown, JSON có toạ độ và độ tin cậy, CSV cho bảng; chữ kém tin cậy được đánh dấu.', 'Text, Markdown, JSON with boxes and confidence, CSV for tables; low-confidence words are flagged.')}</span></li>
 </ol></div></section>
 
 <section><div class="wrap"><div class="grid g2">
-<div class="card"><h3>{t('Độ chính xác đã đo', 'Measured accuracy')}</h3>
+<div class="card"><h3>{t('Độ chính xác đã đo: đa ngôn ngữ', 'Measured accuracy: multilingual')}</h3>
+<table class="spec"><tr><th>{t('Ngôn ngữ', 'Language')}</th><th>{t('Bộ nhận dạng', 'Recogniser')}</th><th>CER</th></tr>{bench2}</table>
+<p style="margin-top:12px">{t('Mỗi ngôn ngữ: 2 đến 3 dòng chữ in sạch (câu, số hoá đơn, số tiền) vẽ bằng Chrome rồi đọc bằng đúng đường chạy của trang này. Đây là kiểm tra cơ bản, không phải benchmark: ảnh thật mờ, nghiêng hoặc nhiều nền sẽ kém hơn.', 'Each language: 2 to 3 clean printed lines (a sentence, an invoice number, an amount) rendered in Chrome and read through this page&rsquo;s own pipeline. This is a smoke test, not a benchmark: blurry, tilted or busy real images do worse.')}</p>
+<h3 style="margin-top:20px">{t('Tiếng Việt (Tesseract)', 'Vietnamese (Tesseract)')}</h3>
 <table class="spec"><tr><th>{t('Ảnh thử', 'Test image')}</th><th>{t('Chế độ tài liệu (CER)', 'Document mode (CER)')}</th><th>{t('Chế độ ảnh chụp (CER)', 'Photo mode (CER)')}</th></tr>{bench}</table>
-<p style="margin-top:12px">{t('CER = tỉ lệ lỗi ký tự (thấp hơn là tốt hơn), đo trên ảnh thử tự tạo, chữ in tiếng Việt có dấu. Ảnh thật có thể cho kết quả khác; chữ viết tay không được hỗ trợ.', 'CER = character error rate (lower is better), measured on self-made test images with printed Vietnamese text. Real images can differ; handwriting is not supported.')}</p></div>
+<p style="margin-top:12px">{t('CER = tỉ lệ lỗi ký tự (thấp hơn là tốt hơn), đo trên 6 ảnh thử tự tạo, chữ in tiếng Việt có dấu. Chữ viết tay không được hỗ trợ.', 'CER = character error rate (lower is better), measured on 6 self-made test images with printed Vietnamese text. Handwriting is not supported.')}</p></div>
 <div class="card"><h3>{t('Giới hạn cần biết', 'Known limits')}</h3>
 <ul><li>{t('Đây là OCR cổ điển, không phải mô hình thị giác-ngôn ngữ (LLM): không hiểu biểu đồ, ô gộp phức tạp hay bảng không có khoảng trống rõ.', 'This is classic OCR, not a vision-language model: it does not understand charts, complex merged cells or tables without clear gaps.')}</li>
 <li>{t('Chữ viết tay, chữ cong, chữ quá nhỏ (dưới khoảng 12 px chiều cao) hoặc ảnh mờ cho kết quả kém.', 'Handwriting, curved text, very small text (under about 12 px tall) and blurry images give poor results.')}</li>
-<li>{t('Ảnh bị ngược hoặc nằm ngang: dùng nút Xoay trước khi đọc.', 'Upside-down or sideways images: use the Rotate buttons first.')}</li>
-<li>{t('Thiết bị yếu có thể chậm ở chế độ ảnh chụp (vài giây đến vài chục giây mỗi ảnh).', 'Weak devices can be slow in photo mode (a few seconds to tens of seconds per image).')}</li></ul></div>
+<li>{t('Một ảnh đọc một ngôn ngữ mỗi lần: ảnh trộn nhiều chữ viết (ví dụ Hàn và Nga) cần chọn ngôn ngữ chính. Chế độ Tự động chỉ bao gồm Latin, Trung, Nhật và tiếng Việt; nếu độ tin cậy thấp, trang gợi ý chọn đúng ngôn ngữ.', 'One language per read: an image that mixes scripts (for example Korean and Russian) needs its main language selected. Automatic covers Latin, Chinese, Japanese and Vietnamese only; when confidence is low the page suggests picking the language.')}</li>
+<li>{t('Ả Rập là thử nghiệm: bộ nhận dạng trả về thứ tự hiển thị nên trang đảo lại, nhưng số Latin trong dòng Ả Rập có thể bị rơi mất. Ngôn ngữ viết phải-sang-trái chưa dựng được cột và bảng.', 'Arabic is experimental: the recogniser returns visual order so the page flips it back, but Latin digits inside Arabic lines can be dropped. Right-to-left languages do not get column or table reconstruction yet.')}</li>
+<li>{t('Ảnh bị ngược hoặc nằm ngang: trang tự thử các hướng khi độ tin cậy thấp, hoặc dùng nút Xoay.', 'Upside-down or sideways images: the page tries the other orientations when confidence is low, or use the Rotate buttons.')}</li>
+<li>{t('Chạy bằng WebAssembly một luồng: thường 4 đến 10 giây mỗi ảnh sau khi mô hình đã tải; thiết bị yếu hoặc ảnh dày chữ chậm hơn.', 'Single-thread WebAssembly: typically 4 to 10 seconds per image once the models are loaded; weak devices and dense pages are slower.')}</li></ul></div>
 </div></div></section>
 
 <section class="band"><div class="wrap"><h2>{t('Quyền riêng tư và yêu cầu', 'Privacy and requirements')}</h2>
 <ul>
 <li>{t('Ảnh được xử lý hoàn toàn trong trình duyệt; không có ảnh hay văn bản nào được tải lên máy chủ của Shopsmon.', 'Images are processed entirely in the browser; no image or text is uploaded to a Shopsmon server.')}</li>
-<li>{t('Thư viện (Tesseract.js, PaddleOCR.js) và dữ liệu ngôn ngữ được tải từ CDN jsDelivr; mô hình phát hiện chữ được tải từ shopsmon.com.', 'Libraries (Tesseract.js, PaddleOCR.js) and language data load from the jsDelivr CDN; the text-detection model loads from shopsmon.com.')}</li>
+<li>{t('Thư viện (Tesseract.js, PaddleOCR.js) và dữ liệu tiếng Việt được tải từ CDN jsDelivr; các mô hình PP-OCR được tải từ shopsmon.com.', 'Libraries (Tesseract.js, PaddleOCR.js) and the Vietnamese data load from the jsDelivr CDN; the PP-OCR models load from shopsmon.com.')}</li>
 <li>{t('Cần trình duyệt có WebAssembly và Web Worker (Chrome, Edge, Firefox, Safari bản gần đây).', 'Requires a browser with WebAssembly and Web Workers (recent Chrome, Edge, Firefox or Safari).')}</li></ul></div></section>
 
 <section><div class="wrap"><h2>{t('Công nghệ và nguồn', 'Technology and credits')}</h2>
 <ul class="refs">
 <li>Tesseract OCR &amp; tessdata_best &mdash; Google / Tesseract OCR community, Apache-2.0. Tesseract.js &mdash; Apache-2.0.</li>
-<li>PaddleOCR PP-OCRv6 detection &amp; PaddleOCR.js &mdash; PaddlePaddle Authors, Apache-2.0.</li>
+<li>PaddleOCR PP-OCRv6 (detection and recognition), PP-OCRv5 per-script recognisers (Korean, Eslav/Cyrillic, Thai, Arabic, Devanagari, Greek) &amp; PaddleOCR.js &mdash; PaddlePaddle Authors, Apache-2.0.</li>
 <li>ONNX Runtime Web &mdash; Microsoft, MIT. OpenCV.js &mdash; Apache-2.0.</li>
-<li>{t('Ghi chú kỹ thuật: bộ từ điển nhận dạng của PP-OCRv6 thiếu 88/134 chữ cái tiếng Việt có dấu, nên Paddle chỉ dùng để tìm dòng chữ.', 'Technical note: the PP-OCRv6 recognition dictionary lacks 88 of 134 Vietnamese tone-marked letters, so Paddle is used only to find text lines.')}</li>
+<li>{t('Ghi chú kỹ thuật: bộ từ điển nhận dạng của PP-OCRv6 (18.708 ký tự) và của PP-OCRv5 Latin đều thiếu 88/134 chữ cái tiếng Việt có dấu (ví dụ &ldquo;trời đẹp&rdquo; thành &ldquo;tri đp&rdquo;), nên tiếng Việt vẫn do Tesseract đọc; Paddle chỉ tìm dòng chữ. Bộ từ điển PP-OCRv6 cũng không có chữ Kirin, Hàn, Thái, Ả Rập, Devanagari, vì vậy các ngôn ngữ đó dùng mô hình PP-OCRv5.', 'Technical note: the PP-OCRv6 recognition dictionary (18,708 characters) and the PP-OCRv5 Latin one both lack 88 of 134 Vietnamese tone-marked letters (&ldquo;trời đẹp&rdquo; comes out as &ldquo;tri đp&rdquo;), so Tesseract still reads Vietnamese and Paddle only finds the text lines. The PP-OCRv6 dictionary also has no Cyrillic, Korean, Thai, Arabic or Devanagari, which is why those languages use PP-OCRv5 models.')}</li>
 </ul></div></section>
 
 <section class="band"><div class="wrap" style="text-align:center"><h2>{t('Cần OCR cho hệ thống của bạn?', 'Need OCR inside your own system?')}</h2>
@@ -1214,9 +1238,9 @@ def product_ocr(L):
 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)} <a class="btn ghost" href="{P('/products/')}">{t('Tất cả sản phẩm', 'All products')}</a></div></div></section>
 """
     layout(L, "/products/ocr.html",
-           t("OCR ảnh thành văn bản miễn phí, đọc tiếng Việt có dấu, giữ bảng và cột | Shopsmon", "Free image-to-text OCR with Vietnamese tone marks, tables and columns | Shopsmon"),
-           t("OCR ảnh thành văn bản ngay trên trình duyệt: đọc tiếng Việt có dấu và tiếng Anh, dựng lại tiêu đề, đoạn, danh sách, bảng, cột. Xuất txt, Markdown, JSON, CSV. Ảnh không rời khỏi thiết bị.",
-             "Image-to-text OCR in your browser: reads Vietnamese with tone marks and English, rebuilds headings, paragraphs, lists, tables and columns. Export txt, Markdown, JSON, CSV. Images never leave your device."),
+           t("OCR ảnh thành văn bản miễn phí, PP-OCRv6 đa ngôn ngữ và tiếng Việt, giữ bảng và cột | Shopsmon", "Free multilingual image-to-text OCR (PP-OCRv6) with Vietnamese, tables and columns | Shopsmon"),
+           t("OCR ảnh thành văn bản ngay trên trình duyệt bằng PP-OCRv6: đọc chữ đa ngôn ngữ (Latin, Trung, Nhật, Hàn, Nga, Thái, Hindi, Hy Lạp) và tiếng Việt có dấu, dựng lại tiêu đề, đoạn, danh sách, bảng, cột. Ảnh không rời khỏi thiết bị.",
+             "Image-to-text OCR in your browser with PP-OCRv6: reads multilingual text (Latin, Chinese, Japanese, Korean, Russian, Thai, Hindi, Greek) and Vietnamese with tone marks, rebuilds headings, paragraphs, lists, tables and columns. Images never leave your device."),
            body, active="/products/", og_image="/assets/img/products/ocr-og.png",
            extra_body='<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("ocrEmpty"),s=document.getElementById("ocrStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/ocr.js" defer></script>')
 

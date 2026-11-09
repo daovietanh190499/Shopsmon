@@ -1,11 +1,13 @@
-/* Shopsmon OCR — image to structured text, runs entirely in the browser (no upload).
+/* Shopsmon OCR - image to structured text, runs entirely in the browser (no upload).
  *
  * Engines
- *   Document : image clean-up (illumination flattening, contrast stretch, auto-deskew) -> Tesseract.js (LSTM, "vie"/"eng") on the whole page.
- *   Photo    : PaddleOCR.js text detection (PP-OCRv6 small, ONNX Runtime Web, Web Worker) finds every text line at any tilt;
- *              each line is rectified and read by Tesseract.js in parallel workers.
- *   Why the split: the PP-OCRv6 recognition dictionary has no Vietnamese tone-marked letters such as ả ạ ế ộ ữ, so Paddle is used for
- *   detection only and Tesseract (tessdata_best "vie") does the Vietnamese reading.
+ *   PP-OCRv6 (default, multilingual): PaddleOCR.js (ONNX Runtime Web + OpenCV.js in a Web Worker) = text detection (PP-OCRv6 small det) +
+ *              text recognition (PP-OCRv6 small rec: Latin incl. FR/DE/ES/TR/PL..., Chinese simplified + traditional, Japanese).
+ *              For scripts the v6 dictionary does not contain, the matching PP-OCRv5 recogniser is loaded on demand:
+ *              Korean, Cyrillic (eslav), Thai, Arabic, Devanagari (Hindi), Greek.
+ *   Vietnamese: the PP-OCRv6/v5 dictionaries have no Vietnamese tone-marked letters (ả ạ ế ộ ữ ...), so a Vietnamese page is read by
+ *              Tesseract.js (tessdata_best "vie"): "Document" = whole page after clean-up + deskew, "Photo" = PP-OCRv6 detection finds
+ *              every line, each line is rectified and read by Tesseract. Auto language detects Vietnamese from the PP-OCRv6 output.
  *   Layout: words/lines -> segments -> columns -> tables -> paragraphs / lists / headings -> HTML, Markdown, plain text.
  */
 (function () {
@@ -20,7 +22,9 @@
       decodeErr: 'Không đọc được ảnh này.', err: 'Có lỗi khi nhận dạng', empty: 'Không tìm thấy chữ trong ảnh. Thử xoay ảnh, chọn chế độ khác hoặc dùng ảnh rõ hơn.',
       lowConf: 'Độ tin cậy thấp. Hãy thử ảnh rõ hơn, chế độ "Ảnh chụp" hoặc xoay ảnh cho đúng chiều.', autoRetry: 'Độ tin cậy thấp, đang thử thêm chế độ ảnh chụp…',
       words: 'từ', linesN: 'dòng', conf: 'độ tin cậy', skew: 'đã chỉnh nghiêng', engDoc: 'Tài liệu', engPhoto: 'Ảnh chụp', copied: 'Đã sao chép', copyFail: 'Không sao chép được',
-      table: 'bảng', cols: 'cột', s: 's', mb: 'MB', tableN: 'bảng', orient: 'Độ tin cậy thấp, đang thử các hướng xoay khác…', rotated: 'đã tự xoay ảnh'
+      table: 'bảng', cols: 'cột', s: 's', mb: 'MB', tableN: 'bảng', orient: 'Độ tin cậy thấp, đang thử các hướng xoay khác…', rotated: 'đã tự xoay ảnh',
+      loadingRec: 'Đang tải mô hình nhận dạng', vnFound: 'Phát hiện tiếng Việt, chuyển sang bộ đọc tiếng Việt…',
+      lowScript: 'Độ tin cậy thấp. Nếu chữ trong ảnh là tiếng Hàn, Nga, Thái, Ả Rập, Hindi hoặc Hy Lạp, hãy chọn đúng ngôn ngữ ở ô Ngôn ngữ.', engPP: 'PP-OCRv6', engPP5: 'PP-OCRv5'
     },
     en: {
       loadingLib: 'Loading OCR libraries…', loadingLang: 'Downloading language data', loadingModel: 'Downloading model', initRt: 'Initialising recogniser…',
@@ -29,20 +33,31 @@
       decodeErr: 'This image could not be read.', err: 'Recognition error', empty: 'No text found. Try rotating the image, another mode, or a clearer picture.',
       lowConf: 'Low confidence. Try a clearer image, the "Photo" mode, or rotate the image upright.', autoRetry: 'Low confidence, also trying photo mode…',
       words: 'words', linesN: 'lines', conf: 'confidence', skew: 'deskewed', engDoc: 'Document', engPhoto: 'Photo', copied: 'Copied', copyFail: 'Copy failed',
-      table: 'table', cols: 'cols', s: 's', mb: 'MB', tableN: 'tables', orient: 'Low confidence, trying other orientations…', rotated: 'auto-rotated'
+      table: 'table', cols: 'cols', s: 's', mb: 'MB', tableN: 'tables', orient: 'Low confidence, trying other orientations…', rotated: 'auto-rotated',
+      loadingRec: 'Downloading recognition model', vnFound: 'Vietnamese detected, switching to the Vietnamese reader…',
+      lowScript: 'Low confidence. If the text is Korean, Russian, Thai, Arabic, Hindi or Greek, pick that language in the Language box.', engPP: 'PP-OCRv6', engPP5: 'PP-OCRv5'
     }
   }[LANG];
 
   var TESS_JS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
   var TESS_CORE = 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/';
-  var TESS_DATA = {
-    vie: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int',
-    eng: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int'
-  };
+  var TESS_DATA = { vie: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/vie/4.0.0_best_int' };
   var PADDLE_JS = 'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm';
   var PADDLE_WORKER = 'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/dist/assets/worker-entry-C9UNuyOJ.js';
   var DET_URL = '/assets/models/PP-OCRv6_small_det.tar';
-  var REC_URL = '/assets/models/PP-OCRv6_tiny_rec.tar';
+  // recognisers (model name must equal model_name inside the tar's inference.yml); v6 first = default
+  var RECS = {
+    v6: { name: 'PP-OCRv6_small_rec', url: '/assets/models/PP-OCRv6_small_rec.tar', v: 6 },
+    ko: { name: 'korean_PP-OCRv5_mobile_rec', url: '/assets/models/korean_PP-OCRv5_mobile_rec.tar', v: 5 },
+    ru: { name: 'eslav_PP-OCRv5_mobile_rec', url: '/assets/models/eslav_PP-OCRv5_mobile_rec.tar', v: 5 },
+    th: { name: 'th_PP-OCRv5_mobile_rec', url: '/assets/models/th_PP-OCRv5_mobile_rec.tar', v: 5 },
+    ar: { name: 'arabic_PP-OCRv5_mobile_rec', url: '/assets/models/arabic_PP-OCRv5_mobile_rec.tar', v: 5 },
+    hi: { name: 'devanagari_PP-OCRv5_mobile_rec', url: '/assets/models/devanagari_PP-OCRv5_mobile_rec.tar', v: 5 },
+    el: { name: 'el_PP-OCRv5_mobile_rec', url: '/assets/models/el_PP-OCRv5_mobile_rec.tar', v: 5 }
+  };
+  // Vietnamese-only letters (d-stroke, horn/breve vowels, dotted/hooked tone marks): the PP-OCR dictionary drops most of them, but a few survive
+  var VN_RE = /[đĐơƠưƯăĂạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]/g;
+  var NOSP = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef\u0e00-\u0e7f]/;   // scripts written without spaces between words
   var QS = new URLSearchParams(location.search);   // test overrides: ?ocrbackend=auto&ocrlimit=960
   var MAX_SIDE = 2600;
   var LOW_CONF = 60;
@@ -61,7 +76,8 @@
   var R = null;            // last result {blocks, md, text, json, shapes, overlay, csv}
   var busy = false;
   var tessState = { key: '', workers: [] };
-  var paddle = null;
+  var paddle = null;       // {key, inst}
+  var wkUrl = null;
 
   // ------------------------------------------------------------------ small helpers
   function setStatus(msg, kind) { el.status.textContent = msg || ''; el.status.className = 'idp-status' + (kind ? ' ' + kind : ''); }
@@ -294,8 +310,17 @@
     }); }); });
     return out;   // array of lines, each an array of words
   }
+  // join tokens with spaces, except between two characters of a script that is written without spaces
+  function joinWords(ws, fmt) {
+    var o = '';
+    ws.forEach(function (w, i) {
+      if (i && !(NOSP.test(ws[i - 1].t.slice(-1)) && NOSP.test(w.t.charAt(0)))) o += ' ';
+      o += fmt ? fmt(w) : w.t;
+    });
+    return o;
+  }
   function segFromWords(ws, ext) {
-    var s = { words: ws, text: ws.map(function (w) { return w.t; }).join(' '), x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, conf: 0 }, tc = 0, tw = 0;
+    var s = { words: ws, text: joinWords(ws), x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, conf: 0 }, tc = 0, tw = 0;
     ws.forEach(function (w) {
       s.x0 = Math.min(s.x0, w.x0); s.y0 = Math.min(s.y0, w.y0); s.x1 = Math.max(s.x1, w.x1); s.y1 = Math.max(s.y1, w.y1);
       var l = w.t.length; tc += w.c * l; tw += l;
@@ -329,16 +354,22 @@
   }
 
   // ------------------------------------------------------------------ engines: Paddle detection + Tesseract line reading
-  async function getPaddle() {
-    if (paddle) return paddle;
+  async function getPaddle(key) {
+    key = key || 'v6';
+    if (paddle && paddle.key === key) return paddle.inst;
+    if (paddle) { var old = paddle.inst; paddle = null; try { await old.dispose(); } catch (e) { /* ignore */ } }
+    var rc = RECS[key];
     setStatus(TXT.loadingLib); setBar(null);
     var mod = await import(PADDLE_JS);
     var det = await fetchBuf(DET_URL, TXT.loadingModel + ' (1/3)'); void det;      // warm the HTTP cache, with progress
-    var rec = await fetchBuf(REC_URL, TXT.loadingModel + ' (2/3)'); void rec;
+    var rec = await fetchBuf(rc.url, TXT.loadingRec + ' (2/3)'); void rec;
     var origin = location.origin, wk = false;
     try {
-      var code = await fetchBuf(PADDLE_WORKER, TXT.loadingModel + ' (3/3)');
-      var u = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      if (!wkUrl) {
+        var code = await fetchBuf(PADDLE_WORKER, TXT.loadingModel + ' (3/3)');
+        wkUrl = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      }
+      var u = wkUrl;
       wk = { createWorker: function () { return new Worker(u, { type: 'module' }); } };
     } catch (e) { wk = false; }
     setStatus(TXT.initRt); setBar(null);
@@ -346,12 +377,14 @@
       return mod.PaddleOCR.create({
         worker: worker,
         textDetectionModelName: 'PP-OCRv6_small_det', textDetectionModelAsset: { url: origin + DET_URL },
-        textRecognitionModelName: 'PP-OCRv6_tiny_rec', textRecognitionModelAsset: { url: origin + REC_URL },
+        textRecognitionModelName: rc.name, textRecognitionModelAsset: { url: origin + rc.url },
         ortOptions: { backend: QS.get('ocrbackend') || 'wasm', numThreads: 1, simd: true }
       });
     };
-    try { paddle = await mk(wk); } catch (e) { paddle = await mk(false); }
-    return paddle;
+    var inst;
+    try { inst = await mk(wk); } catch (e) { inst = await mk(false); }
+    paddle = { key: key, inst: inst };
+    return inst;
   }
   function cropLine(src, poly) {
     var p = poly, dx = p[1][0] - p[0][0], dy = p[1][1] - p[0][1];
@@ -384,11 +417,11 @@
       var w = seg.words[i], p = pt[k];
       if (p !== w.t && ASCII_TOK.test(p) && ASCII_TOK.test(w.t) && Math.abs(p.length - w.t.length) <= 1) { w.t = p; w.c = Math.max(w.c, pScore * 100); changed = true; }
     });
-    if (changed) { seg.text = seg.words.map(function (w) { return w.t; }).join(' '); }
+    if (changed) { seg.text = joinWords(seg.words); }
   }
   async function runPhoto(lang, onProg) {
     var prep = prepare(false), base = prep.canvas;
-    var pd = await getPaddle();
+    var pd = await getPaddle('v6');
     setStatus(TXT.detecting); setBar(null); await tick();
     var bm = await createImageBitmap(base);
     var res = await pd.predict(bm, { textDetMaxSideLimit: +QS.get('ocrlimit') || 960, textDetBoxThresh: 0.5, textDetUnclipRatio: 1.7, textRecScoreThresh: 0 });
@@ -421,6 +454,41 @@
       segs.push(s); shapes.push({ pts: it.poly, conf: s.conf });
     });
     return { segs: segs, canvas: base, shapes: shapes, skew: gAng, engine: 'photo' };
+  }
+
+  // PP-OCR pipeline: detection + recognition in the worker. RTL (Arabic) output comes in visual order: flip it back to logical order.
+  function fixRtl(t) {
+    var r = t.split('').reverse().join('');
+    return r.replace(/[0-9A-Za-z][0-9A-Za-z.,:%\/\-]*/g, function (m) { return m.split('').reverse().join(''); });
+  }
+  async function runPP(key, onProg) {
+    var prep = prepare(false), base = prep.canvas;
+    var pd = await getPaddle(key);
+    setStatus(TXT.reading); setBar(null); await tick();
+    var bm = await createImageBitmap(base);
+    var res = await pd.predict(bm, { textDetMaxSideLimit: +QS.get('ocrlimit') || 1280, textDetBoxThresh: 0.5, textDetUnclipRatio: 1.7, textRecScoreThresh: 0 });
+    onProg && onProg(1);
+    var items = (res[0] && res[0].items || []).filter(function (it) { return it.poly && it.poly.length === 4 && it.text && it.text.trim(); });
+    var eng = RECS[key].v === 6 ? 'pp6' : 'pp5';
+    if (!items.length) return { segs: [], canvas: base, shapes: [], skew: 0, engine: eng, rec: key };
+    var angs = items.map(function (it) { return Math.atan2(it.poly[1][1] - it.poly[0][1], it.poly[1][0] - it.poly[0][0]); });
+    var gAng = median(angs), ca = Math.cos(-gAng), sa = Math.sin(-gAng), cx = base.width / 2, cy = base.height / 2;
+    var segs = [], shapes = [];
+    items.forEach(function (it) {
+      var txt = key === 'ar' ? fixRtl(it.text.trim()) : it.text.trim();
+      var c = it.score * 100;
+      var rp = it.poly.map(function (q) { var x = q[0] - cx, y = q[1] - cy; return [x * ca - y * sa + cx, x * sa + y * ca + cy]; });
+      var xs = rp.map(function (q) { return q[0]; }), ys = rp.map(function (q) { return q[1]; });
+      var wl = txt.split(/\s+/).filter(Boolean).map(function (t) { return { t: t, c: c, x0: 0, y0: 0, x1: 0, y1: 0 }; });
+      var sg = segFromWords(wl);
+      sg.x0 = Math.min.apply(null, xs); sg.x1 = Math.max.apply(null, xs); sg.y0 = Math.min.apply(null, ys); sg.y1 = Math.max.apply(null, ys);
+      segs.push(sg); shapes.push({ pts: it.poly, conf: c });
+    });
+    return { segs: segs, canvas: base, shapes: shapes, skew: gAng, engine: eng, rec: key };
+  }
+  function looksVietnamese(segs) {
+    var t = segs.map(function (s) { return s.text; }).join(' '), m = t.match(VN_RE);
+    return !!m && m.length >= 2 && (t.match(/[A-Za-z]/g) || []).length > 15;
   }
 
   // ------------------------------------------------------------------ layout reconstruction
@@ -570,7 +638,7 @@
 
   // ------------------------------------------------------------------ output formats
   function runsHtml(words) {
-    return words.map(function (w) { return w.c < LOW_CONF ? '<mark class="lc" title="' + Math.round(w.c) + '%">' + esc(w.t) + '</mark>' : esc(w.t); }).join(' ');
+    return joinWords(words, function (w) { return w.c < LOW_CONF ? '<mark class="lc" title="' + Math.round(w.c) + '%">' + esc(w.t) + '</mark>' : esc(w.t); });
   }
   function blockWords(b, keep) {
     if (keep) return b.lines.map(function (l) { return l.words; });
@@ -592,7 +660,10 @@
     if (inList) h += '</ul>';
     return h;
   }
-  function plainOf(b, keep) { return b.lines.map(function (l) { return l.text; }).join(keep ? '\n' : ' '); }
+  function plainOf(b, keep) {
+    if (keep) return b.lines.map(function (l) { return l.text; }).join('\n');
+    return joinWords([].concat.apply([], b.lines.map(function (l) { return l.words; })));
+  }
   function toMarkdown(blocks, keep) {
     var out = [], firstHead = true;
     blocks.forEach(function (b) {
@@ -664,7 +735,7 @@
     drawOverlay(R);
     var nt = blocks.filter(function (b) { return b.t === 'table'; }).length;
     el.info.textContent = [
-      (res.engine === 'photo' ? TXT.engPhoto : TXT.engDoc), res.segs.length + ' ' + TXT.linesN, st.words + ' ' + TXT.words,
+      ({ photo: TXT.engPhoto, doc: TXT.engDoc, pp6: TXT.engPP, pp5: TXT.engPP5 }[res.engine] || res.engine), res.segs.length + ' ' + TXT.linesN, st.words + ' ' + TXT.words,
       TXT.conf + ' ' + Math.round(st.conf) + '%', nt ? nt + ' ' + TXT.tableN : '',
       Math.abs(res.skew) >= 0.003 && res.engine === 'doc' ? TXT.skew + ' ' + Math.round(res.skew * 180 / Math.PI * 10) / 10 + '°' : '', secs.toFixed(1) + TXT.s, extra || ''
     ].filter(Boolean).join(' · ');
@@ -675,42 +746,72 @@
   }
 
   // ------------------------------------------------------------------ orchestration
+  // Vietnamese reader (Tesseract vie): Document / Photo / Auto, with auto-rotate
+  async function runVi(mode) {
+    var lang = 'vie', res, extra = '';
+    if (mode === 'photo') return { res: await runPhoto(lang), extra: extra };
+    res = await runDocument(lang);
+    if (mode === 'auto') {
+      var st = stats(res.segs), dig = 0, tot = 0;
+      if (res.segs.length && st.conf < 70) {          // maybe sideways or upside down: try the other orientations
+        setStatus(TXT.orient); await tick();
+        var base = S.rot, best = res, bestQ = quality(res), bestRot = base;
+        for (var k = 1; k <= 3; k++) {
+          S.rot = (base + k) % 4;
+          var rr = await runDocument(lang), qq = quality(rr);
+          if (qq > bestQ * 1.3) { best = rr; bestQ = qq; bestRot = S.rot; }
+        }
+        S.rot = bestRot; res = best; st = stats(res.segs);
+        if (bestRot !== base) { drawPrev(); extra = TXT.rotated; }
+      }
+      res.segs.forEach(function (s) { s.words.forEach(function (w) { tot++; if (/\d/.test(w.t)) dig++; }); });
+      var digitHeavy = tot > 0 && dig / tot >= 0.15 && st.conf < 93;   // receipts, price lists: Paddle re-reads the digits
+      if (st.conf < 70 || !res.segs.length || digitHeavy) {
+        setStatus(TXT.autoRetry); await tick();
+        var alt = await runPhoto(lang), sa = stats(alt.segs);
+        if (alt.segs.length && (!res.segs.length || sa.conf > st.conf - (digitHeavy ? 2 : 0))) { res = alt; extra = 'auto'; }
+      }
+    }
+    return { res: res, extra: extra };
+  }
+  // PP-OCR reader (PP-OCRv6 multilingual, or the PP-OCRv5 recogniser of one script) with auto-rotate
+  async function runMulti(key) {
+    var res = await runPP(key), extra = '';
+    var st = stats(res.segs);
+    if (!res.segs.length || st.conf < 70) {
+      setStatus(TXT.orient); await tick();
+      var base = S.rot, best = res, bestQ = quality(res), bestRot = base;
+      for (var k = 1; k <= 3; k++) {
+        S.rot = (base + k) % 4;
+        var rr = await runPP(key), qq = quality(rr);
+        if (qq > bestQ * 1.3) { best = rr; bestQ = qq; bestRot = S.rot; }
+      }
+      S.rot = bestRot; res = best;
+      if (bestRot !== base) { drawPrev(); extra = TXT.rotated; }
+    }
+    return { res: res, extra: extra };
+  }
   async function recognise() {
     if (!S || busy) return;
     busy = true; el.run.disabled = true;
-    var t0 = performance.now(), lang = el.lang.value, mode = el.mode.value;
+    var t0 = performance.now(), lang = el.lang.value, mode = el.mode.value, hint = '';
     try {
-      var res, extra = '';
-      if (mode === 'photo') res = await runPhoto(lang);
+      var out, res, extra = '';
+      if (lang === 'vie') out = await runVi(mode);
       else {
-        res = await runDocument(lang);
-        if (mode === 'auto') {
-          var st = stats(res.segs), dig = 0, tot = 0;
-          if (res.segs.length && st.conf < 70) {          // maybe sideways or upside down: try the other orientations
-            setStatus(TXT.orient); await tick();
-            var base = S.rot, best = res, bestQ = quality(res), bestRot = base;
-            for (var k = 1; k <= 3; k++) {
-              S.rot = (base + k) % 4;
-              var rr = await runDocument(lang), qq = quality(rr);
-              if (qq > bestQ * 1.3) { best = rr; bestQ = qq; bestRot = S.rot; }
-            }
-            S.rot = bestRot; res = best; st = stats(res.segs);
-            if (bestRot !== base) { drawPrev(); extra = TXT.rotated; }
-          }
-          res.segs.forEach(function (s) { s.words.forEach(function (w) { tot++; if (/\d/.test(w.t)) dig++; }); });
-          var digitHeavy = tot > 0 && dig / tot >= 0.15 && st.conf < 93;   // receipts, price lists: Paddle re-reads the digits
-          if (st.conf < 70 || !res.segs.length || digitHeavy) {
-            setStatus(TXT.autoRetry); await tick();
-            var alt = await runPhoto(lang), sa = stats(alt.segs);
-            if (alt.segs.length && (!res.segs.length || sa.conf > st.conf - (digitHeavy ? 2 : 0))) { res = alt; extra = 'auto'; }
-          }
+        var key = RECS[lang] ? lang : 'v6';
+        out = await runMulti(key);
+        if (key === 'v6' && lang === 'auto') {
+          if (looksVietnamese(out.res.segs)) { setStatus(TXT.vnFound); await tick(); out = await runVi(mode); out.extra = (out.extra ? out.extra + ' · ' : '') + 'vi'; }
+          else if (stats(out.res.segs).conf < 65) hint = TXT.lowScript;
         }
       }
+      res = out.res; extra = out.extra;
       setStatus(TXT.layout); setBar(null); await tick();
-      if (!res.segs.length) { el.stage.hidden = true; var e2 = $('ocrEmpty'); if (e2) e2.hidden = false; setStatus(TXT.empty, 'err'); return; }
+      if (!res.segs.length) { el.stage.hidden = true; var e2 = $('ocrEmpty'); if (e2) e2.hidden = false; setStatus(hint || TXT.empty, 'err'); return; }
       var st2 = render(res, (performance.now() - t0) / 1000, extra);
       showTab('view');
-      setStatus(st2.conf < 65 ? TXT.lowConf : TXT.done, st2.conf < 65 ? '' : 'ok'); setBar(null);
+      setStatus(st2.conf < 65 ? (hint || TXT.lowConf) : TXT.done, st2.conf < 65 ? '' : 'ok'); setBar(null);
     } catch (e) {
       console.error(e); setStatus(TXT.err + ': ' + (e && e.message || e), 'err'); setBar(null);
     } finally { busy = false; el.run.disabled = false; }
@@ -755,7 +856,14 @@
   el.sampleDoc.addEventListener('click', function () { loadSample('/assets/img/products/ocr-sample-doc.png', 'ocr-sample-doc.png'); });
   el.samplePhoto.addEventListener('click', function () { loadSample('/assets/img/products/ocr-sample-photo.jpg', 'ocr-sample-photo.jpg'); });
   el.run.addEventListener('click', recognise);
-  [el.mode, el.lang].forEach(function (c) { c.addEventListener('change', function () { if (S && !busy) recognise(); }); });
+  function syncControls() {
+    var l = el.lang.value;
+    el.mode.disabled = !(l === 'auto' || l === 'vie');   // Document / Photo only matters for the Vietnamese reader
+    el.view.dir = l === 'ar' ? 'rtl' : 'ltr';
+  }
+  el.lang.addEventListener('change', function () { syncControls(); if (S && !busy) recognise(); });
+  el.mode.addEventListener('change', function () { if (S && !busy) recognise(); });
+  syncControls();
   [el.keep, el.tables].forEach(function (c) { c.addEventListener('change', function () { if (R && S && !busy) rerender(); }); });
   function rerender() {
     // layout-only options: rebuild from the cached segments without running OCR again
@@ -781,7 +889,7 @@
   el.dlMd.addEventListener('click', function () { download(baseName() + '.md', el.md.value, 'text/markdown;charset=utf-8'); });
   el.dlJson.addEventListener('click', function () { download(baseName() + '.json', el.json.textContent, 'application/json'); });
   el.dlCsv.addEventListener('click', function () { if (R && R.csv) download(baseName() + '-tables.csv', R.csv, 'text/csv;charset=utf-8'); });
-  window.addEventListener('pagehide', function () { killTess(); });
+  window.addEventListener('pagehide', function () { killTess(); if (paddle) { try { paddle.inst.dispose(); } catch (e) { /* ignore */ } } });
   el.run.disabled = true; el.rotL.disabled = el.rotR.disabled = true;
   showTab('view');
   window.__ocrDebug = function () { return lastRes; };   // for automated tests
