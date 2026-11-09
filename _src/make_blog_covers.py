@@ -15,6 +15,7 @@ CARDS = {
     "gd-conditioning": ("Gradient descent & conditioning", "Why least squares gets slow  |  kappa, CG, NumPy", "#a855f7"),
     "essential-matrix": ("Essential matrix: four poses", "Decomposing E, one cheirality test  |  SVD, NumPy", "#ef4444"),
     "pca-svd": ("PCA through the SVD", "Stability and sensor data compression  |  NumPy", "#14b8a6"),
+    "bundle-adjustment": ("Bundle adjustment", "Levenberg-Marquardt and the Schur complement  |  NumPy, SciPy", "#8b5cf6"),
 }
 ONLY = set(__import__("sys").argv[1:])
 

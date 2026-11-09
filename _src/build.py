@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-08"
+TODAY = "2026-11-09"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="bundle-adjustment", date="2026-11-09", min=15, aff="ml-books",
+         og="/assets/img/blog/bundle-adjustment-cover.png",
+         tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
+         title={"vi": "Bundle adjustment: Levenberg-Marquardt và phần bù Schur, cài đặt từ đầu",
+                "en": "Bundle adjustment from scratch: Levenberg-Marquardt and the Schur complement"},
+         summary={"vi": "Tinh chỉnh đồng thời camera và điểm 3D bằng cách cực tiểu sai số tái chiếu: dẫn xuất, cấu trúc thưa, phần bù Schur, kiểm tra bằng SciPy, vùng hội tụ, chi phí và ngoại lai (Huber).",
+                  "en": "Refining cameras and 3D points together by minimising reprojection error: derivation, sparsity, the Schur complement, a SciPy cross-check, basin of convergence, cost scaling and outliers (Huber)."},
+         seo_title={"vi": "Bundle adjustment: LM và phần bù Schur, cài đặt NumPy | Shopsmon",
+                    "en": "Bundle adjustment: Levenberg-Marquardt and the Schur complement in NumPy | Shopsmon"},
+         seo_desc={"vi": "Cài đặt bundle adjustment từ đầu bằng NumPy: Levenberg-Marquardt, cấu trúc thưa, phần bù Schur, so khớp SciPy và thí nghiệm đo vùng hội tụ, thời gian, ngoại lai.",
+                   "en": "A from-scratch NumPy bundle adjustment: Levenberg-Marquardt, sparsity, the Schur complement, a SciPy cross-check and measured experiments on convergence basin, run time and outliers."}),
     dict(slug="essential-matrix", date="2026-11-08", min=13, aff="calib",
          og="/assets/img/blog/essential-matrix-cover.png",
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
@@ -289,6 +300,9 @@ def aff_box(L, key):
         f'<li><a href="{AFF[i]["link"]}" rel="sponsored nofollow noopener" target="_blank">{AFF[i][L]}</a> '
         f'<span class="price">{AFF[i]["price"]}</span></li>' for i in b["items"])
     return (f'<aside class="aff-box"><h3>{b["title"][L]}</h3><p>{b["intro"][L]}</p><ul>{lis}</ul></aside>')
+
+
+NEWS_LIST_MAX = 30
 
 
 def sorted_news():
@@ -731,7 +745,7 @@ def contact(L):
 
 def news_index(L):
     t = lambda vi, en: vi if L == "vi" else en
-    items = sorted_news()
+    items = sorted_news()[:NEWS_LIST_MAX]  # older items keep their own page but leave the list
     top = items[0]
     rest = "".join(
         f'<a class="ncard" href="{news_url(L, n)}" data-cat="{n["cat"]}">'

@@ -1,0 +1,189 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-09 &middot; Tái tạo 3D &middot; ~15 phút đọc</p>
+<h1>Bundle adjustment: Levenberg-Marquardt và phần bù Schur, cài đặt từ đầu</h1>
+<p class="meta">Tinh chỉnh đồng thời mọi camera và mọi điểm 3D bằng cách cực tiểu sai số tái chiếu: hàm mục tiêu, vì sao ma trận chuẩn có cấu trúc thưa, phần bù Schur, so khớp với SciPy, vùng hội tụ, chi phí theo kích thước và ảnh hưởng của điểm ngoại lai.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Các bài trước trên blog này xây từng mắt xích của một hệ thống tái tạo 3D: <a href="@@L@@/blog/zhang-calibration.html">hiệu chuẩn camera</a>, <a href="@@L@@/blog/eight-point-normalization.html">ước lượng ma trận từ điểm khớp</a>, <a href="@@L@@/blog/essential-matrix.html">tách chuyển động camera</a> và <a href="@@L@@/blog/triangulation-dlt.html">tam giác hoá</a>. Mỗi bước dùng kết quả của bước trước làm đầu vào cố định, nên sai số của chúng cộng dồn và không bước nào &ldquo;nhìn&rdquo; toàn bộ dữ liệu cùng lúc. <strong>Bundle adjustment</strong> (BA) là bước cuối cùng của hầu hết các hệ thống structure-from-motion: lấy ước lượng thô của mọi camera và mọi điểm, rồi tinh chỉnh <em>tất cả cùng nhau</em> để các tia sáng đi từ tâm mỗi camera qua điểm ảnh đo được hội tụ về các điểm 3D một cách nhất quán nhất có thể (&ldquo;bó&rdquo; tia, bundle of rays).</p>
+<p>Bài này cài đặt BA từ đầu bằng NumPy: Levenberg-Marquardt có phần bù Schur, kiểm tra bằng SciPy, rồi đo bốn điều có thể tái lập: sai số đạt được so với giới hạn lý thuyết, vùng khởi tạo mà thuật toán còn hội tụ, thời gian của phần bù Schur so với giải ma trận đầy đủ, và ảnh hưởng của điểm ngoại lai.</p>
+
+<h2>2. Bài toán</h2>
+<p>Có \(C\) camera với ma trận nội tại đã biết (tiêu cự \(f\), điểm chính \((c_x,c_y)\)) và \(P\) điểm 3D. Camera \(i\) có phép quay \(R(\mathbf r_i)\) (biểu diễn bằng vectơ quay \(\mathbf r_i\in\mathbb R^3\)) và phép tịnh tiến \(\mathbf t_i\); điểm \(j\) có toạ độ \(\mathbf X_j\). Với mỗi quan sát \((i,j)\), tức camera \(i\) nhìn thấy điểm \(j\) tại pixel \(\mathbf u_{ij}\), phần dư là sai số tái chiếu</p>
+$$\mathbf e_{ij}=\pi\!\left(R(\mathbf r_i)\mathbf X_j+\mathbf t_i\right)-\mathbf u_{ij},\qquad \pi(x,y,z)=\left(f\tfrac{x}{z}+c_x,\;f\tfrac{y}{z}+c_y\right).$$
+<p>BA tìm \(\{\mathbf r_i,\mathbf t_i\}\) và \(\{\mathbf X_j\}\) cực tiểu \(\tfrac12\sum_{(i,j)}\|\mathbf e_{ij}\|^2\). Với \(N\) quan sát có \(2N\) phần dư và \(p=6C+3P\) ẩn số. Hai hệ quả đáng ghi nhớ trước khi viết một dòng code:</p>
+<ul>
+<li><strong>Có 7 bậc tự do vô hình (gauge).</strong> Dịch, quay hay phóng to toàn bộ thế giới (cùng với các camera) không đổi sai số tái chiếu: \(3+3+1=7\) hướng trong không gian ẩn số mà hàm mục tiêu không thay đổi. Vì vậy ma trận Jacobian có hạng \(p-7\), và để so sánh với đáp án đúng phải căn chỉnh theo một phép đồng dạng (tôi dùng thuật toán của Umeyama, 1991).</li>
+<li><strong>Có một mức sai số tối thiểu để kỳ vọng.</strong> Giả sử nhiễu pixel Gauss độc lập có độ lệch chuẩn \(\sigma\). Tại cực tiểu, vectơ phần dư xấp xỉ là phép chiếu của vectơ nhiễu lên phần bù trực giao của không gian cột của \(J\), có số chiều \(2N-(p-7)\). Do đó \(\mathbb E\|\mathbf e\|^2=\sigma^2\,(2N-p+7)\) và RMS kỳ vọng là
+$$\mathrm{RMS}_{\mathrm{exp}}=\sigma\sqrt{\frac{2N-p+7}{2N}}.$$
+Đây là phép kiểm tra tính đúng đắn miễn phí: nếu thuật toán hội tụ về cực tiểu toàn cục, RMS cuối phải khớp con số này. Lưu ý nó <em>thấp hơn</em> \(\sigma\): LM khớp một phần nhiễu bằng cách di chuyển camera và điểm.</li>
+</ul>
+
+<h2>3. Gauss-Newton và Levenberg-Marquardt</h2>
+<p>Gọi \(\mathbf e(\mathbf x)\) là vectơ mọi phần dư và \(J=\partial\mathbf e/\partial\mathbf x\) là Jacobian. Gauss-Newton thay \(\mathbf e\) bằng xấp xỉ tuyến tính và giải phương trình chuẩn</p>
+$$J^\top J\,\boldsymbol\delta=-J^\top\mathbf e .$$
+<p>Levenberg (1944) và Marquardt (1963) thêm &ldquo;giảm chấn&rdquo; để bước đi luôn hữu ích khi mô hình tuyến tính chưa đúng. Tôi dùng dạng Marquardt, nhân đường chéo với \(1+\lambda\):</p>
+$$\big(J^\top J+\lambda\,\mathrm{diag}(J^\top J)\big)\,\boldsymbol\delta=-J^\top\mathbf e .$$
+<p>Quy tắc điều khiển \(\lambda\) đơn giản: thử bước \(\boldsymbol\delta\); nếu tổng bình phương phần dư giảm thì chấp nhận và chia \(\lambda\) cho 3 (gần Gauss-Newton hơn); nếu không thì nhân \(\lambda\) với 4 và thử lại (gần xuống dốc hơn, bước ngắn hơn). Giảm chấn còn có công dụng phụ quan trọng: nó làm ma trận \(J^\top J\), vốn suy biến 7 chiều do gauge, khả nghịch, nên không cần cố định camera nào.</p>
+
+<h2>4. Cấu trúc thưa và phần bù Schur</h2>
+<p>Mỗi phần dư chỉ phụ thuộc vào 6 tham số của <em>một</em> camera và 3 toạ độ của <em>một</em> điểm. Mỗi hàng của \(J\) vì thế chỉ có 9 phần tử khác không (Hình 1, trái). Sắp xếp ẩn số theo thứ tự camera rồi điểm, ma trận chuẩn có dạng khối</p>
+$$\begin{bmatrix}B&E\\E^\top&D\end{bmatrix}\begin{bmatrix}\boldsymbol\delta_c\\\boldsymbol\delta_p\end{bmatrix}=-\begin{bmatrix}\mathbf g_c\\\mathbf g_p\end{bmatrix},$$
+<p>trong đó \(B\) là ma trận khối đường chéo gồm các khối \(6\times6\) (mỗi camera một khối), \(D\) là khối đường chéo gồm các khối \(3\times3\) (mỗi điểm một khối), và \(E\) có một khối \(6\times3\) cho mỗi quan sát (Hình 1, giữa; tôi dùng \(D\) thay cho \(C\) để khỏi trùng với số camera). Vì \(D\) khối đường chéo nên khử các điểm rất rẻ: chỉ phải nghịch đảo \(P\) ma trận \(3\times3\). Khử \(\boldsymbol\delta_p\) cho</p>
+$$S\,\boldsymbol\delta_c=-\mathbf g_c+E D^{-1}\mathbf g_p,\qquad S=B-E D^{-1}E^\top,\qquad \boldsymbol\delta_p=D^{-1}\!\left(-\mathbf g_p-E^\top\boldsymbol\delta_c\right).$$
+<p>Ma trận \(S\) (phần bù Schur) có kích thước chỉ \(6C\times6C\), không phụ thuộc số điểm \(P\), trong khi số điểm thường lớn hơn số camera rất nhiều. Khối \((i,k)\) của \(S\) khác không khi camera \(i\) và \(k\) cùng nhìn một điểm (Hình 1, phải). Đây là kỹ thuật chuẩn của BA, được mô tả trong Triggs và cộng sự (2000), trong Phụ lục 6 của Hartley và Zisserman (2004), và cài đặt trong gói SBA của Lourakis và Argyros (2009); Agarwal và cộng sự (2010) cho bài toán rất lớn, khi cả \(S\) cũng quá lớn để phân rã, giải \(S\) bằng gradient liên hợp có tiền điều kiện.</p>
+<figure><img src="/assets/img/blog/ba-structure.svg" alt="Ba ô hiển thị mẫu phần tử khác không của Jacobian, của ma trận chuẩn và của phần bù Schur trong một ví dụ nhỏ gồm 5 camera và 12 điểm" width="1000" height="400">
+<figcaption>Hình 1. Mẫu phần tử khác không trong ví dụ nhỏ (5 camera, 12 điểm; mỗi điểm thấy bởi khoảng 3 camera). Trái: Jacobian, mỗi hàng 9 phần tử khác không. Giữa: \(J^\top J\) có cấu trúc &ldquo;mũi tên&rdquo;: khối đường chéo cho camera, khối đường chéo cho điểm, và khối \(E\) nối chúng. Phải: phần bù Schur chỉ còn \(30\times30\); với 5 camera mọi cặp đều chung ít nhất một điểm nên ma trận kín hoàn toàn, khối chỉ trống với các cặp camera không chung điểm nào. Đường đỏ chia tham số camera (6 mỗi camera) và điểm (3 mỗi điểm).</figcaption></figure>
+
+<h2>5. Cài đặt</h2>
+<p>Jacobian của từng quan sát (khối \(2\times6\) cho camera, \(2\times3\) cho điểm) tính bằng sai phân trung tâm với bước \(10^{-6}\), vector hoá cho mọi quan sát cùng lúc; các khối \(B\), \(D\), \(E\) và các vế phải được cộng dồn bằng <code>np.bincount</code>. Cách này không cần đạo hàm giải tích của vectơ quay và đủ chính xác cho mục đích bài viết (các phần mềm thực tế dùng đạo hàm giải tích hoặc vi phân tự động). Phần lõi:</p>
+<pre><code class="language-python">def solve_schur(nb, lam):
+    """Eliminate the 3x3 point blocks, solve a (6C x 6C) system for the cameras, back-substitute."""
+    C, P = nb.sc["C"], nb.sc["P"]
+    Bd, Dd = nb.B.copy(), nb.Cm.copy()          # Cm = the 3x3 point blocks (called D in the text)
+    Bd[:, D6, D6] *= 1 + lam                   # Marquardt damping: scale the diagonal
+    Dd[:, D3, D3] *= 1 + lam
+    Dinv = sp.bsr_matrix((np.linalg.inv(Dd), np.arange(P), np.arange(P + 1)), shape=(3*P, 3*P))
+    Bsp = sp.bsr_matrix((Bd, np.arange(C), np.arange(C + 1)), shape=(6*C, 6*C))
+    S = (Bsp - nb.Esp @ Dinv @ nb.Esp.T).toarray()
+    rhs = -nb.gc.ravel() + nb.Esp @ (Dinv @ nb.gp.ravel())
+    dc = np.linalg.solve(S, rhs)
+    dp = Dinv @ (-nb.gp.ravel() - nb.Esp.T @ dc)
+    return dc.reshape(C, 6), dp.reshape(P, 3)
+
+def lm(cam, pts, sc, max_iter=60, lam=1e-3):
+    nb = Normal(cam, pts, sc)                   # residuals, Jacobian blocks, B, D, E, gradients
+    for it in range(max_iter):
+        while True:
+            dc, dp = solve_schur(nb, lam)
+            cam2, pts2 = cam + dc, pts + dp
+            cost2 = 0.5 * np.sum(residual(cam2, pts2, sc["ci"], sc["pi"], sc["uv"]) ** 2)
+            if cost2 &lt; nb.cost: break           # accept the step
+            lam *= 4                            # reject: more damping, shorter step
+        rel = (nb.cost - cost2) / nb.cost
+        cam, pts, lam = cam2, pts2, max(lam / 3, 1e-9)
+        nb = Normal(cam, pts, sc)
+        if rel &lt; 1e-9: break
+    return cam, pts</code></pre>
+<p><a href="/blog/code/bundle_adjustment.py">Script đầy đủ</a> gồm bộ sinh cảnh, khởi tạo, giải bằng ma trận đầy đủ, so khớp SciPy, các thí nghiệm và hình vẽ, tải về được.</p>
+
+<h3>Kiểm tra tính đúng đắn</h3>
+<p>Ba kiểm tra độc lập, trên cảnh 1 (seed 0) bên dưới:</p>
+<ul>
+<li><strong>Bước Schur bằng bước của hệ đầy đủ.</strong> Với cùng \(J\) và cùng \(\lambda\), phần bù Schur và việc giải toàn bộ ma trận chuẩn \((6C+3P)\times(6C+3P)\) bằng phương pháp dày cho cùng một bước: chênh lệch lớn nhất giữa hai bước là \(6{,}0\times10^{-14}\) tại \(\lambda=10^{-3}\) (phần tử lớn nhất của bước là 7,555) và \(7{,}8\times10^{-16}\) tại \(\lambda=1\). Phần bù Schur là phép biến đổi đại số chính xác, không phải xấp xỉ.</li>
+<li><strong>Khớp với SciPy.</strong> <code>scipy.optimize.least_squares</code> (trust-region, <code>tr_solver='lsmr'</code>, cùng Jacobian) kết thúc ở RMS 0,4268 px, bằng cài đặt của tôi, với sai số điểm 3D 0,0086 ở cả hai.</li>
+<li><strong>RMS cuối khớp giá trị kỳ vọng.</strong> Ở cảnh này kỳ vọng 0,4290 px, đo được 0,4268 px; trên 20 cảnh tỉ số RMS đo/RMS kỳ vọng có trung vị 0,9975 (phần 7.2).</li>
+</ul>
+
+<h2>6. Thiết lập thí nghiệm</h2>
+<p><strong>Dữ liệu tổng hợp, có seed.</strong> Tiêu cự \(f=800\) px, điểm chính \((320,240)\), không méo ống kính. Các điểm 3D phân bố đều trong hộp \(4\times3\times2\) quanh gốc toạ độ. Các camera đặt trên một cung 80&deg; cách gốc 8 đơn vị (độ cao dao động nhẹ, tối đa 0,8 đơn vị), cùng nhìn vào gốc. Mỗi điểm được thấy bởi mỗi camera với xác suất 0,6 (tối thiểu hai camera), cộng nhiễu pixel Gauss \(\sigma=0{,}5\) px. <strong>Khởi tạo</strong> mô phỏng một ước lượng thô: mỗi camera bị nhiễu về góc quay (độ lệch chuẩn 1&deg; trên mỗi trục) và vị trí tâm (0,1 đơn vị trên mỗi trục), các điểm 3D được tam giác hoá tuyến tính (DLT) từ các camera sai đó. Sai số điểm, tâm camera và góc quay được đo sau khi căn chỉnh nghiệm với đáp án bằng phép đồng dạng tốt nhất; RMS tái chiếu tính trên toàn bộ phần dư. Mọi thí nghiệm có seed cố định và chạy lại được bằng script ở cuối bài.</p>
+
+<h2>7. Kết quả</h2>
+<h3>7.1 Một cảnh: 10 camera, 200 điểm</h3>
+<p>Cảnh có \(N=1237\) quan sát (2474 phần dư), 660 ẩn số và \(2474-660+7=1821\) bậc tự do. RMS tái chiếu theo từng vòng lặp:</p>
+<table>
+<thead><tr><th>Vòng</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr></thead>
+<tbody><tr><td>RMS (px)</td><td>17,8697</td><td>1,1942</td><td>0,4597</td><td>0,4269</td><td>0,4268</td><td>0,4268</td><td>0,4268</td></tr></tbody></table>
+<p>RMS giảm từ 17,87 px xuống 0,4268 px sau 6 vòng, so với 0,4290 px kỳ vọng. Tại các tham số <em>đúng</em> RMS là 0,4974 px, cao hơn mức đạt được: như đã nói ở mục 2, cực tiểu khớp một phần nhiễu. Sai số so với đáp án:</p>
+<table>
+<thead><tr><th></th><th>Điểm 3D (RMS, đơn vị)</th><th>Tâm camera (RMS, đơn vị)</th><th>Góc quay camera (RMS, &deg;)</th></tr></thead>
+<tbody>
+<tr><td>Khởi tạo</td><td>0,5043</td><td>0,5157</td><td>1,748</td></tr>
+<tr><td>Sau BA</td><td>0,0086</td><td>0,0090</td><td>0,061</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/ba-convergence.svg" alt="Trái: RMS tái chiếu theo vòng lặp trên thang log, hội tụ về mức kỳ vọng. Phải: thời gian giải một bước theo số ẩn số, ma trận chuẩn đầy đủ so với phần bù Schur" width="1000" height="380">
+<figcaption>Hình 2. Trái: RMS tái chiếu theo vòng lặp trên cảnh ở mục 7.1 (đường đứt: mức kỳ vọng tại cực tiểu). Phải: thời gian của phần giải hệ tuyến tính trong một bước LM theo số ẩn số \(n=6C+3P\) (thang log-log; số liệu ở bảng mục 7.4).</figcaption></figure>
+
+<h3>7.2 20 cảnh (seed 0&ndash;19), cùng thiết lập</h3>
+<table>
+<thead><tr><th>Đại lượng</th><th>Khởi tạo, trung vị (p10&ndash;p90)</th><th>Sau BA, trung vị (p10&ndash;p90)</th></tr></thead>
+<tbody>
+<tr><td>RMS tái chiếu (px)</td><td>15,03 (11,25&ndash;17,91)</td><td>0,4264 (0,4197&ndash;0,4337)</td></tr>
+<tr><td>Điểm 3D, RMS (đơn vị)</td><td>0,2010 (0,1464&ndash;0,4138)</td><td>0,0069 (0,0066&ndash;0,0078)</td></tr>
+<tr><td>Tâm camera, RMS (đơn vị)</td><td>0,2112 (0,1757&ndash;0,4167)</td><td>0,0091 (0,0079&ndash;0,0106)</td></tr>
+<tr><td>Góc quay camera, RMS (&deg;)</td><td>1,763 (1,378&ndash;1,917)</td><td>0,062 (0,057&ndash;0,077)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>RMS cuối đúng bằng mức lý thuyết.</strong> Tỉ số RMS đo/RMS kỳ vọng có trung vị 0,9975 (p10&ndash;p90: 0,9869&ndash;1,0195) trên 20 cảnh.</li>
+<li><strong>Sai số hình học giảm khoảng 29 lần với điểm và 23 lần với tâm camera</strong> (0,2010 &rarr; 0,0069 và 0,2112 &rarr; 0,0091), góc quay giảm khoảng 28 lần (1,763 &rarr; 0,062&deg;).</li>
+<li><strong>Thường 4&ndash;6 vòng lặp được chấp nhận</strong> (trung vị 4; p90 6); trường hợp chậm nhất trong 20 cảnh cần 51.</li>
+</ul>
+
+<h3>7.3 Vùng hội tụ: khởi tạo tệ đến mức nào thì thất bại?</h3>
+<p>BA là bài toán không lồi; LM chỉ hội tụ về cực tiểu cục bộ gần điểm xuất phát. Tôi tăng nhiễu khởi tạo (độ lệch chuẩn góc quay trên mỗi trục; nhiễu tâm camera bằng 0,1 đơn vị cho mỗi độ), 30 cảnh mỗi dòng. &ldquo;Thành công&rdquo; nghĩa là RMS cuối nằm trong 10 % mức kỳ vọng.</p>
+<table>
+<thead><tr><th>Nhiễu góc quay (&deg;/trục)</th><th>Nhiễu tâm (đơn vị/trục)</th><th>RMS khởi tạo, trung vị (px)</th><th>Thành công</th><th>RMS cuối trung vị của các ca thất bại (px)</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>0,05</td><td>7,9</td><td>30/30</td><td>&ndash;</td></tr>
+<tr><td>1</td><td>0,10</td><td>16,1</td><td>28/30</td><td>1,74</td></tr>
+<tr><td>2</td><td>0,20</td><td>53,7</td><td>6/30</td><td>5,66</td></tr>
+<tr><td>3</td><td>0,30</td><td>644,2</td><td>0/30</td><td>7,59</td></tr>
+<tr><td>5</td><td>0,50</td><td>5313,4</td><td>0/30</td><td>134,68</td></tr>
+<tr><td>10</td><td>1,00</td><td>21951,2</td><td>0/30</td><td>189,62</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Vùng hội tụ hẹp một cách đáng ngạc nhiên.</strong> Ở 1&deg; mỗi trục (RMS khởi tạo khoảng 16 px) hai trong 30 cảnh đã kẹt ở cực tiểu cục bộ (RMS cuối 1,74 px so với 0,43 kỳ vọng); ở 2&deg; chỉ 6/30 hội tụ; từ 3&deg; trở lên không cảnh nào hội tụ. Cùng đoạn mã đó hội tụ 30/30 khi khởi tạo ở 0,5&deg;.</li>
+<li><strong>Cách khởi tạo ảnh hưởng đến con số này.</strong> Các điểm được tam giác hoá từ camera sai, nên nhiễu camera lan sang cả các điểm; RMS khởi tạo ở 3&deg; đã lên tới 644 px. Các pipeline structure-from-motion thường thêm camera dần dần và chạy BA sau mỗi vài camera để không bắt đầu từ sai số lớn; thí nghiệm này không mô phỏng cách làm đó nên không cho biết nó cải thiện được bao nhiêu.</li>
+</ul>
+
+<h3>7.4 Chi phí: phần bù Schur so với ma trận chuẩn đầy đủ</h3>
+<p>Số điểm là \(P=20C\), mỗi điểm được thấy bởi tối thiểu 2 camera và trung bình khoảng 8 camera (với \(C=8\) là khoảng 4,9 vì xác suất nhìn thấy tối đa là 0,6). Bảng dưới đo riêng thời gian giải hệ tuyến tính của <em>một</em> bước LM (trung vị 3 lần đo, CPU đơn, NumPy/SciPy): ma trận chuẩn đầy đủ \(n\times n\) với \(n=6C+3P\) giải bằng <code>np.linalg.solve</code>, so với phần bù Schur.</p>
+<table>
+<thead><tr><th>\(C\)</th><th>\(P\)</th><th>Quan sát \(N\)</th><th>Ẩn số \(n\)</th><th>Ma trận chuẩn đầy đủ (s)</th><th>Phần bù Schur (s)</th><th>Tỉ lệ</th><th>Chênh lệch bước lớn nhất</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>160</td><td>788</td><td>528</td><td>0,027</td><td>0,006</td><td>4,3</td><td>2,2e-14</td></tr>
+<tr><td>16</td><td>320</td><td>2588</td><td>1056</td><td>0,092</td><td>0,020</td><td>4,7</td><td>5,2e-14</td></tr>
+<tr><td>32</td><td>640</td><td>5203</td><td>2112</td><td>0,457</td><td>0,046</td><td>10,0</td><td>5,8e-12</td></tr>
+<tr><td>64</td><td>1280</td><td>10167</td><td>4224</td><td>3,615</td><td>0,112</td><td>32,3</td><td>1,4e-12</td></tr>
+<tr><td>96</td><td>1920</td><td>15326</td><td>6336</td><td>10,031</td><td>0,174</td><td>57,6</td><td>7,6e-11</td></tr>
+</tbody></table>
+<p>Thời gian phụ thuộc vào máy và tải lúc đo: trong ba lần chạy trọn vẹn script, tỉ lệ ở \(C=96\) là 67, 65 và 58 lần; bảng là lần chạy cuối.</p>
+<ul>
+<li><strong>Hai cách cho cùng một bước.</strong> Chênh lệch lớn nhất giữa hai bước ở mọi kích thước không vượt quá \(10^{-10}\) (cột cuối).</li>
+<li><strong>Khoảng cách tăng theo kích thước.</strong> Khi \(n\) tăng 12 lần (528 &rarr; 6336), giải đầy đủ chậm đi từ 0,027 s lên 10,0 s (khoảng 370 lần), còn phần bù Schur từ 0,006 s lên 0,174 s (khoảng 29 lần): tỉ lệ thời gian là 4,3 lần ở \(C=8\) và 58 lần ở \(C=96\). Giải đầy đủ tốn công theo \(n^3\) (nhân đôi \(n\) từ 2112 lên 4224 làm thời gian tăng khoảng 8 lần); phần bù Schur chỉ phải giải hệ \(6C\times6C\), còn công việc phụ thuộc \(P\) (nghịch đảo các khối \(3\times3\)) là tuyến tính.</li>
+<li><strong>Chạy trọn vẹn ở \(C=96\) (\(P=1920\), \(N=15326\)) mất khoảng 15&ndash;17 s, nhưng chưa tới mức đáy.</strong> Từ khởi tạo 0,5&deg;/0,05 đơn vị: 27 vòng lặp, 16,6 s, RMS 8,53 &rarr; 0,5278 px so với 0,4454 px kỳ vọng. Một điểm kết thúc với sai số tái chiếu riêng trên 5 px (bị loại khi đo tiếp); không tính điểm đó RMS là 0,4953 px, sai số điểm 3D 0,0122 đơn vị, sai số tâm camera 0,0434 đơn vị. Từ khởi tạo 1&deg;/0,1 đơn vị: 18 vòng lặp, 14,5 s, RMS 18,41 &rarr; 0,9310 px, hai điểm trên 5 px; không tính chúng RMS là 0,7698 px, sai số điểm 0,0221, sai số tâm camera 0,1389. Cả hai lần đều dừng cao hơn mức kỳ vọng; tôi không chẩn đoán nguyên nhân (96 camera trên cung 80&deg; có đường cơ sở giữa các camera lân cận rất ngắn), nên con số này chỉ cho biết chi phí, không phải độ chính xác.</li>
+</ul>
+
+<h3>7.5 Điểm ngoại lai: bình phương tối thiểu so với hàm mất mát Huber</h3>
+<p>Điểm khớp thật luôn có ngoại lai. Tôi thay 5 % quan sát bằng sai số lớn (30&ndash;80 px theo hướng ngẫu nhiên) trên 10 cảnh (seed 0&ndash;9), cùng thiết lập khởi tạo (1&deg;, 0,1 đơn vị). Hàm mất mát Huber (Huber, 1964) với \(f_{\mathrm{scale}}=1\) px dùng <code>least_squares(loss='huber')</code> của SciPy, cùng Jacobian thưa.</p>
+<table>
+<thead><tr><th>Phương pháp</th><th>Sai số điểm 3D (đơn vị), trung vị (p10&ndash;p90)</th><th>Sai số góc quay camera (&deg;), trung vị (p10&ndash;p90)</th></tr></thead>
+<tbody>
+<tr><td>Bình phương tối thiểu (LM của bài)</td><td>0,1163 (0,0923&ndash;0,1277)</td><td>1,164 (1,016&ndash;1,291)</td></tr>
+<tr><td>Huber, bắt đầu từ khởi tạo ban đầu (SciPy)</td><td>0,1490 (0,0692&ndash;0,3628)</td><td>0,244 (0,121&ndash;0,877)</td></tr>
+<tr><td>Huber, bắt đầu từ nghiệm bình phương tối thiểu (SciPy)</td><td>0,0638 (0,0392&ndash;0,0839)</td><td>0,109 (0,069&ndash;0,157)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>5 % ngoại lai làm hỏng nghiệm bình phương tối thiểu.</strong> Sai số điểm 3D tăng từ 0,0069 (20 cảnh sạch, mục 7.2) lên 0,1163, khoảng 17 lần; sai số góc quay từ 0,062&deg; lên 1,164&deg;.</li>
+<li><strong>Huber giúp nhiều khi xuất phát từ nghiệm tốt.</strong> Bắt đầu từ nghiệm bình phương tối thiểu, sai số điểm giảm còn 0,0638 (khoảng 1,8 lần thấp hơn) và góc quay còn 0,109&deg; (khoảng 11 lần thấp hơn). Vẫn cao hơn khoảng 9 lần so với cảnh sạch (0,0069).</li>
+<li><strong>Xuất phát từ khởi tạo thô thì Huber kém ổn định.</strong> Sai số điểm trung vị 0,1490, p90 0,3628: không tốt hơn bình phương tối thiểu về điểm, dù góc quay tốt hơn rõ (0,244&deg;). Nguyên nhân không được kiểm tra riêng; một khả năng là bài toán vẫn không lồi theo các tham số camera và điểm khởi tạo đã bị ngoại lai làm lệch. Cách làm hai giai đoạn (bình phương tối thiểu rồi Huber) cho kết quả tốt nhất trong ba dòng.</li>
+</ul>
+
+<h2>8. Hạn chế</h2>
+<p>Đây là các cảnh tổng hợp: nhiễu pixel Gauss độc lập, tham số nội tại biết chính xác và cố định (BA thực tế thường tinh chỉnh cả tiêu cự và méo ống kính), mọi điểm nằm trong hộp nhỏ, camera trên một cung đều, không có điểm bị che ngoài mô hình xác suất đơn giản. Khởi tạo là phép nhiễu của đáp án cộng tam giác hoá, không phải đầu ra của một pipeline structure-from-motion thật, nên vùng hội tụ ở mục 7.3 không áp dụng nguyên vẹn cho dữ liệu thật. Jacobian dùng sai phân hữu hạn trung tâm thay vì đạo hàm giải tích. Thời gian đo trên một máy, CPU đơn, không tối ưu hoá, và chỉ so cách giải dày với phần bù Schur dày: ở quy mô hàng nghìn camera, các hệ thống thực dùng phân rã thưa hoặc gradient liên hợp có tiền điều kiện (Agarwal và cộng sự, 2010), mà tôi không cài đặt. Hai lần chạy đầy đủ ở \(C=96\) (mục 7.4) dừng cao hơn mức RMS kỳ vọng và không được chẩn đoán thêm. Thí nghiệm ngoại lai chỉ có 10 cảnh và một tỉ lệ nhiễm duy nhất; kết luận không nên được khái quát ngoài thiết lập này.</p>
+
+<h2>9. Điều rút ra</h2>
+<ol>
+<li>BA tinh chỉnh mọi camera và điểm cùng lúc bằng cách cực tiểu sai số tái chiếu; trong thí nghiệm trên nó đưa sai số điểm 3D từ 0,20 xuống 0,0069 đơn vị (trung vị 20 cảnh).</li>
+<li>Có mức sai số đáy lý thuyết \(\sigma\sqrt{(2N-p+7)/2N}\). Nếu RMS cuối cao hơn rõ rệt, nghi ngờ cực tiểu cục bộ hoặc ngoại lai, không phải thuật toán.</li>
+<li>Cấu trúc thưa là toàn bộ chuyện: phần bù Schur cho cùng một bước với giải đầy đủ (chênh lệch dưới \(10^{-10}\)) nhưng rẻ hơn nhiều khi số điểm lớn hơn số camera.</li>
+<li>Khởi tạo quyết định. Trong thí nghiệm này, sai số khởi tạo 1&deg; mỗi trục đã khiến 2/30 cảnh thất bại, và 3&deg; thì thất bại hoàn toàn. Hãy chạy BA thường xuyên khi thêm camera thay vì một lần ở cuối.</li>
+<li>Ngoại lai: trong thí nghiệm, 5 % quan sát sai nặng đã làm sai số điểm 3D tăng khoảng 17 lần. Hàm mất mát bền (Huber) giảm được phần lớn, nhưng chỉ ổn định khi bắt đầu từ nghiệm đã khá tốt; loại ngoại lai bằng RANSAC trước khi tinh chỉnh là bước bổ sung hợp lý.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần tái tạo 3D, chatbot agent hoặc công cụ AI theo yêu cầu?</strong><br>
+Tôi nhận làm các việc này theo hình thức freelance. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi làm rõ và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20t%C3%A1i%20t%E1%BA%A1o%203D">Xin báo giá</a> <a class="btn ghost" href="@@L@@/services.html">Xem dịch vụ</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>K. Levenberg. &ldquo;A method for the solution of certain non-linear problems in least squares.&rdquo; <em>Quarterly of Applied Mathematics</em> 2(2):164&ndash;168, 1944. <a href="https://doi.org/10.1090/qam/10666">doi:10.1090/qam/10666</a>.</li>
+<li>D. W. Marquardt. &ldquo;An algorithm for least-squares estimation of nonlinear parameters.&rdquo; <em>Journal of the Society for Industrial and Applied Mathematics</em> 11(2):431&ndash;441, 1963. <a href="https://doi.org/10.1137/0111030">doi:10.1137/0111030</a>.</li>
+<li>P. J. Huber. &ldquo;Robust estimation of a location parameter.&rdquo; <em>The Annals of Mathematical Statistics</em> 35(1):73&ndash;101, 3/1964. <a href="https://doi.org/10.1214/aoms/1177703732">doi:10.1214/aoms/1177703732</a>.</li>
+<li>S. Umeyama. &ldquo;Least-squares estimation of transformation parameters between two point patterns.&rdquo; <em>IEEE Transactions on Pattern Analysis and Machine Intelligence</em> 13(4):376&ndash;380, 4/1991. <a href="https://doi.org/10.1109/34.88573">doi:10.1109/34.88573</a>.</li>
+<li>B. Triggs, P. F. McLauchlan, R. I. Hartley and A. W. Fitzgibbon. &ldquo;Bundle adjustment &mdash; a modern synthesis.&rdquo; In <em>Vision Algorithms: Theory and Practice</em>, Lecture Notes in Computer Science 1883, pp. 298&ndash;372, Springer, 2000. <a href="https://doi.org/10.1007/3-540-44480-7_21">doi:10.1007/3-540-44480-7_21</a>.</li>
+<li>M. I. A. Lourakis and A. A. Argyros. &ldquo;SBA: a software package for generic sparse bundle adjustment.&rdquo; <em>ACM Transactions on Mathematical Software</em> 36(1), Article 2, pp. 1&ndash;30, 3/2009. <a href="https://doi.org/10.1145/1486525.1486527">doi:10.1145/1486525.1486527</a>.</li>
+<li>S. Agarwal, N. Snavely, S. M. Seitz and R. Szeliski. &ldquo;Bundle adjustment in the large.&rdquo; In <em>Computer Vision &ndash; ECCV 2010</em>, Lecture Notes in Computer Science 6312, pp. 29&ndash;42, Springer, 2010. <a href="https://doi.org/10.1007/978-3-642-15552-9_3">doi:10.1007/978-3-642-15552-9_3</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd ed. Cambridge University Press, 2004. ISBN 978-0-521-54051-3. <a href="https://www.cambridge.org/9780521540513">Trang nhà xuất bản</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/bundle_adjustment.py">bundle_adjustment.py</a> (Python 3.12, NumPy, SciPy, Matplotlib). Mọi con số trong các mục 5&ndash;7 là kết quả chạy của script này.</p>
+</article>

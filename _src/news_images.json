@@ -190,5 +190,29 @@
    1500,
    1500
   ]
+ },
+ "meta-muse-specialized-models": {
+  "credit": "Meta AI Research",
+  "image_url": "https://research.meta.ai/articles/powering-a-more-intelligent-capable-muse/images/social-v2.jpg",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "apple-ipad-mini-oled-a20-pro": {
+  "credit": "Apple",
+  "image_url": "https://www.apple.com/newsroom/images/2026/10/apple-gives-ipad-mini-its-biggest-update-ever/tile/Apple-iPad-mini-hero-261026-lp.jpg.og.jpg?202611032322",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "st-edge-ai-suite-stm32-tools": {
+  "credit": "STMicroelectronics",
+  "image_url": "https://img.einnews.com/facebook/1241649/st-edge-ai-suite.jpeg",
+  "orig_size": [
+   1200,
+   628
+  ]
  }
 }
