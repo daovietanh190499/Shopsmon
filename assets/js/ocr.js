@@ -90,7 +90,8 @@
     for (;;) {
       var x = await rd.read(); if (x.done) break;
       chunks.push(x.value); got += x.value.length;
-      setStatus(label + ' ' + Math.round(got / 1048576 * 10) / 10 + ' / ' + Math.round(total / 1048576 * 10) / 10 + ' ' + TXT.mb); setBar(got / total);
+      var shown = Math.min(got, total);   // Content-Length can be the compressed size while the stream is decoded
+      setStatus(label + ' ' + Math.round(shown / 1048576 * 10) / 10 + ' / ' + Math.round(total / 1048576 * 10) / 10 + ' ' + TXT.mb); setBar(shown / total);
     }
     var out = new Uint8Array(got), o = 0;
     chunks.forEach(function (c) { out.set(c, o); o += c.length; });
@@ -336,7 +337,7 @@
     var rec = await fetchBuf(REC_URL, TXT.loadingModel + ' (2/3)'); void rec;
     var origin = location.origin, wk = false;
     try {
-      var code = await (await fetch(PADDLE_WORKER)).text();
+      var code = await fetchBuf(PADDLE_WORKER, TXT.loadingModel + ' (3/3)');
       var u = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
       wk = { createWorker: function () { return new Worker(u, { type: 'module' }); } };
     } catch (e) { wk = false; }
