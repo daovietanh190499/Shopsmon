@@ -839,14 +839,14 @@ def privacy(L):
 <li><strong>Thông tin bạn chủ động gửi</strong> qua email hoặc Facebook Messenger: tên, địa chỉ email, mô tả dự án, tệp hoặc dữ liệu bạn chia sẻ để đánh giá yêu cầu.</li>
 <li><strong>Thông tin thanh toán:</strong> khi bạn thanh toán, giao dịch được xử lý bởi PayPal. Chúng tôi nhận thông tin giao dịch từ PayPal (tên, email, số tiền, mã giao dịch) nhưng <strong>không bao giờ nhìn thấy số thẻ hay thông tin đăng nhập PayPal của bạn</strong>.</li>
 <li><strong>Dữ liệu kỹ thuật:</strong> website là trang tĩnh chạy trên GitHub Pages. Nhà cung cấp hosting có thể ghi nhận địa chỉ IP và thông tin yêu cầu theo chính sách riêng của họ. Chúng tôi không tự vận hành hệ thống phân tích hay theo dõi.</li>
-<li><strong>Ứng dụng web (trang Sản phẩm):</strong> ảnh bạn chọn trong ứng dụng tạo ảnh thẻ được xử lý hoàn toàn trong trình duyệt của bạn và <strong>không được tải lên máy chủ nào</strong>. Ứng dụng tải mô hình AI từ shopsmon.com và thư viện chạy mô hình (ONNX Runtime Web, MediaPipe) từ jsDelivr.</li>
+<li><strong>Ứng dụng web (trang Sản phẩm):</strong> ảnh bạn chọn trong ứng dụng tạo ảnh thẻ và ứng dụng OCR ảnh thành văn bản được xử lý hoàn toàn trong trình duyệt của bạn và <strong>không được tải lên máy chủ nào</strong>. Các ứng dụng tải mô hình AI từ shopsmon.com và thư viện chạy mô hình (ONNX Runtime Web, MediaPipe, Tesseract.js, PaddleOCR.js) cùng dữ liệu ngôn ngữ OCR từ jsDelivr.</li>
 <li><strong>Lưu trữ trên trình duyệt:</strong> website dùng <code>localStorage</code> của trình duyệt chỉ để ghi nhớ lựa chọn ngôn ngữ và giao diện sáng/tối của bạn. Dữ liệu này nằm trên thiết bị của bạn, không được gửi cho chúng tôi. Website không đặt cookie quảng cáo hay cookie theo dõi.</li>
 </ul>
 
 <h2>2. Dịch vụ của bên thứ ba</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (lưu trữ website).</li>
-<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này, và ứng dụng tạo ảnh thẻ tải thư viện chạy mô hình từ jsDelivr; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
+<li><strong>jsDelivr và cdnjs (Cloudflare)</strong>: các trang blog tải thư viện hiển thị công thức (KaTeX) và tô màu code (highlight.js) từ các CDN này, và các ứng dụng trong trang Sản phẩm tải thư viện chạy mô hình từ jsDelivr; khi đó CDN nhận địa chỉ IP và thông tin trình duyệt của bạn.</li>
 <li><strong>Google (Gmail)</strong>: trao đổi qua email.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: nếu bạn tương tác với Facebook Page của Shopsmon, Meta xử lý dữ liệu theo chính sách của Meta.</li>
 <li><strong>Shopee (liên kết affiliate)</strong>: một số trang có liên kết tiếp thị liên kết (affiliate) tới Shopee Việt Nam. Khi bạn bấm vào, Shopee và chương trình Shopee Affiliate có thể đặt cookie và ghi nhận lượt giới thiệu theo chính sách của họ; Shopsmon không nhận được thông tin cá nhân của bạn từ việc này và có thể nhận hoa hồng nếu bạn mua hàng.</li>
@@ -895,14 +895,14 @@ def privacy(L):
 <li><strong>Information you send voluntarily</strong> by email or Facebook Messenger: name, email address, project description, and any files or data you share so a request can be evaluated.</li>
 <li><strong>Payment information:</strong> payments are processed by PayPal. We receive transaction details from PayPal (name, email, amount, transaction ID) but <strong>never see your card number or PayPal login credentials</strong>.</li>
 <li><strong>Technical data:</strong> the website is static and hosted on GitHub Pages. The hosting provider may log IP addresses and request details under its own policy. We do not run our own analytics or tracking.</li>
-<li><strong>Web apps (Products page):</strong> photos you choose in the ID photo maker are processed entirely in your browser and <strong>are not uploaded to any server</strong>. The app loads its AI models from shopsmon.com and its runtime libraries (ONNX Runtime Web, MediaPipe) from jsDelivr.</li>
+<li><strong>Web apps (Products page):</strong> photos you choose in the ID photo maker and images you choose in the image-to-text OCR app are processed entirely in your browser and <strong>are not uploaded to any server</strong>. The apps load their AI models from shopsmon.com and their runtime libraries (ONNX Runtime Web, MediaPipe, Tesseract.js, PaddleOCR.js) and OCR language data from jsDelivr.</li>
 <li><strong>Browser storage:</strong> the website uses the browser&rsquo;s <code>localStorage</code> only to remember your language and light/dark theme choice. This stays on your device and is not sent to us. The site sets no advertising or tracking cookies.</li>
 </ul>
 
 <h2>2. Third-party services</h2>
 <ul>
 <li><strong>GitHub Pages</strong> (website hosting).</li>
-<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, and the ID photo app loads its runtime libraries from jsDelivr, which then receive your IP address and browser details.</li>
+<li><strong>jsDelivr and cdnjs (Cloudflare)</strong>: blog pages load the math rendering library (KaTeX) and the code highlighter (highlight.js) from these CDNs, and the apps on the Products page load their runtime libraries from jsDelivr, which then receive your IP address and browser details.</li>
 <li><strong>Google (Gmail)</strong>: email correspondence.</li>
 <li><strong>Meta (Facebook, Messenger)</strong>: if you interact with the Shopsmon Facebook Page, Meta processes your data under its own policy.</li>
 <li><strong>Shopee (affiliate links)</strong>: some pages contain affiliate links to Shopee Vietnam. When you click one, Shopee and its affiliate programme may set cookies and record the referral under their own policies; Shopsmon receives no personal information from this and may earn a commission if you buy.</li>
@@ -965,6 +965,17 @@ def idp_thumb():
     return f'<svg viewBox="0 0 300 142" width="300" height="142" role="img" aria-label="ID photo">{fr}</svg>'
 
 
+def ocr_thumb():
+    """Inline SVG for the OCR card: a scanned page on the left, structured text rows on the right."""
+    ln = "".join(f'<rect x="28" y="{34 + i * 12}" width="{w}" height="5" rx="2" fill="#9aa7bf"/>' for i, w in enumerate((92, 104, 80, 98, 70, 100, 88)))
+    out = "".join(f'<rect x="178" y="{34 + i * 12}" width="{w}" height="5" rx="2" fill="{c}"/>' for i, (w, c) in enumerate(((60, "#1f6feb"), (96, "#2b3a55"), (84, "#2b3a55"), (92, "#2b3a55"), (70, "#2b3a55"), (96, "#2b3a55"), (78, "#2b3a55"))))
+    return (f'<svg viewBox="0 0 300 142" width="300" height="142" role="img" aria-label="OCR">'
+            f'<rect x="14" y="14" width="124" height="114" rx="5" fill="#fff" stroke="#c9d3e6"/>{ln}'
+            '<path d="M146 71h20m-7-7 7 7-7 7" stroke="#1f6feb" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+            f'<rect x="166" y="14" width="124" height="114" rx="5" fill="#f4f8ff" stroke="#c9d3e6"/>{out}'
+            '<rect x="178" y="116" width="40" height="5" rx="2" fill="#d62828"/><rect x="224" y="116" width="40" height="5" rx="2" fill="#1f9d55"/></svg>')
+
+
 def products(L):
     t = lambda vi, en: vi if L == "vi" else en
     P = lambda x: pth(L, x)
@@ -981,6 +992,13 @@ def products(L):
 <p>{t('Làm nét, tách nền, nhận diện khuôn mặt, căn thẳng và cắt đúng tỉ lệ ảnh thẻ, đổi nền trắng, xanh hoặc màu tùy chọn. Chạy hoàn toàn trên trình duyệt, không tải ảnh lên máy chủ.', 'Sharpen, remove the background, detect the face, straighten and crop to a standard ID-photo size, then switch to a white, blue or custom background. Runs entirely in the browser; photos are never uploaded.')}</p>
 <div class="tags"><span>JavaScript</span><span>WebAssembly</span><span>MediaPipe</span><span>MODNet</span></div>
 <span class="btn primary">{t('Dùng thử miễn phí', 'Try it free')}</span></div></a>
+<a class="pcard" href="{P('/products/ocr.html')}">
+<div class="pvis">{ocr_thumb()}</div>
+<div class="pbody"><span class="tag" style="font-size:12px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">{t('Ứng dụng web &middot; Miễn phí', 'Web app &middot; Free')}</span>
+<h3>{t('OCR ảnh thành văn bản bằng AI', 'AI Image-to-Text OCR')}</h3>
+<p>{t('Tải ảnh tài liệu, biên lai hoặc ảnh chụp lên: AI đọc chữ tiếng Việt có dấu và dựng lại đúng cấu trúc tiêu đề, đoạn, danh sách, bảng, cột. Xuất văn bản, Markdown, JSON, CSV. Chạy hoàn toàn trên trình duyệt, không tải ảnh lên máy chủ.', 'Upload a document, receipt or photo: the AI reads Vietnamese (with tone marks) and English text and rebuilds the structure: headings, paragraphs, lists, tables and columns. Export text, Markdown, JSON or CSV. Runs entirely in the browser; images are never uploaded.')}</p>
+<div class="tags"><span>JavaScript</span><span>WebAssembly</span><span>Tesseract</span><span>PaddleOCR</span></div>
+<span class="btn primary">{t('Dùng thử miễn phí', 'Try it free')}</span></div></a>
 </div></div></section>
 <section class="band"><div class="wrap" style="text-align:center"><h2>{t('Cần một sản phẩm AI cho doanh nghiệp của bạn?', 'Need an AI product for your business?')}</h2>
 <p class="sub" style="margin:0 auto 24px">{t('Shopsmon nhận xây dựng ứng dụng AI chạy trên web, chatbot LLM và công cụ tự động hoá theo yêu cầu.', 'Shopsmon builds browser-based AI apps, LLM chatbots and custom automation tools on request.')}</p>
@@ -988,8 +1006,8 @@ def products(L):
 """
     layout(L, "/products/",
            t("Sản phẩm AI miễn phí chạy trên web | Shopsmon", "Free browser-based AI products | Shopsmon"),
-           t("Ứng dụng AI do Shopsmon phát triển: tạo ảnh thẻ bằng AI chạy hoàn toàn trên trình duyệt, dùng thử miễn phí.",
-             "AI applications by Shopsmon: an ID photo maker that runs entirely in the browser, free to try."),
+           t("Ứng dụng AI do Shopsmon phát triển: tạo ảnh thẻ và OCR ảnh thành văn bản, chạy hoàn toàn trên trình duyệt, dùng thử miễn phí.",
+             "AI applications by Shopsmon: an ID photo maker and an image-to-text OCR, both running entirely in the browser, free to try."),
            body, active="/products/", og_image="/assets/img/products/id-photo-og.png")
 
 
@@ -1096,6 +1114,113 @@ def product_idphoto(L):
            extra_body='<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("idpEmpty"),s=document.getElementById("idpStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/idphoto.js" defer></script>')
 
 
+# Measured on six synthetic Vietnamese test images (see reports/web-product-ocr-2026-11-09.md): character error rate, lower is better.
+OCR_BENCH = [
+    ("doc_single", {"vi": "Thông báo một cột (ảnh phẳng)", "en": "One-column notice (flat image)"}, "0.4%", "0.4%"),
+    ("doc_columns", {"vi": "Hai cột có tiêu đề", "en": "Two columns with a title"}, "0.3%", "0.3%"),
+    ("doc_table", {"vi": "Bảng có kẻ ô", "en": "Ruled table"}, "0.9%", "3.7%"),
+    ("photo_single", {"vi": "Ảnh chụp nghiêng, đổ bóng, nhiễu, JPEG", "en": "Tilted photo, shading, noise, JPEG"}, "0.8%", "1.9%"),
+    ("receipt", {"vi": "Biên lai, chữ đơn cách, số 0 gạch chéo", "en": "Receipt, monospace, slashed zeros"}, "9.6%", "0.5%"),
+    ("ui_small", {"vi": "Ảnh chụp màn hình chữ nhỏ", "en": "Small-text screenshot"}, "0.0%", "0.0%"),
+]
+
+
+def product_ocr(L):
+    t = lambda vi, en: vi if L == "vi" else en
+    P = lambda x: pth(L, x)
+    bench = "".join(f"<tr><td>{n[L]}</td><td>{a}</td><td>{b}</td></tr>" for _, n, a, b in OCR_BENCH)
+    body = f"""
+<div class="hero" style="padding:56px 0 28px"><div class="wrap prodhero">
+<div><span class="pill">{t('Sản phẩm AI thứ hai &middot; Miễn phí', 'Second AI product &middot; Free')}</span>
+<h1 style="font-size:clamp(30px,5vw,48px)">{t('OCR ảnh thành văn bản đúng cấu trúc, ngay trên trình duyệt', 'Image-to-text OCR that keeps the structure, right in your browser')}</h1>
+<p class="lead">{t('Tải ảnh tài liệu, biên lai, ảnh chụp màn hình hoặc ảnh chụp giấy tờ: AI đọc chữ tiếng Việt có dấu và tiếng Anh, rồi dựng lại tiêu đề, đoạn văn, danh sách, bảng và bố cục nhiều cột ở tab Kết quả. Ảnh được xử lý trên thiết bị của bạn, không gửi lên máy chủ.', 'Upload a document, receipt, screenshot or a photo of a paper: the AI reads Vietnamese (with tone marks) and English text, then rebuilds headings, paragraphs, lists, tables and multi-column layouts in the Result tab. Images are processed on your device and never uploaded.')}</p>
+<div class="cta"><a class="btn primary" href="#app">{t('Dùng thử miễn phí', 'Try it free')}</a><a class="btn ghost" href="#how">{t('Cách hoạt động', 'How it works')}</a></div></div>
+<div style="display:flex;justify-content:center">{ocr_thumb()}</div>
+</div></div>
+
+<section id="app" style="padding-top:28px"><div class="wrap"><div class="idp">
+<div class="idp-panel">
+<h3>{t('1. Ảnh cần đọc', '1. Image to read')}</h3>
+<label class="idp-drop" id="ocrDrop"><strong>{t('Chọn ảnh, kéo thả hoặc dán (Ctrl+V)', 'Choose an image, drop it, or paste (Ctrl+V)')}</strong><span>{t('JPG, PNG, WebP, BMP, GIF &middot; tối đa 25 MB', 'JPG, PNG, WebP, BMP, GIF &middot; up to 25 MB')}</span>
+<input type="file" id="ocrFile" accept="image/*"></label>
+<p style="margin:10px 0 0;font-size:13px;color:var(--muted)">{t('Chưa có ảnh? Dùng thử với:', 'No image at hand? Try:')}
+<button type="button" class="linkbtn" id="ocrSampleDoc">{t('tài liệu mẫu', 'sample document')}</button> &middot; <button type="button" class="linkbtn" id="ocrSamplePhoto">{t('ảnh chụp nghiêng', 'tilted photo')}</button></p>
+<canvas id="ocrPrev" class="ocr-prev" hidden aria-label="{t('Ảnh gốc', 'Source image')}"></canvas>
+<div class="idp-actions" style="margin-top:8px"><button type="button" class="btn ghost" id="ocrRotL" style="padding:6px 12px;font-size:14px" disabled aria-label="{t('Xoay trái', 'Rotate left')}">&#8634; {t('Xoay trái', 'Left')}</button><button type="button" class="btn ghost" id="ocrRotR" style="padding:6px 12px;font-size:14px" disabled aria-label="{t('Xoay phải', 'Rotate right')}">&#8635; {t('Xoay phải', 'Right')}</button></div>
+<h3>{t('2. Ngôn ngữ', '2. Language')}</h3>
+<select id="ocrLang" aria-label="{t('Ngôn ngữ', 'Language')}"><option value="vie">{t('Tiếng Việt (có dấu) + chữ Latin', 'Vietnamese (tone marks) + Latin')}</option><option value="eng">English</option></select>
+<h3>{t('3. Chế độ', '3. Mode')}</h3>
+<select id="ocrMode" aria-label="{t('Chế độ', 'Mode')}"><option value="auto">{t('Tự động (khuyên dùng)', 'Automatic (recommended)')}</option><option value="doc">{t('Tài liệu, ảnh scan, ảnh chụp màn hình', 'Document, scan, screenshot')}</option><option value="photo">{t('Ảnh chụp: nghiêng, nhiều nền, biên lai', 'Photo: tilted, busy background, receipt')}</option></select>
+<h3>{t('4. Tuỳ chọn kết quả', '4. Result options')}</h3>
+<label class="chk"><input type="checkbox" id="ocrTables" checked> {t('Nhận diện bảng và cột', 'Detect tables and columns')}</label>
+<label class="chk"><input type="checkbox" id="ocrKeep"> {t('Giữ nguyên ngắt dòng của ảnh', 'Keep the image line breaks')}</label>
+<p style="margin:14px 0 0"><button type="button" class="btn primary" id="ocrRun" style="padding:8px 16px;font-size:14px" disabled>{t('Nhận dạng lại', 'Run again')}</button> <button type="button" class="btn ghost" id="ocrReset" style="padding:8px 14px;font-size:14px">{t('Làm lại', 'Start over')}</button></p>
+</div>
+<div class="idp-stage-wrap">
+<p class="idp-status" id="ocrStatus" role="status" aria-live="polite"></p>
+<div class="idp-barwrap" id="ocrBarWrap" hidden><div class="idp-bar" id="ocrBar"></div></div>
+<div class="idp-stage" id="ocrStage" hidden>
+<p class="idp-info" id="ocrInfo" style="margin:0 0 12px"></p>
+<div class="ocr-tabs" id="ocrTabs" role="tablist"><button type="button" data-t="view" role="tab" class="on">{t('Kết quả', 'Result')}</button><button type="button" data-t="md" role="tab">Markdown</button><button type="button" data-t="overlay" role="tab">{t('Vùng nhận dạng', 'Detected regions')}</button><button type="button" data-t="json" role="tab">JSON</button></div>
+<div id="ocrPane-view"><div class="ocr-view" id="ocrView" contenteditable="true" spellcheck="false" aria-label="{t('Kết quả, có thể sửa trực tiếp', 'Result, editable')}"></div>
+<p class="idp-info">{t('Chữ gạch chân cam là chữ có độ tin cậy thấp: nên kiểm tra lại. Bạn có thể sửa trực tiếp trong khung.', 'Orange-underlined words have low confidence: please double-check them. You can edit directly in the box.')}</p></div>
+<div id="ocrPane-md" hidden><textarea class="ocr-md" id="ocrMd" readonly></textarea></div>
+<div id="ocrPane-overlay" hidden><canvas id="ocrCanvas" class="ocr-cv"></canvas><p class="idp-info">{t('Khung xanh: tin cậy cao; vàng: trung bình; đỏ: thấp.', 'Green: high confidence; amber: medium; red: low.')}</p></div>
+<div id="ocrPane-json" hidden><pre class="ocr-json" id="ocrJson"></pre></div>
+<div class="idp-actions"><button type="button" class="btn primary" id="ocrCopy">{t('Sao chép', 'Copy')}</button><button type="button" class="btn ghost" id="ocrDlTxt">{t('Tải .txt', 'Download .txt')}</button><button type="button" class="btn ghost" id="ocrDlMd">{t('Tải .md', 'Download .md')}</button><button type="button" class="btn ghost" id="ocrDlJson">{t('Tải .json', 'Download .json')}</button><button type="button" class="btn ghost" id="ocrDlCsv" hidden>{t('Tải bảng .csv', 'Download tables .csv')}</button></div>
+</div>
+<div class="idp-empty" id="ocrEmpty">{t('Kết quả sẽ hiển thị ở đây. Lần đầu tải bộ nhận dạng tiếng Việt (khoảng 6 MB), sau đó được lưu trong bộ nhớ đệm của trình duyệt. Chế độ ảnh chụp tải thêm khoảng 26 MB.', 'Your result appears here. The first run downloads the Vietnamese recogniser (about 6 MB), which the browser then caches. Photo mode downloads about 26 MB more.')}</div>
+</div>
+</div></div></section>
+
+<section class="band" id="how"><div class="wrap"><h2>{t('Quy trình xử lý', 'Processing pipeline')}</h2>
+<p class="sub">{t('Sáu bước, toàn bộ chạy bằng JavaScript và WebAssembly trên thiết bị của bạn.', 'Six steps, all running as JavaScript and WebAssembly on your device.')}</p>
+<ol class="flow">
+<li><b>{t('Làm sạch ảnh', 'Image clean-up')}</b><span>{t('Đọc EXIF, giới hạn kích thước, chia cho nền giấy ước lượng để xoá bóng đổ, kéo giãn tương phản.', 'EXIF orientation, size cap, division by an estimated paper background to remove shadows, contrast stretch.')}</span></li>
+<li><b>{t('Chỉnh nghiêng', 'Deskew')}</b><span>{t('Đo góc nghiêng bằng projection profile (±10°) rồi xoay thẳng dòng chữ.', 'Skew measured with a projection profile (±10°), then the text lines are rotated level.')}</span></li>
+<li><b>{t('Tìm dòng chữ', 'Find text lines')}</b><span>{t('Chế độ ảnh chụp dùng PaddleOCR (PP-OCRv6 detection) trong Web Worker để lấy từng dòng chữ ở mọi góc.', 'Photo mode uses PaddleOCR (PP-OCRv6 detection) in a Web Worker to get every text line at any angle.')}</span></li>
+<li><b>{t('Đọc chữ tiếng Việt', 'Read the text')}</b><span>{t('Tesseract.js (LSTM, tessdata_best &quot;vie&quot;) đọc đủ dấu thanh và dấu mũ; chạy song song nhiều worker.', 'Tesseract.js (LSTM, tessdata_best &quot;vie&quot;) reads every tone mark and diacritic; several workers run in parallel.')}</span></li>
+<li><b>{t('Dựng lại bố cục', 'Rebuild layout')}</b><span>{t('Từ ô chữ sang hàng, cột (khe trống dọc), bảng (cột thẳng hàng), danh sách, tiêu đề và đoạn.', 'From text boxes to rows, columns (vertical gutters), tables (aligned cells), lists, headings and paragraphs.')}</span></li>
+<li><b>{t('Xuất kết quả', 'Export')}</b><span>{t('Văn bản, Markdown, JSON có toạ độ và độ tin cậy, CSV cho bảng; chữ kém tin cậy được đánh dấu.', 'Text, Markdown, JSON with boxes and confidence, CSV for tables; low-confidence words are flagged.')}</span></li>
+</ol></div></section>
+
+<section><div class="wrap"><div class="grid g2">
+<div class="card"><h3>{t('Độ chính xác đã đo', 'Measured accuracy')}</h3>
+<table class="spec"><tr><th>{t('Ảnh thử', 'Test image')}</th><th>{t('Chế độ tài liệu (CER)', 'Document mode (CER)')}</th><th>{t('Chế độ ảnh chụp (CER)', 'Photo mode (CER)')}</th></tr>{bench}</table>
+<p style="margin-top:12px">{t('CER = tỉ lệ lỗi ký tự (thấp hơn là tốt hơn), đo trên ảnh thử tự tạo, chữ in tiếng Việt có dấu. Ảnh thật có thể cho kết quả khác; chữ viết tay không được hỗ trợ.', 'CER = character error rate (lower is better), measured on self-made test images with printed Vietnamese text. Real images can differ; handwriting is not supported.')}</p></div>
+<div class="card"><h3>{t('Giới hạn cần biết', 'Known limits')}</h3>
+<ul><li>{t('Đây là OCR cổ điển, không phải mô hình thị giác-ngôn ngữ (LLM): không hiểu biểu đồ, ô gộp phức tạp hay bảng không có khoảng trống rõ.', 'This is classic OCR, not a vision-language model: it does not understand charts, complex merged cells or tables without clear gaps.')}</li>
+<li>{t('Chữ viết tay, chữ cong, chữ quá nhỏ (dưới khoảng 12 px chiều cao) hoặc ảnh mờ cho kết quả kém.', 'Handwriting, curved text, very small text (under about 12 px tall) and blurry images give poor results.')}</li>
+<li>{t('Ảnh bị ngược hoặc nằm ngang: dùng nút Xoay trước khi đọc.', 'Upside-down or sideways images: use the Rotate buttons first.')}</li>
+<li>{t('Thiết bị yếu có thể chậm ở chế độ ảnh chụp (vài giây đến vài chục giây mỗi ảnh).', 'Weak devices can be slow in photo mode (a few seconds to tens of seconds per image).')}</li></ul></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>{t('Quyền riêng tư và yêu cầu', 'Privacy and requirements')}</h2>
+<ul>
+<li>{t('Ảnh được xử lý hoàn toàn trong trình duyệt; không có ảnh hay văn bản nào được tải lên máy chủ của Shopsmon.', 'Images are processed entirely in the browser; no image or text is uploaded to a Shopsmon server.')}</li>
+<li>{t('Thư viện (Tesseract.js, PaddleOCR.js) và dữ liệu ngôn ngữ được tải từ CDN jsDelivr; mô hình phát hiện chữ được tải từ shopsmon.com.', 'Libraries (Tesseract.js, PaddleOCR.js) and language data load from the jsDelivr CDN; the text-detection model loads from shopsmon.com.')}</li>
+<li>{t('Cần trình duyệt có WebAssembly và Web Worker (Chrome, Edge, Firefox, Safari bản gần đây).', 'Requires a browser with WebAssembly and Web Workers (recent Chrome, Edge, Firefox or Safari).')}</li></ul></div></section>
+
+<section><div class="wrap"><h2>{t('Công nghệ và nguồn', 'Technology and credits')}</h2>
+<ul class="refs">
+<li>Tesseract OCR &amp; tessdata_best &mdash; Google / Tesseract OCR community, Apache-2.0. Tesseract.js &mdash; Apache-2.0.</li>
+<li>PaddleOCR PP-OCRv6 detection &amp; PaddleOCR.js &mdash; PaddlePaddle Authors, Apache-2.0.</li>
+<li>ONNX Runtime Web &mdash; Microsoft, MIT. OpenCV.js &mdash; Apache-2.0.</li>
+<li>{t('Ghi chú kỹ thuật: bộ từ điển nhận dạng của PP-OCRv6 thiếu 88/134 chữ cái tiếng Việt có dấu, nên Paddle chỉ dùng để tìm dòng chữ.', 'Technical note: the PP-OCRv6 recognition dictionary lacks 88 of 134 Vietnamese tone-marked letters, so Paddle is used only to find text lines.')}</li>
+</ul></div></section>
+
+<section class="band"><div class="wrap" style="text-align:center"><h2>{t('Cần OCR cho hệ thống của bạn?', 'Need OCR inside your own system?')}</h2>
+<p class="sub" style="margin:0 auto 24px">{t('Shopsmon nhận tùy biến, tích hợp và phát triển ứng dụng AI chạy trên web theo yêu cầu.', 'Shopsmon takes on customisation, integration and custom browser-based AI apps.')}</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">{cta_btns(L)} <a class="btn ghost" href="{P('/products/')}">{t('Tất cả sản phẩm', 'All products')}</a></div></div></section>
+"""
+    layout(L, "/products/ocr.html",
+           t("OCR ảnh thành văn bản miễn phí, đọc tiếng Việt có dấu, giữ bảng và cột | Shopsmon", "Free image-to-text OCR with Vietnamese tone marks, tables and columns | Shopsmon"),
+           t("OCR ảnh thành văn bản ngay trên trình duyệt: đọc tiếng Việt có dấu và tiếng Anh, dựng lại tiêu đề, đoạn, danh sách, bảng, cột. Xuất txt, Markdown, JSON, CSV. Ảnh không rời khỏi thiết bị.",
+             "Image-to-text OCR in your browser: reads Vietnamese with tone marks and English, rebuilds headings, paragraphs, lists, tables and columns. Export txt, Markdown, JSON, CSV. Images never leave your device."),
+           body, active="/products/", og_image="/assets/img/products/ocr-og.png",
+           extra_body='<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("ocrEmpty"),s=document.getElementById("ocrStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/ocr.js" defer></script>')
+
+
 # =============================================================== BUILD
 import make_covers  # noqa: E402
 make_covers.main()  # draws any missing news cover (deterministic per slug)
@@ -1110,6 +1235,7 @@ for L in LANGS:
     landing_consulting(L)
     products(L)
     product_idphoto(L)
+    product_ocr(L)
     contact(L)
     blog_index(L)
     news_index(L)

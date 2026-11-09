@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free image-to-text OCR with Vietnamese tone marks, tables and columns | Shopsmon</title>
+<meta name="description" content="Image-to-text OCR in your browser: reads Vietnamese with tone marks and English, rebuilds headings, paragraphs, lists, tables and columns. Export txt, Markdown, JSON, CSV. Images never leave your device.">
+<link rel="canonical" href="https://shopsmon.com/en/products/ocr.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/products/ocr.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/products/ocr.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/products/ocr.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Free image-to-text OCR with Vietnamese tone marks, tables and columns | Shopsmon">
+<meta property="og:description" content="Image-to-text OCR in your browser: reads Vietnamese with tone marks and English, rebuilds headings, paragraphs, lists, tables and columns. Export txt, Markdown, JSON, CSV. Images never leave your device.">
+<meta property="og:url" content="https://shopsmon.com/en/products/ocr.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/products/ocr-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/" class=active>Products</a><a href="/en/blog/">Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/products/ocr.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+
+<div class="hero" style="padding:56px 0 28px"><div class="wrap prodhero">
+<div><span class="pill">Second AI product &middot; Free</span>
+<h1 style="font-size:clamp(30px,5vw,48px)">Image-to-text OCR that keeps the structure, right in your browser</h1>
+<p class="lead">Upload a document, receipt, screenshot or a photo of a paper: the AI reads Vietnamese (with tone marks) and English text, then rebuilds headings, paragraphs, lists, tables and multi-column layouts in the Result tab. Images are processed on your device and never uploaded.</p>
+<div class="cta"><a class="btn primary" href="#app">Try it free</a><a class="btn ghost" href="#how">How it works</a></div></div>
+<div style="display:flex;justify-content:center"><svg viewBox="0 0 300 142" width="300" height="142" role="img" aria-label="OCR"><rect x="14" y="14" width="124" height="114" rx="5" fill="#fff" stroke="#c9d3e6"/><rect x="28" y="34" width="92" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="46" width="104" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="58" width="80" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="70" width="98" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="82" width="70" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="94" width="100" height="5" rx="2" fill="#9aa7bf"/><rect x="28" y="106" width="88" height="5" rx="2" fill="#9aa7bf"/><path d="M146 71h20m-7-7 7 7-7 7" stroke="#1f6feb" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="166" y="14" width="124" height="114" rx="5" fill="#f4f8ff" stroke="#c9d3e6"/><rect x="178" y="34" width="60" height="5" rx="2" fill="#1f6feb"/><rect x="178" y="46" width="96" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="58" width="84" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="70" width="92" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="82" width="70" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="94" width="96" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="106" width="78" height="5" rx="2" fill="#2b3a55"/><rect x="178" y="116" width="40" height="5" rx="2" fill="#d62828"/><rect x="224" y="116" width="40" height="5" rx="2" fill="#1f9d55"/></svg></div>
+</div></div>
+
+<section id="app" style="padding-top:28px"><div class="wrap"><div class="idp">
+<div class="idp-panel">
+<h3>1. Image to read</h3>
+<label class="idp-drop" id="ocrDrop"><strong>Choose an image, drop it, or paste (Ctrl+V)</strong><span>JPG, PNG, WebP, BMP, GIF &middot; up to 25 MB</span>
+<input type="file" id="ocrFile" accept="image/*"></label>
+<p style="margin:10px 0 0;font-size:13px;color:var(--muted)">No image at hand? Try:
+<button type="button" class="linkbtn" id="ocrSampleDoc">sample document</button> &middot; <button type="button" class="linkbtn" id="ocrSamplePhoto">tilted photo</button></p>
+<canvas id="ocrPrev" class="ocr-prev" hidden aria-label="Source image"></canvas>
+<div class="idp-actions" style="margin-top:8px"><button type="button" class="btn ghost" id="ocrRotL" style="padding:6px 12px;font-size:14px" disabled aria-label="Rotate left">&#8634; Left</button><button type="button" class="btn ghost" id="ocrRotR" style="padding:6px 12px;font-size:14px" disabled aria-label="Rotate right">&#8635; Right</button></div>
+<h3>2. Language</h3>
+<select id="ocrLang" aria-label="Language"><option value="vie">Vietnamese (tone marks) + Latin</option><option value="eng">English</option></select>
+<h3>3. Mode</h3>
+<select id="ocrMode" aria-label="Mode"><option value="auto">Automatic (recommended)</option><option value="doc">Document, scan, screenshot</option><option value="photo">Photo: tilted, busy background, receipt</option></select>
+<h3>4. Result options</h3>
+<label class="chk"><input type="checkbox" id="ocrTables" checked> Detect tables and columns</label>
+<label class="chk"><input type="checkbox" id="ocrKeep"> Keep the image line breaks</label>
+<p style="margin:14px 0 0"><button type="button" class="btn primary" id="ocrRun" style="padding:8px 16px;font-size:14px" disabled>Run again</button> <button type="button" class="btn ghost" id="ocrReset" style="padding:8px 14px;font-size:14px">Start over</button></p>
+</div>
+<div class="idp-stage-wrap">
+<p class="idp-status" id="ocrStatus" role="status" aria-live="polite"></p>
+<div class="idp-barwrap" id="ocrBarWrap" hidden><div class="idp-bar" id="ocrBar"></div></div>
+<div class="idp-stage" id="ocrStage" hidden>
+<p class="idp-info" id="ocrInfo" style="margin:0 0 12px"></p>
+<div class="ocr-tabs" id="ocrTabs" role="tablist"><button type="button" data-t="view" role="tab" class="on">Result</button><button type="button" data-t="md" role="tab">Markdown</button><button type="button" data-t="overlay" role="tab">Detected regions</button><button type="button" data-t="json" role="tab">JSON</button></div>
+<div id="ocrPane-view"><div class="ocr-view" id="ocrView" contenteditable="true" spellcheck="false" aria-label="Result, editable"></div>
+<p class="idp-info">Orange-underlined words have low confidence: please double-check them. You can edit directly in the box.</p></div>
+<div id="ocrPane-md" hidden><textarea class="ocr-md" id="ocrMd" readonly></textarea></div>
+<div id="ocrPane-overlay" hidden><canvas id="ocrCanvas" class="ocr-cv"></canvas><p class="idp-info">Green: high confidence; amber: medium; red: low.</p></div>
+<div id="ocrPane-json" hidden><pre class="ocr-json" id="ocrJson"></pre></div>
+<div class="idp-actions"><button type="button" class="btn primary" id="ocrCopy">Copy</button><button type="button" class="btn ghost" id="ocrDlTxt">Download .txt</button><button type="button" class="btn ghost" id="ocrDlMd">Download .md</button><button type="button" class="btn ghost" id="ocrDlJson">Download .json</button><button type="button" class="btn ghost" id="ocrDlCsv" hidden>Download tables .csv</button></div>
+</div>
+<div class="idp-empty" id="ocrEmpty">Your result appears here. The first run downloads the Vietnamese recogniser (about 6 MB), which the browser then caches. Photo mode downloads about 26 MB more.</div>
+</div>
+</div></div></section>
+
+<section class="band" id="how"><div class="wrap"><h2>Processing pipeline</h2>
+<p class="sub">Six steps, all running as JavaScript and WebAssembly on your device.</p>
+<ol class="flow">
+<li><b>Image clean-up</b><span>EXIF orientation, size cap, division by an estimated paper background to remove shadows, contrast stretch.</span></li>
+<li><b>Deskew</b><span>Skew measured with a projection profile (±10°), then the text lines are rotated level.</span></li>
+<li><b>Find text lines</b><span>Photo mode uses PaddleOCR (PP-OCRv6 detection) in a Web Worker to get every text line at any angle.</span></li>
+<li><b>Read the text</b><span>Tesseract.js (LSTM, tessdata_best &quot;vie&quot;) reads every tone mark and diacritic; several workers run in parallel.</span></li>
+<li><b>Rebuild layout</b><span>From text boxes to rows, columns (vertical gutters), tables (aligned cells), lists, headings and paragraphs.</span></li>
+<li><b>Export</b><span>Text, Markdown, JSON with boxes and confidence, CSV for tables; low-confidence words are flagged.</span></li>
+</ol></div></section>
+
+<section><div class="wrap"><div class="grid g2">
+<div class="card"><h3>Measured accuracy</h3>
+<table class="spec"><tr><th>Test image</th><th>Document mode (CER)</th><th>Photo mode (CER)</th></tr><tr><td>One-column notice (flat image)</td><td>0.4%</td><td>0.4%</td></tr><tr><td>Two columns with a title</td><td>0.3%</td><td>0.3%</td></tr><tr><td>Ruled table</td><td>0.9%</td><td>3.7%</td></tr><tr><td>Tilted photo, shading, noise, JPEG</td><td>0.8%</td><td>1.9%</td></tr><tr><td>Receipt, monospace, slashed zeros</td><td>9.6%</td><td>0.5%</td></tr><tr><td>Small-text screenshot</td><td>0.0%</td><td>0.0%</td></tr></table>
+<p style="margin-top:12px">CER = character error rate (lower is better), measured on self-made test images with printed Vietnamese text. Real images can differ; handwriting is not supported.</p></div>
+<div class="card"><h3>Known limits</h3>
+<ul><li>This is classic OCR, not a vision-language model: it does not understand charts, complex merged cells or tables without clear gaps.</li>
+<li>Handwriting, curved text, very small text (under about 12 px tall) and blurry images give poor results.</li>
+<li>Upside-down or sideways images: use the Rotate buttons first.</li>
+<li>Weak devices can be slow in photo mode (a few seconds to tens of seconds per image).</li></ul></div>
+</div></div></section>
+
+<section class="band"><div class="wrap"><h2>Privacy and requirements</h2>
+<ul>
+<li>Images are processed entirely in the browser; no image or text is uploaded to a Shopsmon server.</li>
+<li>Libraries (Tesseract.js, PaddleOCR.js) and language data load from the jsDelivr CDN; the text-detection model loads from shopsmon.com.</li>
+<li>Requires a browser with WebAssembly and Web Workers (recent Chrome, Edge, Firefox or Safari).</li></ul></div></section>
+
+<section><div class="wrap"><h2>Technology and credits</h2>
+<ul class="refs">
+<li>Tesseract OCR &amp; tessdata_best &mdash; Google / Tesseract OCR community, Apache-2.0. Tesseract.js &mdash; Apache-2.0.</li>
+<li>PaddleOCR PP-OCRv6 detection &amp; PaddleOCR.js &mdash; PaddlePaddle Authors, Apache-2.0.</li>
+<li>ONNX Runtime Web &mdash; Microsoft, MIT. OpenCV.js &mdash; Apache-2.0.</li>
+<li>Technical note: the PP-OCRv6 recognition dictionary lacks 88 of 134 Vietnamese tone-marked letters, so Paddle is used only to find text lines.</li>
+</ul></div></section>
+
+<section class="band"><div class="wrap" style="text-align:center"><h2>Need OCR inside your own system?</h2>
+<p class="sub" style="margin:0 auto 24px">Shopsmon takes on customisation, integration and custom browser-based AI apps.</p>
+<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Get a free quote</a><a class="btn ghost" href="/en/portfolio.html">See portfolio</a> <a class="btn ghost" href="/en/products/">All products</a></div></div></section>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("ocrEmpty"),s=document.getElementById("ocrStage");if(e&&s){new MutationObserver(function(){e.hidden=!s.hidden}).observe(s,{attributes:true,attributeFilter:["hidden"]})}});</script><script src="/assets/js/ocr.js" defer></script>
+</body>
+</html>

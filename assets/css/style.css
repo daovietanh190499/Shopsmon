@@ -188,6 +188,21 @@ button.chip.on{background:var(--brand);color:var(--btn-text);border-color:var(--
 .spec{border-collapse:collapse;width:100%;font-size:15px}
 .spec th,.spec td{border:1px solid var(--line);padding:8px 12px;text-align:left}
 .spec th{background:var(--bg2)}
+.idp-stage-wrap{min-width:0}
+.linkbtn{background:none;border:0;padding:0;color:var(--brand);font:inherit;cursor:pointer;text-decoration:underline}
+.ocr-prev{display:block;max-width:100%;height:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.ocr-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.ocr-tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.ocr-tabs button.on{color:var(--text);border-bottom-color:var(--brand)}
+.ocr-view{min-height:200px;max-height:620px;overflow:auto;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);line-height:1.6;outline:none}
+.ocr-view:focus{border-color:var(--brand)}
+.ocr-view h2,.ocr-view h3{margin:14px 0 8px;line-height:1.3}.ocr-view h2{font-size:22px}.ocr-view h3{font-size:18px}
+.ocr-view p{margin:0 0 12px}.ocr-view .ocr-list{margin:0 0 12px;padding-left:22px;list-style:none}.ocr-view .ocr-list li{margin-bottom:4px}
+.ocr-tw{overflow-x:auto;margin:0 0 12px}.ocr-table{background:var(--card)}.ocr-table td,.ocr-table th{vertical-align:top}
+mark.lc{background:transparent;color:inherit;text-decoration:underline wavy #e0a100;text-underline-offset:3px}
+.ocr-md{width:100%;min-height:320px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);color:var(--text);font:13px/1.55 ui-monospace,Consolas,monospace;resize:vertical}
+.ocr-cv{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.ocr-json{max-height:520px;overflow:auto;margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);font:12.5px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 @media(max-width:900px){.idp{grid-template-columns:1fr}.idp-panel{position:static}.prodhero{grid-template-columns:1fr}}
 [hidden]{display:none!important}
 
