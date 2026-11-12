@@ -38,6 +38,8 @@ OVERRIDE = {
     "infineon-aurix-rc1-risc-v": "https://assets.infineon.com/is/image/infineon/aurix-rc1-visual-hi-res.jpg",
     # Press-release mirror has only a site logo; use the module image from the manufacturer's product page.
     "u-blox-sam-m11n-gnss": "https://content.u-blox.com/sites/default/files/2026-06/SAM-M11N-top-bottom.png",
+    # Business Wire blocks scripts (403): product image from Quectel's own release on PR Newswire Asia.
+    "quectel-sp900bf-ap-edge-ai": "https://mmx.prnasia.com/media/MS2032716/20261111052431EST_image_1.jpg?id=OA3072233&p=original",
 }
 # Credit for OVERRIDE images that come from a different outlet than the news source.
 CREDIT_OVERRIDE = {
@@ -47,6 +49,7 @@ CREDIT_OVERRIDE = {
     "nordic-nrf71-edge-ai": "CircuitDigest",
     "infineon-aurix-rc1-risc-v": "Infineon",
     "u-blox-sam-m11n-gnss": "u-blox",
+    "quectel-sp900bf-ap-edge-ai": "Quectel / PR Newswire Asia",
 }
 
 

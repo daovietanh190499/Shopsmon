@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phát hiện thay đổi trên luồng cảm biến: EWMA, CUSUM, Shewhart | Shopsmon</title>
+<meta name="description" content="So sánh Shewhart, EWMA và CUSUM ở cùng ARL0 bằng mô phỏng NumPy: độ trễ phát hiện, xung nhiễu, bộ lọc trung vị, nhiễu tự tương quan và EWMA số nguyên cho vi điều khiển.">
+<link rel="canonical" href="https://shopsmon.com/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/stream-change-detection.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Phát hiện thay đổi trên luồng cảm biến: EWMA, CUSUM, Shewhart | Shopsmon">
+<meta property="og:description" content="So sánh Shewhart, EWMA và CUSUM ở cùng ARL0 bằng mô phỏng NumPy: độ trễ phát hiện, xung nhiễu, bộ lọc trung vị, nhiễu tự tương quan và EWMA số nguyên cho vi điều khiển.">
+<meta property="og:url" content="https://shopsmon.com/blog/stream-change-detection.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/stream-change-detection-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/" class=active>Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/stream-change-detection.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-12 &middot; IoT / AIoT &middot; ~14 phút đọc</p>
+<h1>Phát hiện thay đổi trên luồng cảm biến: Shewhart, EWMA và CUSUM đo ở cùng mức báo động nhầm</h1>
+<p class="meta">Một nút IoT đọc nhiệt độ, rung hay dòng điện mỗi giây cần biết khi nào giá trị trung bình dịch chuyển, mà không báo động nhầm mỗi vài phút. Bài này so sánh ba bộ phát hiện chạy được trong vài byte RAM, hiệu chỉnh ngưỡng để cả ba có cùng tần suất báo động nhầm, rồi đo độ trễ phát hiện, ảnh hưởng của xung nhiễu, nhiễu tự tương quan và số học số nguyên trên vi điều khiển.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Ngưỡng cố định trên giá trị đo (&ldquo;báo động nếu nhiệt độ lớn hơn 80&nbsp;&deg;C&rdquo;) chỉ bắt được thay đổi lớn. Ổ trục mòn, cảm biến trôi hay máy bơm yếu dần thường làm trung bình dịch đi chỉ vài phần mười độ lệch chuẩn của nhiễu &mdash; nhỏ hơn nhiều so với dao động của từng mẫu. Kiểm soát chất lượng thống kê có hai công cụ cổ điển cho tình huống này: biểu đồ tổng tích luỹ CUSUM của Page (1954) và biểu đồ trung bình động trọng số mũ EWMA của Roberts (1959); Lucas và Saccucci (1990) phân tích EWMA chi tiết. Cả hai chỉ cần một hoặc hai biến trạng thái và vài phép cộng, nên chạy được trên vi điều khiển không có số thực dấu phẩy động. Bài này dẫn xuất ba bộ phát hiện (cộng biểu đồ Shewhart làm mốc so sánh), hiệu chỉnh ngưỡng bằng mô phỏng và đo bốn điều: độ trễ theo cỡ dịch chuyển, tác động của xung nhiễu cô lập, tác động của nhiễu tự tương quan, và sai lệch khi cài đặt bằng số nguyên.</p>
+
+<h2>2. Bài toán và thước đo</h2>
+<p>Mẫu \(x_t=\mu_t+e_t\), với \(e_t\sim N(0,1)\) độc lập (đã chuẩn hoá về độ lệch chuẩn nhiễu bằng 1; \(\mu_0=0\) và \(\sigma=1\) coi như đã biết). Trung bình \(\mu_t=0\) khi chưa có thay đổi và \(\mu_t=\delta\) từ mẫu \(t=1\) trở đi trong các thí nghiệm có dịch chuyển. Hai thước đo chuẩn:</p>
+<ul>
+<li><strong>ARL\(_0\)</strong> (average run length khi trong kiểm soát): số mẫu trung bình tới báo động đầu tiên khi không có thay đổi. Đây là nghịch đảo của tần suất báo động nhầm.</li>
+<li><strong>ARL\(_1\)</strong>: số mẫu trung bình tới báo động đầu tiên khi trung bình đã dịch đi \(\delta\) (độ trễ phát hiện).</li>
+</ul>
+<p>So sánh chỉ công bằng khi cả ba bộ phát hiện có cùng ARL\(_0\); nếu không, bộ nào có ngưỡng thấp hơn sẽ &ldquo;nhanh hơn&rdquo; chỉ vì báo động nhầm nhiều hơn. Bài này đặt ARL\(_0\)=370,4, đúng bằng biểu đồ Shewhart với ngưỡng 3 độ lệch chuẩn (\(1/(2(1-\Phi(3)))\)), tức khoảng một báo động nhầm mỗi 370 mẫu.</p>
+
+<h2>3. Ba bộ phát hiện</h2>
+<p><strong>Shewhart.</strong> Báo động nếu \(|x_t|>c\). Không có trạng thái; chỉ nhìn một mẫu.</p>
+<p><strong>EWMA</strong> (Roberts, 1959): \(z_t=\lambda x_t+(1-\lambda)z_{t-1}\), \(z_0=0\). Với nhiễu trắng phương sai 1, phương sai giới hạn của \(z\) là \(\lambda/(2-\lambda)\), nên báo động khi</p>
+$$|z_t|>L\sqrt{\frac{\lambda}{2-\lambda}}.$$
+<p>Bài này dùng \(\lambda=1/8\): trọng số lũy thừa của 2 để phép cập nhật thành một phép dịch bit \(z\mathrel{+}=(x-z)\gg3\) trên số nguyên. Một biến trạng thái.</p>
+<p><strong>CUSUM</strong> (Page, 1954), hai phía: \(S^+_t=\max(0,\,S^+_{t-1}+x_t-k)\), \(S^-_t=\max(0,\,S^-_{t-1}-x_t-k)\), báo động khi \(\max(S^+_t,S^-_t)>h\). Hằng \(k\) là &ldquo;độ nới&rdquo;: với \(k=\delta_0/2\) biểu đồ là kiểm định tỉ số hợp lý tuần tự cho dịch chuyển \(\delta_0\); ở đây \(k=0{,}5\) (thiết kế cho dịch chuyển 1 độ lệch chuẩn). Với cỡ dịch chuyển biết trước, Lorden (1971) chứng minh CUSUM tối ưu tiệm cận và Moustakides (1986) chứng minh tối ưu chính xác theo tiêu chí độ trễ trong trường hợp xấu nhất. Hai biến trạng thái.</p>
+<p><strong>Kiểm tra ngưỡng bằng giải tích.</strong> Với một phía, Siegmund (1985) xấp xỉ ARL trong kiểm soát bằng \((e^{2kb}-2kb-1)/(2k^2)\) với \(b=h+1{,}166\); biểu đồ hai phía xấp xỉ bằng một nửa giá trị đó. Ở \(h=4{,}7963\) (ngưỡng đo được ở Mục 5) công thức cho 381,5, lệch khoảng 3 % so với mục tiêu 370,4: mô phỏng và giải tích khớp nhau.</p>
+<figure><img src="/assets/img/blog/change-detect-example.svg" alt="Ba biểu đồ xếp dọc cho cùng một chuỗi 300 mẫu có dịch chuyển trung bình +1 độ lệch chuẩn từ mẫu 151: giá trị đo với hai ngưỡng 3 độ lệch chuẩn, thống kê EWMA và thống kê CUSUM, mỗi biểu đồ có một đường ngưỡng nằm ngang và một đường dọc đánh dấu báo động đầu tiên sau thay đổi" width="920" height="700">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Một chuỗi mô phỏng (seed 7): trung bình dịch lên +1 độ lệch chuẩn từ mẫu 151 (đường cam). Đường xanh lá là báo động đầu tiên sau thay đổi: Shewhart ở mẫu 235 (sau 85 mẫu), EWMA ở mẫu 163 (sau 13 mẫu), CUSUM ở mẫu 172 (sau 22 mẫu). Đây chỉ là một chuỗi; bảng ở Mục 6 là số trung bình trên 20.000 chuỗi.</figcaption></figure>
+
+<h2>4. Cài đặt</h2>
+<p><a href="/blog/code/stream_change_detection.py">Script đầy đủ</a> (hiệu chỉnh, bốn thí nghiệm, hai hình; chạy khoảng 11 phút) tải về được. Lõi của hai bộ phát hiện có trạng thái:</p>
+<pre><code class="language-python">LAM, K = 1 / 8, 0.5
+
+def ewma_step(z, x):
+    return z + LAM * (x - z)                  # z_t = lam*x_t + (1 - lam)*z_{t-1}
+
+def cusum_step(sp, sm, x):
+    return max(0.0, sp + x - K), max(0.0, sm - x - K)
+
+# integer version for a microcontroller (x already scaled by 'scale' and rounded to int32)
+z_q += (x_q - z_q) >> 3                         # lambda = 1/8, arithmetic shift = floor division
+
+# 3-point median prefilter (removes an isolated spike completely)
+med3 = lambda a, b, c: max(min(a, b), min(max(a, b), c))
+</code></pre>
+<p>Bộ nhớ trạng thái: Shewhart 0 biến, EWMA 1 biến, CUSUM 2 biến; bộ lọc trung vị ba điểm thêm 2 mẫu gần nhất.</p>
+
+<h2>5. Thiết lập thí nghiệm</h2>
+<p><strong>Hiệu chỉnh ngưỡng.</strong> Với mỗi bộ phát hiện, mô phỏng 8.000 chuỗi nhiễu trắng độ dài 4.500 (seed cố định), tính đường thống kê một lần (không đặt lại sau báo động; thời điểm vượt ngưỡng đầu tiên không phụ thuộc điều đó) và dò nhị phân ngưỡng sao cho ARL\(_0\) trung bình bằng 370,4. Ngưỡng tìm được: Shewhart 2,9956 (giải tích: 3), EWMA \(L=2{,}7617\), CUSUM \(h=4{,}7963\). Với bộ lọc trung vị ba điểm đặt trước (Mục 7) hiệu chỉnh lại từ đầu trên dữ liệu đã lọc: 1,9318, 2,7472 và 4,6211.</p>
+<p><strong>Kiểm chứng.</strong> ARL\(_0\) đo lại trên 20.000 chuỗi độc lập (seed khác): Shewhart 365,9, EWMA 372,0, CUSUM 376,4, mỗi giá trị sai số chuẩn &plusmn; 2,6 (hiệu chỉnh trên mẫu nhỏ hơn nên lệch trong phạm vi sai số). Mọi ARL\(_1\) dưới đây là trung bình trên 20.000 chuỗi, mô phỏng có dịch chuyển \(\delta\) từ mẫu đầu tiên, trạng thái khởi tạo bằng 0 (&ldquo;zero-state&rdquo;); sai số chuẩn của mỗi giá trị ghi sau dấu &plusmn;.</p>
+
+<h2>6. Thí nghiệm 1: độ trễ phát hiện theo cỡ dịch chuyển</h2>
+<figure><img src="/assets/img/blog/change-detect-arl.svg" alt="Đồ thị ARL1 theo cỡ dịch chuyển delta từ 0,5 đến 3 độ lệch chuẩn, thang log trục dọc, ba đường cho Shewhart, EWMA và CUSUM; Shewhart cao hơn rõ rệt ở dịch chuyển nhỏ, ba đường gần nhau từ 1,5 trở lên" width="614" height="422">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). ARL\(_1\) (trung bình trên 20.000 chuỗi; thanh sai số là sai số chuẩn, nhỏ hơn dấu chấm) theo cỡ dịch chuyển, cả ba bộ phát hiện đặt ở ARL\(_0\)&asymp;370.</figcaption></figure>
+<table>
+<thead><tr><th>Dịch chuyển \(\delta\)</th><th>Shewhart</th><th>EWMA (\(\lambda=1/8\))</th><th>CUSUM (\(k=0{,}5\))</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>152,54 &plusmn; 1,08</td><td><strong>29,68 &plusmn; 0,16</strong></td><td>35,30 &plusmn; 0,20</td></tr>
+<tr><td>1,0</td><td>43,34 &plusmn; 0,30</td><td><strong>9,65 &plusmn; 0,03</strong></td><td>10,01 &plusmn; 0,04</td></tr>
+<tr><td>1,5</td><td>14,95 &plusmn; 0,10</td><td>5,59 &plusmn; 0,01</td><td><strong>5,56 &plusmn; 0,02</strong></td></tr>
+<tr><td>2,0</td><td>6,27 &plusmn; 0,04</td><td>3,97 &plusmn; 0,01</td><td><strong>3,87 &plusmn; 0,01</strong></td></tr>
+<tr><td>3,0</td><td><strong>1,98 &plusmn; 0,01</strong></td><td>2,60 &plusmn; 0,00</td><td>2,49 &plusmn; 0,00</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Dịch chuyển nhỏ: bộ có nhớ nhanh hơn 4&ndash;5 lần.</strong> Ở \(\delta=1\), EWMA và CUSUM phát hiện sau khoảng 10 mẫu, Shewhart sau 43 mẫu (gấp 4,5 và 4,3 lần). Ở \(\delta=0{,}5\) tỉ số là 5,1 và 4,3 lần.</li>
+<li><strong>Dịch chuyển lớn: Shewhart nhanh nhất.</strong> Ở \(\delta=3\) Shewhart phát hiện sau 1,98 mẫu so với 2,60 (EWMA) và 2,49 (CUSUM), vì hai bộ kia cần vài mẫu để tích luỹ.</li>
+<li><strong>EWMA và CUSUM sát nhau.</strong> EWMA tốt hơn ở \(\delta\le1\) (29,68 so với 35,30 ở \(\delta=0{,}5\)); CUSUM nhỉnh hơn một chút ở \(\delta\ge2\) (3,87 so với 3,97 ở \(\delta=2\)). Ở \(\delta=1{,}5\) hai bộ gần như ngang nhau (5,59 và 5,56).</li>
+<li><strong>Phân phối lệch.</strong> Trung vị nhỏ hơn trung bình: ở \(\delta=1\) trung vị là 30 mẫu cho Shewhart và 9 cho cả EWMA lẫn CUSUM, nên thỉnh thoảng có lần phát hiện chậm hơn nhiều.</li>
+</ul>
+
+<h2>7. Thí nghiệm 2: xung nhiễu cô lập và bộ lọc trung vị ba điểm</h2>
+<p>Cảm biến thật thỉnh thoảng cho một mẫu hỏng đơn lẻ. Mô phỏng: mỗi mẫu có xác suất 0,2 % bị thay bằng xung \(\pm8\) độ lệch chuẩn (cô lập, dấu ngẫu nhiên); 2.000 chuỗi &times; 5.000 mẫu, bộ phát hiện được đặt lại sau mỗi báo động. Bảng cho số báo động trên 1.000 mẫu; mục tiêu khi sạch là \(1000/370{,}4=2{,}70\).</p>
+<table>
+<thead><tr><th>Cấu hình</th><th>Dữ liệu sạch</th><th>Có xung 0,2 %</th></tr></thead>
+<tbody>
+<tr><td>Shewhart, không lọc</td><td>2,72</td><td>4,73</td></tr>
+<tr><td>EWMA, không lọc</td><td>2,68</td><td>4,52</td></tr>
+<tr><td>CUSUM, không lọc</td><td>2,64</td><td>4,62</td></tr>
+<tr><td>Shewhart, sau median-3</td><td>4,20</td><td>4,51</td></tr>
+<tr><td>EWMA, sau median-3</td><td>2,71</td><td><strong>2,80</strong></td></tr>
+<tr><td>CUSUM, sau median-3</td><td>2,69</td><td><strong>2,79</strong></td></tr>
+</tbody></table>
+<ul>
+<li><strong>Xung làm tăng báo động nhầm gần đúng 2 trên 1.000 mẫu</strong> (đúng bằng tần suất xung 0,002 &times; 1.000) với cả ba bộ không lọc: một xung 8 độ lệch chuẩn vượt ngưỡng của cả ba.</li>
+<li><strong>Median-3 loại bỏ xung cô lập</strong>: EWMA và CUSUM sau bộ lọc chỉ tăng từ 2,71 lên 2,80 và 2,69 lên 2,79.</li>
+<li><strong>Shewhart sau median-3 có 4,20 báo động trên 1.000 mẫu khi sạch</strong>, cao hơn mục tiêu 2,70 dù ARL\(_0\) tới báo động đầu tiên vẫn là 371,6. Điều này phù hợp với việc median-3 làm các mẫu lân cận tương quan, khiến báo động đến thành cụm; script không đo trực tiếp các cụm.</li>
+</ul>
+<p><strong>Cái giá của bộ lọc</strong> (ARL\(_0\) hiệu chỉnh lại về 370,4 trên dữ liệu đã lọc; ARL\(_1\) tính từ mẫu bị dịch đầu tiên):</p>
+<table>
+<thead><tr><th>\(\delta\)</th><th>Shewhart</th><th>EWMA</th><th>CUSUM</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>100,66 &plusmn; 0,70</td><td>34,61 &plusmn; 0,19</td><td>38,93 &plusmn; 0,22</td></tr>
+<tr><td>1,0</td><td>23,17 &plusmn; 0,16</td><td>11,34 &plusmn; 0,04</td><td>11,55 &plusmn; 0,04</td></tr>
+<tr><td>1,5</td><td>8,23 &plusmn; 0,05</td><td>6,76 &plusmn; 0,02</td><td>6,71 &plusmn; 0,02</td></tr>
+<tr><td>2,0</td><td>4,27 &plusmn; 0,02</td><td>5,03 &plusmn; 0,01</td><td>4,95 &plusmn; 0,01</td></tr>
+<tr><td>3,0</td><td>2,30 &plusmn; 0,01</td><td>3,63 &plusmn; 0,00</td><td>3,52 &plusmn; 0,00</td></tr>
+</tbody></table>
+<p>Với EWMA, bộ lọc làm chậm thêm 1,7 mẫu ở \(\delta=1\) (9,65 lên 11,34), 1,0 mẫu ở \(\delta=3\) (2,60 lên 3,63) và 4,9 mẫu ở \(\delta=0{,}5\) (29,68 lên 34,61). Ngược lại Shewhart được lợi: median-3 giảm phương sai nhiễu nên ngưỡng hiệu chỉnh hạ xuống 1,93 và ARL\(_1\) ở \(\delta=1\) giảm từ 43,34 xuống 23,17 (vẫn gấp đôi EWMA).</p>
+
+<h2>8. Thí nghiệm 3: nhiễu tự tương quan</h2>
+<p>Cảm biến thật hiếm khi có nhiễu trắng: nhiệt độ, điện áp và rung thường tương quan giữa các mẫu liền kề. Giữ nguyên các ngưỡng đã hiệu chỉnh cho nhiễu trắng (không lọc) và thay nhiễu bằng quá trình AR(1) \(e_t=\varphi e_{t-1}+\sqrt{1-\varphi^2}\,\eta_t\) có phương sai biên bằng 1, rồi đo ARL\(_0\) (20.000 chuỗi mỗi ô):</p>
+<table>
+<thead><tr><th>\(\varphi\)</th><th>Shewhart</th><th>EWMA</th><th>CUSUM</th></tr></thead>
+<tbody>
+<tr><td>0 (nhiễu trắng)</td><td>362,6 &plusmn; 2,6</td><td>371,4 &plusmn; 2,6</td><td>380,5 &plusmn; 2,7</td></tr>
+<tr><td>0,3</td><td>365,2 &plusmn; 2,6</td><td>96,6 &plusmn; 0,7</td><td>85,9 &plusmn; 0,6</td></tr>
+<tr><td>0,5</td><td>385,2 &plusmn; 2,7</td><td>52,5 &plusmn; 0,3</td><td>47,6 &plusmn; 0,3</td></tr>
+<tr><td>0,7</td><td>457,7 &plusmn; 3,3</td><td>33,5 &plusmn; 0,2</td><td>31,9 &plusmn; 0,2</td></tr>
+</tbody></table>
+<ul>
+<li><strong>EWMA và CUSUM hỏng nhanh.</strong> Chỉ với \(\varphi=0{,}3\), báo động nhầm đến sau khoảng 90 mẫu thay vì 370 (EWMA 96,6, CUSUM 85,9); ở \(\varphi=0{,}7\), sau khoảng 33 mẫu, tức gấp khoảng 11 lần tần suất báo động nhầm đã thiết kế.</li>
+<li><strong>Nguyên nhân với EWMA</strong> (suy ra từ công thức, kiểm tra riêng bằng mô phỏng ngắn, không nằm trong script): với nhiễu AR(1), phương sai của \(z\) lớn hơn giá trị nhiễu trắng \(\lambda/(2-\lambda)\) theo hệ số \((1+a\varphi)/(1-a\varphi)\), \(a=1-\lambda\). Hệ số này là 1,71 ở \(\varphi=0{,}3\), 2,56 ở \(\varphi=0{,}5\) và 4,16 ở \(\varphi=0{,}7\) (mô phỏng cho 1,69; 2,53; 4,08); độ lệch chuẩn của \(z\) lớn hơn 1,31; 1,60 và 2,04 lần, nên ngưỡng đặt cho nhiễu trắng thực chất thấp hơn ngần ấy lần.</li>
+<li><strong>Shewhart không hỏng nhưng ARL\(_0\) tăng</strong> (457,7 ở \(\varphi=0{,}7\)): xác suất vượt ngưỡng mỗi mẫu không đổi (phân phối biên vẫn chuẩn), và việc thời gian chờ tới báo động đầu tiên dài hơn phù hợp với các lần vượt đến thành cụm; script không đo trực tiếp các cụm.</li>
+</ul>
+
+<h2>9. Thí nghiệm 4: số học số nguyên trên vi điều khiển</h2>
+<p>EWMA \(\lambda=1/8\) bằng số nguyên: \(x\) được làm tròn thành bội của \(1/\text{scale}\) độ lệch chuẩn, rồi \(z\mathrel{+}=(x-z)\gg3\). Dịch phải số nguyên có dấu là phép lấy sàn, nên mỗi bước làm \(z\) lệch trung bình \(-7/16\) đơn vị nhỏ nhất (LSB), và trạng thái ổn định lệch khoảng \(-3{,}5\) LSB (suy ra từ công thức \(-(7/16)/\lambda\)). Dùng đúng ngưỡng của bản số thực \((L=2{,}7617)\) cho các độ phân giải khác nhau:</p>
+<table>
+<thead><tr><th>Độ phân giải 1 LSB</th><th>Lệch tối đa so với số thực (một chuỗi 2.000 mẫu)</th><th>ARL\(_0\)</th><th>ARL\(_1\), \(\delta=1\)</th><th>ARL\(_1\), \(\delta=2\)</th></tr></thead>
+<tbody>
+<tr><td>số thực</td><td>&mdash;</td><td>372,0 &plusmn; 2,6</td><td>9,65 &plusmn; 0,03</td><td>3,97 &plusmn; 0,01</td></tr>
+<tr><td>1/256 độ lệch chuẩn</td><td>0,0197 &sigma;</td><td>369,3 &plusmn; 2,6</td><td>9,83 &plusmn; 0,03</td><td>4,00 &plusmn; 0,01</td></tr>
+<tr><td>1/64</td><td>0,0849 &sigma;</td><td>321,3 &plusmn; 2,2</td><td>10,42 &plusmn; 0,04</td><td>4,09 &plusmn; 0,01</td></tr>
+<tr><td>1/16</td><td>0,3346 &sigma;</td><td>121,6 &plusmn; 0,8</td><td>14,29 &plusmn; 0,06</td><td>4,58 &plusmn; 0,01</td></tr>
+<tr><td>1/8</td><td>0,7143 &sigma;</td><td>33,8 &plusmn; 0,2</td><td>22,29 &plusmn; 0,11</td><td>5,12 &plusmn; 0,01</td></tr>
+</tbody></table>
+<p>Ở 1/256 \(\sigma\) bản số nguyên gần như trùng bản số thực: ARL\(_0\) lệch 0,7 %, ARL\(_1\) lệch 1,9 % ở \(\delta=1\). Độ phân giải thô dần làm ARL\(_0\) sụt mạnh (321, 122, rồi 34): độ lệch hệ thống \(-3{,}5\) LSB chiếm 0,055 \(\sigma\), 0,22 \(\sigma\) và 0,44 \(\sigma\) ở ba mức thô so với khoảng cách ngưỡng \(L\sqrt{\lambda/(2-\lambda)}=0{,}713\sigma\), và ARL\(_1\) cũng xấu đi vì \(z\) bị kéo lệch về phía âm. Script không thử các cách khắc phục độ lệch này (ví dụ cộng bù trước phép dịch hoặc làm tròn gần nhất thay cho lấy sàn).</p>
+
+<h2>10. Hạn chế</h2>
+<ul>
+<li>Toàn bộ dữ liệu là mô phỏng nhiễu Gaussian với \(\mu_0\) và \(\sigma\) đã biết chính xác. Trên thiết bị thật phải ước lượng \(\mu_0,\sigma\) từ một đoạn đầu và việc ước lượng sai làm lệch ARL\(_0\); thí nghiệm không đo điều này.</li>
+<li>Chỉ thử dịch chuyển trung bình bước nhảy (đúng ngay từ mẫu đầu), không thử trôi chậm (đường dốc), thay đổi phương sai hay nhiễu có đuôi nặng. Các số ARL là trung bình; phân phối lệch nên trung vị nhỏ hơn, và có những lần phát hiện chậm hơn nhiều.</li>
+<li>Thí nghiệm 3 chỉ cho thấy ngưỡng nhiễu trắng không dùng được khi nhiễu tương quan; không thử cách khắc phục (hiệu chỉnh ngưỡng lại theo nhiễu đo được, lọc trắng bằng mô hình AR, lấy mẫu thưa) và không kiểm tra liệu chúng giữ được ARL\(_1\).</li>
+<li>Xung nhiễu trong Thí nghiệm 2 là một loại duy nhất (cô lập, biên độ cố định 8\(\sigma\)); hai xung liền kề hoặc xung nhỏ hơn không được thử.</li>
+<li>Bài chỉ đo mức độ mô phỏng số học; không đo thời gian chạy, năng lượng hay kích thước mã trên vi điều khiển thật.</li>
+</ul>
+
+<h2>11. Kết luận thực hành</h2>
+<ol>
+<li>So sánh bộ phát hiện chỉ có nghĩa khi đã cân bằng ARL\(_0\): ở cùng một báo động nhầm mỗi 370 mẫu, EWMA và CUSUM phát hiện dịch chuyển 1 độ lệch chuẩn sau khoảng 10 mẫu, nhanh gấp 4,3&ndash;4,5 lần ngưỡng đơn mẫu (43 mẫu).</li>
+<li>Chỉ dùng ngưỡng đơn mẫu khi quan tâm tới thay đổi lớn (từ khoảng 3 độ lệch chuẩn); với dịch chuyển nhỏ chọn EWMA hoặc CUSUM. EWMA đơn giản hơn (một biến, một phép dịch bit); CUSUM nhỉnh hơn với dịch chuyển từ 2 độ lệch chuẩn.</li>
+<li>Đặt bộ lọc trung vị ba điểm trước khi phát hiện nếu cảm biến có xung cô lập; cái giá đo được là chậm thêm khoảng 1&ndash;5 mẫu.</li>
+<li>Đo tự tương quan của nhiễu trên dữ liệu thật trước khi chọn ngưỡng: với \(\varphi\ge0{,}3\) ngưỡng của nhiễu trắng làm EWMA/CUSUM báo động nhầm nhiều gấp khoảng 4 lần (\(\varphi=0{,}3\)) đến hơn 11 lần (\(\varphi=0{,}7\)).</li>
+<li>Khi cài EWMA bằng số nguyên, độ phân giải 1/256 độ lệch chuẩn giữ ARL\(_0\) trong khoảng 1 % so với số thực; ở 1/64 ARL\(_0\) giảm 14 %, ở 1/16 giảm khoảng 67 %, vì phép dịch phải lấy sàn gây độ lệch hệ thống âm.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần giám sát cảm biến, phát hiện bất thường hoặc đường ống dữ liệu edge-AI/IoT?</strong><br>
+Tôi nhận làm với tư cách freelancer. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Sensor%20monitoring%20project">Nhận báo giá</a> <a class="btn ghost" href="/solutions/custom-ai-tools.html">Công cụ AI theo yêu cầu</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>E. S. Page. &ldquo;Continuous inspection schemes.&rdquo; <em>Biometrika</em> 41(1&ndash;2), 1954, tr. 100&ndash;115. <a href="https://doi.org/10.1093/biomet/41.1-2.100">doi:10.1093/biomet/41.1-2.100</a>.</li>
+<li>S. W. Roberts. &ldquo;Control chart tests based on geometric moving averages.&rdquo; <em>Technometrics</em> 1(3), 1959, tr. 239&ndash;250. <a href="https://doi.org/10.1080/00401706.1959.10489860">doi:10.1080/00401706.1959.10489860</a>.</li>
+<li>G. Lorden. &ldquo;Procedures for reacting to a change in distribution.&rdquo; <em>The Annals of Mathematical Statistics</em> 42(6), 1971, tr. 1897&ndash;1908. <a href="https://doi.org/10.1214/aoms/1177693055">doi:10.1214/aoms/1177693055</a>.</li>
+<li>N. Gallagher và G. Wise. &ldquo;A theoretical analysis of the properties of median filters.&rdquo; <em>IEEE Transactions on Acoustics, Speech, and Signal Processing</em> 29(6), 1981, tr. 1136&ndash;1141. <a href="https://doi.org/10.1109/TASSP.1981.1163708">doi:10.1109/TASSP.1981.1163708</a>.</li>
+<li>D. Siegmund. <em>Sequential Analysis: Tests and Confidence Intervals</em>. Springer Series in Statistics, Springer, 1985. <a href="https://doi.org/10.1007/978-1-4757-1862-1">doi:10.1007/978-1-4757-1862-1</a>.</li>
+<li>G. V. Moustakides. &ldquo;Optimal stopping times for detecting changes in distributions.&rdquo; <em>The Annals of Statistics</em> 14(4), 1986, tr. 1379&ndash;1387. <a href="https://doi.org/10.1214/aos/1176350164">doi:10.1214/aos/1176350164</a>.</li>
+<li>J. M. Lucas và M. S. Saccucci. &ldquo;Exponentially weighted moving average control schemes: properties and enhancements.&rdquo; <em>Technometrics</em> 32(1), 1990, tr. 1&ndash;12. <a href="https://doi.org/10.1080/00401706.1990.10484583">doi:10.1080/00401706.1990.10484583</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/stream_change_detection.py">stream_change_detection.py</a> (Python 3.12, NumPy, Matplotlib; khoảng 11 phút). Mọi con số ở Mục 5&ndash;9 là đầu ra của script này, trừ các hệ số phương sai 1,71; 2,56; 4,16 (công thức) và 1,69; 2,53; 4,08 (mô phỏng ngắn riêng) ở Mục 8.</p>
+<aside class="aff-box"><h3>Linh kiện IoT / AIoT phổ biến</h3><p>Board và cảm biến thường dùng để làm nguyên mẫu: ESP32-S3 chạy mô hình nhỏ, cảm biến nhiệt độ/độ ẩm và cầu nối Zigbee cho mạng cảm biến.</p><ul><li><a href="https://s.shopee.vn/AUvJ7Ugukh" rel="sponsored nofollow noopener" target="_blank">Bo mạch ESP32-S3 MINI Xiaozhi AI &ndash; robot thoại, màn hình OLED 0,96 inch</a> <span class="price">₫105.000</span></li><li><a href="https://s.shopee.vn/3B8iO1zd11" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, Flash 16 MB + PSRAM 8 MB (board AI/IoT)</a> <span class="price">₫170.000</span></li><li><a href="https://s.shopee.vn/4qGwN7QQYU" rel="sponsored nofollow noopener" target="_blank">Mô-đun cảm biến nhiệt độ &amp; độ ẩm SHT40/SHT41/SHT45</a> <span class="price">₫123.640</span></li><li><a href="https://s.shopee.vn/7fb7kNXg67" rel="sponsored nofollow noopener" target="_blank">SONOFF ZB Bridge-P &ndash; cầu nối Zigbee 3.0 cho smart home</a> <span class="price">₫504.900</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-09"
+TODAY = "2026-11-12"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="stream-change-detection", date="2026-11-12", min=14, aff="iot",
+         og="/assets/img/blog/stream-change-detection-cover.png",
+         tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
+         title={"vi": "Phát hiện thay đổi trên luồng cảm biến: Shewhart, EWMA và CUSUM đo ở cùng mức báo động nhầm",
+                "en": "Change detection on a sensor stream: Shewhart, EWMA and CUSUM at equal false-alarm rates"},
+         summary={"vi": "Ba bộ phát hiện chạy trong vài byte RAM, hiệu chỉnh cùng ARL0 = 370: độ trễ theo cỡ dịch chuyển, xung nhiễu và bộ lọc trung vị, nhiễu tự tương quan làm EWMA/CUSUM báo động nhầm gấp 4-11 lần, và EWMA số nguyên lệch bao nhiêu.",
+                  "en": "Three detectors that run in a few bytes of RAM, tuned to the same ARL0 = 370: delay versus shift size, spikes and a median filter, autocorrelated noise making EWMA/CUSUM raise 4-11 times more false alarms, and how far integer EWMA drifts."},
+         seo_title={"vi": "Phát hiện thay đổi trên luồng cảm biến: EWMA, CUSUM, Shewhart | Shopsmon",
+                    "en": "Sensor stream change detection: EWMA, CUSUM and Shewhart compared | Shopsmon"},
+         seo_desc={"vi": "So sánh Shewhart, EWMA và CUSUM ở cùng ARL0 bằng mô phỏng NumPy: độ trễ phát hiện, xung nhiễu, bộ lọc trung vị, nhiễu tự tương quan và EWMA số nguyên cho vi điều khiển.",
+                   "en": "Shewhart, EWMA and CUSUM compared at equal ARL0 by NumPy simulation: detection delay, spikes, a median filter, autocorrelated noise and integer EWMA for microcontrollers."}),
     dict(slug="bundle-adjustment", date="2026-11-09", min=15, aff="ml-books",
          og="/assets/img/blog/bundle-adjustment-cover.png",
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},

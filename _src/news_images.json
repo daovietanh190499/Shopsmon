@@ -214,5 +214,29 @@
    1200,
    628
   ]
+ },
+ "android-authority-2026-phone-chip-test": {
+  "credit": "Android Authority",
+  "image_url": "https://www.androidauthority.com/wp-content/uploads/2026/10/2026-flagship-smartphones-scaled.jpg",
+  "orig_size": [
+   2560,
+   1440
+  ]
+ },
+ "anthropic-claude-fable-5-2": {
+  "credit": "Anthropic",
+  "image_url": "https://assets.claude.com/21b3240f9264f8e4c8ab1390e2702cf1401b2367.jpg",
+  "orig_size": [
+   1200,
+   630
+  ]
+ },
+ "quectel-sp900bf-ap-edge-ai": {
+  "credit": "Quectel / PR Newswire Asia",
+  "image_url": "https://mmx.prnasia.com/media/MS2032716/20261111052431EST_image_1.jpg?id=OA3072233&p=original",
+  "orig_size": [
+   1000,
+   626
+  ]
  }
 }

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sensor stream change detection: EWMA, CUSUM and Shewhart compared | Shopsmon</title>
+<meta name="description" content="Shewhart, EWMA and CUSUM compared at equal ARL0 by NumPy simulation: detection delay, spikes, a median filter, autocorrelated noise and integer EWMA for microcontrollers.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/stream-change-detection.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/stream-change-detection.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Sensor stream change detection: EWMA, CUSUM and Shewhart compared | Shopsmon">
+<meta property="og:description" content="Shewhart, EWMA and CUSUM compared at equal ARL0 by NumPy simulation: detection delay, spikes, a median filter, autocorrelated noise and integer EWMA for microcontrollers.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/stream-change-detection.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/stream-change-detection-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/stream-change-detection.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-12 &middot; IoT / AIoT &middot; ~14 min read</p>
+<h1>Change detection on a sensor stream: Shewhart, EWMA and CUSUM at equal false-alarm rates</h1>
+<p class="meta">An IoT node that reads temperature, vibration or current every second needs to know when the mean shifts without raising a false alarm every few minutes. This post compares three detectors that run in a few bytes of RAM, tunes the thresholds so all three have the same false-alarm rate, and then measures detection delay, the effect of isolated spikes, correlated noise and integer arithmetic on a microcontroller.</p>
+
+<h2>1. Background</h2>
+<p>A fixed threshold on the raw value (&ldquo;alarm if the temperature exceeds 80&nbsp;&deg;C&rdquo;) only catches large changes. A wearing bearing, a drifting sensor or a weakening pump usually moves the mean by only a fraction of the noise standard deviation &mdash; far less than the sample-to-sample scatter. Statistical process control has two classic tools for this situation: Page's cumulative-sum chart CUSUM (1954) and Roberts' exponentially weighted moving average chart EWMA (1959); Lucas and Saccucci (1990) analyse the EWMA in detail. Each needs one or two state variables and a few additions, so they run on microcontrollers without floating-point hardware. This post derives the three detectors (plus a Shewhart chart as the baseline), tunes thresholds by simulation and measures four things: delay versus shift size, the effect of isolated spikes, the effect of autocorrelated noise, and the error introduced by integer arithmetic.</p>
+
+<h2>2. Problem and metrics</h2>
+<p>Samples \(x_t=\mu_t+e_t\) with independent \(e_t\sim N(0,1)\) (already scaled so the noise standard deviation is 1; \(\mu_0=0\) and \(\sigma=1\) are treated as known). The mean is \(\mu_t=0\) before a change and \(\mu_t=\delta\) from sample \(t=1\) onwards in the experiments with a shift. Two standard metrics:</p>
+<ul>
+<li><strong>ARL\(_0\)</strong> (in-control average run length): the mean number of samples to the first alarm when nothing has changed. It is the inverse of the false-alarm rate.</li>
+<li><strong>ARL\(_1\)</strong>: the mean number of samples to the first alarm when the mean has shifted by \(\delta\) (detection delay).</li>
+</ul>
+<p>A comparison is only fair when all detectors have the same ARL\(_0\); otherwise the one with the lower threshold looks &ldquo;faster&rdquo; merely because it raises more false alarms. Here ARL\(_0\)=370.4, exactly that of a Shewhart chart with a 3-sigma limit (\(1/(2(1-\Phi(3)))\)), i.e. about one false alarm per 370 samples.</p>
+
+<h2>3. The three detectors</h2>
+<p><strong>Shewhart.</strong> Alarm if \(|x_t|>c\). No state; it looks at one sample.</p>
+<p><strong>EWMA</strong> (Roberts, 1959): \(z_t=\lambda x_t+(1-\lambda)z_{t-1}\), \(z_0=0\). For white noise of variance 1 the limiting variance of \(z\) is \(\lambda/(2-\lambda)\), so the alarm condition is</p>
+$$|z_t|>L\sqrt{\frac{\lambda}{2-\lambda}}.$$
+<p>This post uses \(\lambda=1/8\): a power-of-two weight, so the update becomes one bit shift, \(z\mathrel{+}=(x-z)\gg3\), on integers. One state variable.</p>
+<p><strong>CUSUM</strong> (Page, 1954), two-sided: \(S^+_t=\max(0,\,S^+_{t-1}+x_t-k)\), \(S^-_t=\max(0,\,S^-_{t-1}-x_t-k)\), alarm when \(\max(S^+_t,S^-_t)>h\). The constant \(k\) is the allowance: with \(k=\delta_0/2\) the chart is a sequential likelihood-ratio test for a shift \(\delta_0\); here \(k=0.5\) (designed for a shift of one standard deviation). For a known shift size, Lorden (1971) proved CUSUM is asymptotically optimal and Moustakides (1986) proved it exactly optimal for Lorden's worst-case delay criterion. Two state variables.</p>
+<p><strong>Analytic check of the threshold.</strong> For one side, Siegmund (1985) approximates the in-control ARL by \((e^{2kb}-2kb-1)/(2k^2)\) with \(b=h+1.166\); the two-sided chart is about half that value. At \(h=4.7963\) (the threshold measured in Section 5) the formula gives 381.5, about 3% from the 370.4 target: simulation and analysis agree.</p>
+<figure><img src="/assets/img/blog/change-detect-example.svg" alt="Three stacked charts for the same 300-sample series with a +1 standard-deviation mean shift from sample 151: the raw values with two 3-sigma limits, the EWMA statistic and the CUSUM statistic, each with a horizontal threshold line and a vertical line marking the first alarm after the change" width="920" height="700">
+<figcaption>Figure 1. One simulated series (seed 7): the mean shifts up by 1 standard deviation from sample 151 (orange line). The green line is the first alarm after the change: Shewhart at sample 235 (85 samples later), EWMA at sample 163 (13 samples later), CUSUM at sample 172 (22 samples later). This is a single series; the table in Section 6 averages 20,000 series.</figcaption></figure>
+
+<h2>4. Implementation</h2>
+<p>The <a href="/blog/code/stream_change_detection.py">full script</a> (calibration, four experiments, two figures; about 11 minutes) can be downloaded. The core of the two stateful detectors:</p>
+<pre><code class="language-python">LAM, K = 1 / 8, 0.5
+
+def ewma_step(z, x):
+    return z + LAM * (x - z)                  # z_t = lam*x_t + (1 - lam)*z_{t-1}
+
+def cusum_step(sp, sm, x):
+    return max(0.0, sp + x - K), max(0.0, sm - x - K)
+
+# integer version for a microcontroller (x already scaled by 'scale' and rounded to int32)
+z_q += (x_q - z_q) >> 3                         # lambda = 1/8, arithmetic shift = floor division
+
+# 3-point median prefilter (removes an isolated spike completely)
+med3 = lambda a, b, c: max(min(a, b), min(max(a, b), c))
+</code></pre>
+<p>State memory: Shewhart 0 variables, EWMA 1, CUSUM 2; the 3-point median filter adds the 2 most recent samples.</p>
+
+<h2>5. Experimental setup</h2>
+<p><strong>Threshold calibration.</strong> For each detector, 8,000 white-noise streams of length 4,500 are simulated (fixed seed), the statistic path is computed once (without resetting after an alarm; the first threshold crossing does not depend on that) and the threshold is found by bisection so that the mean ARL\(_0\) equals 370.4. The thresholds found: Shewhart 2.9956 (analytic: 3), EWMA \(L=2.7617\), CUSUM \(h=4.7963\). With the 3-point median prefilter in front (Section 7) the calibration is redone from scratch on the filtered data: 1.9318, 2.7472 and 4.6211.</p>
+<p><strong>Validation.</strong> ARL\(_0\) re-measured on 20,000 independent streams (different seed): Shewhart 365.9, EWMA 372.0, CUSUM 376.4, each with a standard error of &plusmn; 2.6 (the calibration used a smaller sample, so the differences are within the error). Every ARL\(_1\) below is the mean over 20,000 streams with the shift \(\delta\) applied from the first sample and the state initialised at zero (&ldquo;zero-state&rdquo;); the standard error of each value follows the &plusmn;.</p>
+
+<h2>6. Experiment 1: detection delay versus shift size</h2>
+<figure><img src="/assets/img/blog/change-detect-arl.svg" alt="ARL1 versus shift delta from 0.5 to 3 standard deviations on a log vertical axis, with three lines for Shewhart, EWMA and CUSUM; Shewhart is clearly higher for small shifts and the three lines are close from 1.5 upwards" width="614" height="422">
+<figcaption>Figure 2. ARL\(_1\) (mean over 20,000 streams; error bars are standard errors, smaller than the markers) versus shift size, all three detectors set to ARL\(_0\)&asymp;370.</figcaption></figure>
+<table>
+<thead><tr><th>Shift \(\delta\)</th><th>Shewhart</th><th>EWMA (\(\lambda=1/8\))</th><th>CUSUM (\(k=0.5\))</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>152.54 &plusmn; 1.08</td><td><strong>29.68 &plusmn; 0.16</strong></td><td>35.30 &plusmn; 0.20</td></tr>
+<tr><td>1.0</td><td>43.34 &plusmn; 0.30</td><td><strong>9.65 &plusmn; 0.03</strong></td><td>10.01 &plusmn; 0.04</td></tr>
+<tr><td>1.5</td><td>14.95 &plusmn; 0.10</td><td>5.59 &plusmn; 0.01</td><td><strong>5.56 &plusmn; 0.02</strong></td></tr>
+<tr><td>2.0</td><td>6.27 &plusmn; 0.04</td><td>3.97 &plusmn; 0.01</td><td><strong>3.87 &plusmn; 0.01</strong></td></tr>
+<tr><td>3.0</td><td><strong>1.98 &plusmn; 0.01</strong></td><td>2.60 &plusmn; 0.00</td><td>2.49 &plusmn; 0.00</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Small shifts: the detectors with memory are 4&ndash;5 times faster.</strong> At \(\delta=1\), EWMA and CUSUM detect after about 10 samples, Shewhart after 43 (4.5 and 4.3 times). At \(\delta=0.5\) the ratios are 5.1 and 4.3.</li>
+<li><strong>Large shifts: Shewhart is fastest.</strong> At \(\delta=3\) Shewhart detects after 1.98 samples against 2.60 (EWMA) and 2.49 (CUSUM), because the other two need a few samples to accumulate.</li>
+<li><strong>EWMA and CUSUM are close.</strong> EWMA is better at \(\delta\le1\) (29.68 versus 35.30 at \(\delta=0.5\)); CUSUM is slightly ahead at \(\delta\ge2\) (3.87 versus 3.97 at \(\delta=2\)). At \(\delta=1.5\) they are nearly equal (5.59 and 5.56).</li>
+<li><strong>Skewed distribution.</strong> The median is below the mean: at \(\delta=1\) the median is 30 samples for Shewhart and 9 for both EWMA and CUSUM, so an occasional detection is much slower.</li>
+</ul>
+
+<h2>7. Experiment 2: isolated spikes and the 3-point median filter</h2>
+<p>Real sensors occasionally return a single bad sample. Simulation: each sample is replaced, with probability 0.2%, by a spike of \(\pm8\) standard deviations (isolated, random sign); 2,000 streams &times; 5,000 samples, the detector restarts after every alarm. The table gives alarms per 1,000 samples; the clean-data target is \(1000/370.4=2.70\).</p>
+<table>
+<thead><tr><th>Configuration</th><th>Clean data</th><th>With 0.2% spikes</th></tr></thead>
+<tbody>
+<tr><td>Shewhart, no filter</td><td>2.72</td><td>4.73</td></tr>
+<tr><td>EWMA, no filter</td><td>2.68</td><td>4.52</td></tr>
+<tr><td>CUSUM, no filter</td><td>2.64</td><td>4.62</td></tr>
+<tr><td>Shewhart, after median-3</td><td>4.20</td><td>4.51</td></tr>
+<tr><td>EWMA, after median-3</td><td>2.71</td><td><strong>2.80</strong></td></tr>
+<tr><td>CUSUM, after median-3</td><td>2.69</td><td><strong>2.79</strong></td></tr>
+</tbody></table>
+<ul>
+<li><strong>Spikes add almost exactly 2 false alarms per 1,000 samples</strong> (the spike frequency 0.002 &times; 1,000) for all three unfiltered detectors: one 8-sigma spike exceeds the threshold of every one of them.</li>
+<li><strong>Median-3 removes isolated spikes</strong>: after the filter, EWMA and CUSUM go from 2.71 to 2.80 and from 2.69 to 2.79 only.</li>
+<li><strong>Shewhart after median-3 has 4.20 alarms per 1,000 samples on clean data</strong>, above the 2.70 target even though its ARL\(_0\) to the first alarm is still 371.6. This is consistent with median-3 making neighbouring samples correlated, so alarms arrive in clusters; the script does not measure the clusters directly.</li>
+</ul>
+<p><strong>The price of the filter</strong> (ARL\(_0\) recalibrated to 370.4 on the filtered data; ARL\(_1\) counted from the first shifted sample):</p>
+<table>
+<thead><tr><th>\(\delta\)</th><th>Shewhart</th><th>EWMA</th><th>CUSUM</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>100.66 &plusmn; 0.70</td><td>34.61 &plusmn; 0.19</td><td>38.93 &plusmn; 0.22</td></tr>
+<tr><td>1.0</td><td>23.17 &plusmn; 0.16</td><td>11.34 &plusmn; 0.04</td><td>11.55 &plusmn; 0.04</td></tr>
+<tr><td>1.5</td><td>8.23 &plusmn; 0.05</td><td>6.76 &plusmn; 0.02</td><td>6.71 &plusmn; 0.02</td></tr>
+<tr><td>2.0</td><td>4.27 &plusmn; 0.02</td><td>5.03 &plusmn; 0.01</td><td>4.95 &plusmn; 0.01</td></tr>
+<tr><td>3.0</td><td>2.30 &plusmn; 0.01</td><td>3.63 &plusmn; 0.00</td><td>3.52 &plusmn; 0.00</td></tr>
+</tbody></table>
+<p>For EWMA the filter adds 1.7 samples of delay at \(\delta=1\) (9.65 to 11.34), 1.0 at \(\delta=3\) (2.60 to 3.63) and 4.9 at \(\delta=0.5\) (29.68 to 34.61). Shewhart, in contrast, gains: median-3 reduces the noise variance, so the calibrated threshold drops to 1.93 and ARL\(_1\) at \(\delta=1\) falls from 43.34 to 23.17 (still twice EWMA).</p>
+
+<h2>8. Experiment 3: autocorrelated noise</h2>
+<p>Real sensor noise is rarely white: temperature, voltage and vibration are usually correlated between adjacent samples. Keeping the thresholds calibrated for white noise (no filter) and replacing the noise with an AR(1) process \(e_t=\varphi e_{t-1}+\sqrt{1-\varphi^2}\,\eta_t\) with marginal variance 1, ARL\(_0\) was measured (20,000 streams per cell):</p>
+<table>
+<thead><tr><th>\(\varphi\)</th><th>Shewhart</th><th>EWMA</th><th>CUSUM</th></tr></thead>
+<tbody>
+<tr><td>0 (white noise)</td><td>362.6 &plusmn; 2.6</td><td>371.4 &plusmn; 2.6</td><td>380.5 &plusmn; 2.7</td></tr>
+<tr><td>0.3</td><td>365.2 &plusmn; 2.6</td><td>96.6 &plusmn; 0.7</td><td>85.9 &plusmn; 0.6</td></tr>
+<tr><td>0.5</td><td>385.2 &plusmn; 2.7</td><td>52.5 &plusmn; 0.3</td><td>47.6 &plusmn; 0.3</td></tr>
+<tr><td>0.7</td><td>457.7 &plusmn; 3.3</td><td>33.5 &plusmn; 0.2</td><td>31.9 &plusmn; 0.2</td></tr>
+</tbody></table>
+<ul>
+<li><strong>EWMA and CUSUM fail quickly.</strong> With \(\varphi=0.3\) alone, false alarms arrive after about 90 samples instead of 370 (EWMA 96.6, CUSUM 85.9); at \(\varphi=0.7\), after about 33 samples, roughly 11 times the designed false-alarm rate.</li>
+<li><strong>Cause for EWMA</strong> (derived from a formula and checked with a separate short simulation, not part of the script): for AR(1) noise the variance of \(z\) exceeds the white-noise value \(\lambda/(2-\lambda)\) by the factor \((1+a\varphi)/(1-a\varphi)\), \(a=1-\lambda\). The factor is 1.71 at \(\varphi=0.3\), 2.56 at \(\varphi=0.5\) and 4.16 at \(\varphi=0.7\) (simulation: 1.69, 2.53, 4.08); the standard deviation of \(z\) is 1.31, 1.60 and 2.04 times larger, so a threshold set for white noise is effectively that many times lower.</li>
+<li><strong>Shewhart does not fail but its ARL\(_0\) grows</strong> (457.7 at \(\varphi=0.7\)): the per-sample probability of exceeding the limit is unchanged (the marginal distribution is still normal), and the longer wait to the first alarm is consistent with exceedances arriving in clusters; the script does not measure the clusters directly.</li>
+</ul>
+
+<h2>9. Experiment 4: integer arithmetic on a microcontroller</h2>
+<p>EWMA with \(\lambda=1/8\) in integers: \(x\) is rounded to a multiple of \(1/\text{scale}\) standard deviations, then \(z\mathrel{+}=(x-z)\gg3\). A signed right shift is a floor operation, so each step biases \(z\) by \(-7/16\) of the least significant bit (LSB) on average, and the steady state is biased by about \(-3.5\) LSB (derived from \(-(7/16)/\lambda\)). Using exactly the floating-point threshold \((L=2.7617)\) at different resolutions:</p>
+<table>
+<thead><tr><th>Resolution of 1 LSB</th><th>Max deviation from float (one 2,000-sample stream)</th><th>ARL\(_0\)</th><th>ARL\(_1\), \(\delta=1\)</th><th>ARL\(_1\), \(\delta=2\)</th></tr></thead>
+<tbody>
+<tr><td>float</td><td>&mdash;</td><td>372.0 &plusmn; 2.6</td><td>9.65 &plusmn; 0.03</td><td>3.97 &plusmn; 0.01</td></tr>
+<tr><td>1/256 standard deviation</td><td>0.0197 &sigma;</td><td>369.3 &plusmn; 2.6</td><td>9.83 &plusmn; 0.03</td><td>4.00 &plusmn; 0.01</td></tr>
+<tr><td>1/64</td><td>0.0849 &sigma;</td><td>321.3 &plusmn; 2.2</td><td>10.42 &plusmn; 0.04</td><td>4.09 &plusmn; 0.01</td></tr>
+<tr><td>1/16</td><td>0.3346 &sigma;</td><td>121.6 &plusmn; 0.8</td><td>14.29 &plusmn; 0.06</td><td>4.58 &plusmn; 0.01</td></tr>
+<tr><td>1/8</td><td>0.7143 &sigma;</td><td>33.8 &plusmn; 0.2</td><td>22.29 &plusmn; 0.11</td><td>5.12 &plusmn; 0.01</td></tr>
+</tbody></table>
+<p>At 1/256 \(\sigma\) the integer version almost coincides with the float version: ARL\(_0\) is off by 0.7%, ARL\(_1\) by 1.9% at \(\delta=1\). Coarser resolutions make ARL\(_0\) collapse (321, 122, then 34): the systematic offset of \(-3.5\) LSB is 0.055 \(\sigma\), 0.22 \(\sigma\) and 0.44 \(\sigma\) at the three coarser settings, against a threshold distance of \(L\sqrt{\lambda/(2-\lambda)}=0.713\sigma\), and ARL\(_1\) also gets worse because \(z\) is pulled toward negative values. The script does not try remedies for this offset (for example adding a correction before the shift, or rounding to nearest instead of flooring).</p>
+
+<h2>10. Limitations</h2>
+<ul>
+<li>All data are simulated Gaussian noise with \(\mu_0\) and \(\sigma\) known exactly. On a real device \(\mu_0,\sigma\) must be estimated from an initial segment, and estimation error shifts ARL\(_0\); the experiments do not measure this.</li>
+<li>Only a step shift in the mean (present from the very first sample) was tried, not slow drift (a ramp), variance changes or heavy-tailed noise. ARL values are means; the distribution is skewed, so medians are lower and some detections are much slower.</li>
+<li>Experiment 3 only shows that white-noise thresholds fail under correlated noise; it does not try remedies (recalibrating the threshold on measured noise, whitening with an AR model, sub-sampling) or check whether they preserve ARL\(_1\).</li>
+<li>The spikes in Experiment 2 are of one kind (isolated, fixed amplitude 8\(\sigma\)); adjacent spikes or smaller ones were not tried.</li>
+<li>The post only measures numerical behaviour in simulation; it does not measure run time, energy or code size on a real microcontroller.</li>
+</ul>
+
+<h2>11. Practical conclusions</h2>
+<ol>
+<li>Comparing detectors only makes sense after ARL\(_0\) is equalised: at one false alarm per 370 samples, EWMA and CUSUM detect a 1-sigma shift after about 10 samples, 4.3&ndash;4.5 times faster than a single-sample limit (43 samples).</li>
+<li>Use the single-sample limit only when large changes (about 3 standard deviations and up) matter; for small shifts choose EWMA or CUSUM. EWMA is simpler (one variable, one bit shift); CUSUM is slightly ahead for shifts of 2 standard deviations and more.</li>
+<li>Put a 3-point median filter in front of the detector if the sensor produces isolated spikes; the measured price is about 1&ndash;5 samples of extra delay.</li>
+<li>Measure the autocorrelation of the noise on real data before choosing thresholds: for \(\varphi\ge0.3\) the white-noise threshold makes EWMA/CUSUM raise about 4 times (\(\varphi=0.3\)) to more than 11 times (\(\varphi=0.7\)) as many false alarms.</li>
+<li>When implementing EWMA in integers, a resolution of 1/256 standard deviation keeps ARL\(_0\) within about 1% of float; at 1/64 ARL\(_0\) drops 14%, at 1/16 about 67%, because the floor in the right shift gives a systematic negative offset.</li>
+</ol>
+
+<div class="cta-box"><strong>Need sensor monitoring, anomaly detection or an edge-AI/IoT data pipeline?</strong><br>
+I take this on as a freelancer. Describe the project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Sensor%20monitoring%20project">Get a quote</a> <a class="btn ghost" href="/en/solutions/custom-ai-tools.html">Custom AI tools</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>E. S. Page. &ldquo;Continuous inspection schemes.&rdquo; <em>Biometrika</em> 41(1&ndash;2), 1954, pp. 100&ndash;115. <a href="https://doi.org/10.1093/biomet/41.1-2.100">doi:10.1093/biomet/41.1-2.100</a>.</li>
+<li>S. W. Roberts. &ldquo;Control chart tests based on geometric moving averages.&rdquo; <em>Technometrics</em> 1(3), 1959, pp. 239&ndash;250. <a href="https://doi.org/10.1080/00401706.1959.10489860">doi:10.1080/00401706.1959.10489860</a>.</li>
+<li>G. Lorden. &ldquo;Procedures for reacting to a change in distribution.&rdquo; <em>The Annals of Mathematical Statistics</em> 42(6), 1971, pp. 1897&ndash;1908. <a href="https://doi.org/10.1214/aoms/1177693055">doi:10.1214/aoms/1177693055</a>.</li>
+<li>N. Gallagher and G. Wise. &ldquo;A theoretical analysis of the properties of median filters.&rdquo; <em>IEEE Transactions on Acoustics, Speech, and Signal Processing</em> 29(6), 1981, pp. 1136&ndash;1141. <a href="https://doi.org/10.1109/TASSP.1981.1163708">doi:10.1109/TASSP.1981.1163708</a>.</li>
+<li>D. Siegmund. <em>Sequential Analysis: Tests and Confidence Intervals</em>. Springer Series in Statistics, Springer, 1985. <a href="https://doi.org/10.1007/978-1-4757-1862-1">doi:10.1007/978-1-4757-1862-1</a>.</li>
+<li>G. V. Moustakides. &ldquo;Optimal stopping times for detecting changes in distributions.&rdquo; <em>The Annals of Statistics</em> 14(4), 1986, pp. 1379&ndash;1387. <a href="https://doi.org/10.1214/aos/1176350164">doi:10.1214/aos/1176350164</a>.</li>
+<li>J. M. Lucas and M. S. Saccucci. &ldquo;Exponentially weighted moving average control schemes: properties and enhancements.&rdquo; <em>Technometrics</em> 32(1), 1990, pp. 1&ndash;12. <a href="https://doi.org/10.1080/00401706.1990.10484583">doi:10.1080/00401706.1990.10484583</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/stream_change_detection.py">stream_change_detection.py</a> (Python 3.12, NumPy, Matplotlib; about 11 minutes). Every number in Sections 5&ndash;9 is output of this script, except the variance factors 1.71, 2.56, 4.16 (formula) and 1.69, 2.53, 4.08 (separate short simulation) in Section 8.</p>
+<aside class="aff-box"><h3>Common IoT / AIoT parts</h3><p>Boards and sensors commonly used for prototyping: ESP32-S3 for small models, a temperature/humidity sensor and a Zigbee bridge for sensor networks.</p><ul><li><a href="https://s.shopee.vn/AUvJ7Ugukh" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED</a> <span class="price">₫105.000</span></li><li><a href="https://s.shopee.vn/3B8iO1zd11" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)</a> <span class="price">₫170.000</span></li><li><a href="https://s.shopee.vn/4qGwN7QQYU" rel="sponsored nofollow noopener" target="_blank">SHT40/SHT41/SHT45 temperature &amp; humidity sensor module</a> <span class="price">₫123.640</span></li><li><a href="https://s.shopee.vn/7fb7kNXg67" rel="sponsored nofollow noopener" target="_blank">SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge</a> <span class="price">₫504.900</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>
