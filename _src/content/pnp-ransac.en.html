@@ -1,0 +1,177 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-15 &middot; 3D reconstruction &middot; ~16 min read</p>
+<h1>PnP and RANSAC: camera pose from 2D&ndash;3D matches with wrong matches, implemented from scratch</h1>
+<p class="meta">Once 3D points exist (triangulation, bundle adjustment), a new image has to be located relative to them: given 3D points \(X_i\) and their pixels \(u_i\), find the camera \(R,t\). That is the Perspective-n-Point (PnP) problem. Real feature matching always contains wrong matches, and this post measures what that does: a linear DLT solver, Gauss-Newton refinement and RANSAC implemented in NumPy and tested on synthetic scenes with a known true pose.</p>
+
+<h2>1. Background</h2>
+<p>In the 3D-reconstruction thread of this blog, the <a href="@@L@@/blog/essential-matrix.html">essential matrix</a> gives the relative motion between two images, <a href="@@L@@/blog/triangulation-dlt.html">triangulation</a> gives 3D points and <a href="@@L@@/blog/bundle-adjustment.html">bundle adjustment</a> refines everything. Once a 3D point map exists, later images are usually not processed from scratch: features of the new image are matched to the known 3D points and PnP gives the camera pose. Two practical issues decide quality: (1) feature matching always produces some fraction of wrong matches (outliers), and (2) the solver must remain stable when only a few points are used. This post implements a minimal pipeline (DLT, Gauss-Newton, RANSAC), measures each link and says plainly where it falls short.</p>
+
+<h2>2. The problem</h2>
+<p>The camera intrinsics \(K\) are known. A 3D point \(X_i\) (world frame) projects to pixel \(u_i\) with \(\lambda_i\,K^{-1}\tilde u_i = R X_i + t\); with normalised coordinates \(x_i=K^{-1}\tilde u_i=(x_i,y_i,1)^\top\) this reads \(x_i\sim [R\,|\,t]\,\tilde X_i\). The unknowns are \(R\in SO(3)\) and \(t\in\mathbb R^3\): 6 degrees of freedom, and each match gives 2 equations, so in principle 3 matches suffice. With 3 points (the P3P problem) there are up to 4 solutions (Gao et al., 2003), so in practice at least one more point is needed to choose. EPnP (Lepetit et al., 2009) solves for \(n\ge4\) in \(O(n)\) time. This post implements neither P3P nor EPnP and uses DLT instead; the reason and the cost are measured in Sections 7 and 9.</p>
+
+<h2>3. Three components</h2>
+<p><strong>DLT (Direct Linear Transform).</strong> Let \(P=[R\,|\,t]\) with rows \(p_1^\top,p_2^\top,p_3^\top\) and \(\tilde X_i\) the homogeneous coordinates. Each match gives two linear equations in the 12 entries of \(P\):</p>
+$$x_i\,(p_3^\top\tilde X_i)-p_1^\top\tilde X_i=0,\qquad y_i\,(p_3^\top\tilde X_i)-p_2^\top\tilde X_i=0.$$
+<p>With \(n\ge6\) matches there are \(2n\ge12\) equations, and \(P\) (up to scale) is the right singular vector of the smallest singular value (SVD). The left \(3\times3\) block must then be forced into a rotation: SVD \(P_{:,1:3}=U\,\mathrm{diag}(s)\,V^\top\), take \(R=UV^\top\), scale \(s=\mathrm{mean}(s_i)\) and \(t=P_{:,4}/s\) (flip the sign of \(P\) if the determinant is negative). DLT does not use the constraint \(R\in SO(3)\) while solving and does not minimise reprojection error; it provides an initial solution.</p>
+<p><strong>Gauss-Newton on reprojection error.</strong> Minimise \(\sum_i\|\pi(RX_i+t)-u_i\|^2\) where \(\pi\) is the projection. Update \(R\leftarrow\exp([\omega]_\times)R\), \(t\leftarrow t+\delta t\); with \(X_c=RX+t\) we have \(\delta X_c=-[X_c]_\times\omega+\delta t\), so the Jacobian of one match is \(\partial\pi/\partial X_c\cdot[-[X_c]_\times\,|\,I]\) (a \(2\times6\) matrix). Solve \((J^\top J+\lambda\,\mathrm{diag}(J^\top J))\,\Delta=-J^\top r\) with \(\lambda=10^{-6}\), at most 15&ndash;30 iterations.</p>
+<p><strong>RANSAC</strong> (Fischler and Bolles, 1981). Repeat: draw \(s\) random matches, solve DLT, count matches whose reprojection error is below a threshold \(\tau\) (inliers), keep the hypothesis with most inliers (ties: lower truncated cost), and finally re-estimate from all inliers (DLT then Gauss-Newton, at most 3 rounds). The number of iterations is adaptive: if the inlier ratio is \(w=1-\varepsilon\), the probability that a sample of \(s\) points is entirely clean is \(w^s\), so to have at least one clean sample with probability \(p\) requires</p>
+$$N=\left\lceil\frac{\log(1-p)}{\log\bigl(1-(1-\varepsilon)^s\bigr)}\right\rceil.$$
+<p>Here \(s=6\) (the minimal sample size for DLT), \(p=0.99\), a cap of 6000 iterations, and \(w\) is taken from the best hypothesis so far. The formula counts clean samples; a clean sample is not necessarily a good model, which Section 7 measures directly. Values of \(N\) for several \(s\) (formula, not measurements):</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>\(s=3\)</th><th>\(s=4\)</th><th>\(s=6\)</th><th>\(s=8\)</th></tr></thead>
+<tbody>
+<tr><td>0.1</td><td>4</td><td>5</td><td>7</td><td>9</td></tr>
+<tr><td>0.3</td><td>11</td><td>17</td><td>37</td><td>78</td></tr>
+<tr><td>0.5</td><td>35</td><td>72</td><td>293</td><td>1177</td></tr>
+<tr><td>0.7</td><td>169</td><td>567</td><td>6315</td><td>70188</td></tr>
+</tbody></table>
+
+<h2>4. Implementation</h2>
+<p>The <a href="/blog/code/pnp_ransac.py">full script</a> (synthetic scene, three solvers, the experiments, two figures; about 15 minutes on one core) can be downloaded. The core of the DLT and the RANSAC loop:</p>
+<pre><code class="language-python">def dlt_pose(X, uv):
+    xn = (uv[:, 0] - CX) / F; yn = (uv[:, 1] - CY) / F          # normalised coordinates
+    Xh = np.column_stack([X, np.ones(len(X))])
+    A = np.zeros((2 * len(X), 12))
+    A[0::2, 0:4] = Xh;  A[0::2, 8:12] = -xn[:, None] * Xh      # x (p3.X) - p1.X = 0
+    A[1::2, 4:8] = Xh;  A[1::2, 8:12] = -yn[:, None] * Xh      # y (p3.X) - p2.X = 0
+    P = np.linalg.svd(A, full_matrices=False)[2][-1].reshape(3, 4)
+    if np.linalg.det(P[:, :3]) &lt; 0: P = -P
+    U, S, Vt = np.linalg.svd(P[:, :3])
+    return U @ Vt, P[:, 3] / S.mean()                           # R in SO(3), t
+
+def ransac(X, uv, tau, rng, p=0.99, s=6, max_iter=6000):
+    best_cnt, best_cost, need, it = -1, np.inf, max_iter, 0
+    while it &lt; min(need, max_iter):
+        it += 1
+        idx = rng.choice(len(X), s, replace=False)
+        R, t = dlt_pose(X[idx], uv[idx])
+        r = residuals(R, t, X, uv)
+        cnt, cost = int((r &lt; tau).sum()), float((np.minimum(r, tau) ** 2).sum())
+        if cnt &gt; best_cnt or (cnt == best_cnt and cost &lt; best_cost):
+            best_cnt, best_cost, best = cnt, cost, (R, t)
+            need = n_iter_needed(cnt / len(X), s, p)            # adaptive stopping
+    return refine(X, uv, *best, tau)                            # DLT + Gauss-Newton on all inliers
+</code></pre>
+
+<h2>5. Experimental setup</h2>
+<p>Synthetic scene: 200 3D points, camera \(f=800\) px, principal point \((320,240)\), image \(640\times480\). Each point sits at a random depth \(z\) in \([4,8]\) (scene units) and a uniformly random image position in \([40,600]\times[40,440]\); the camera is rotated by 5&ndash;30&deg; about a random axis and its centre is about 0.3 from the origin. Every pixel coordinate gets \(N(0,\sigma^2)\) noise (default \(\sigma=1\) px). Outliers: a fraction \(\varepsilon\) of the matches is replaced by a uniformly random pixel over the whole image (completely wrong matches); the outlier sets are nested through one fixed permutation, so the rows of a table share the same scenes. Everything is seeded. Success means rotation error below 1&deg; <em>and</em> camera-centre error below 0.1 scene units. &ldquo;Oracle&rdquo; is DLT + Gauss-Newton on the true matches only (a lower bound RANSAC cannot beat, because it does not know which matches are right). Scenes per row: 60 (30 for the \(\tau\) table).</p>
+<p><strong>Checks before trusting anything.</strong> Without noise, DLT on 200 points gives rotation error 0 (to numerical precision) and centre error \(5.9\times10^{-16}\); on exactly 6 points the rotation error is still 0. The post's Gauss-Newton and <code>scipy.optimize.least_squares</code> (LM) on the same noisy scene (\(\sigma=1\)) reach the same solution: camera centres differ by \(4.2\times10^{-10}\) and the reprojection RMS is the same, 1.4616 px; the expected RMS at the least-squares solution is \(\sigma\sqrt{2(1-6/400)}\approx1.404\) px, and 1.46 px is a random sample near that value.</p>
+
+<h2>6. Experiment 1: the linear solver cannot survive outliers; RANSAC copes up to 50 %</h2>
+<p>First, how many wrong matches break DLT? The table uses 200 points, \(\sigma=1\) px, 60 scenes per row; the number of wrong matches is \(200\varepsilon\).</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>Wrong matches</th><th>DLT on all matches: median / p90 rotation error (&deg;)</th><th>Success</th><th>DLT + Gauss-Newton: median / p90 (&deg;)</th><th>Success</th></tr></thead>
+<tbody>
+<tr><td>0.0</td><td>0</td><td>0.08 / 0.1</td><td>100.0%</td><td>0.0 / 0.1</td><td>100.0%</td></tr>
+<tr><td>0.005</td><td>1</td><td>4.09 / 178.1</td><td>6.7%</td><td>57.4 / 179.4</td><td>28.3%</td></tr>
+<tr><td>0.01</td><td>2</td><td>7.85 / 179.0</td><td>0.0%</td><td>146.0 / 179.7</td><td>1.7%</td></tr>
+<tr><td>0.02</td><td>4</td><td>9.06 / 177.0</td><td>0.0%</td><td>144.5 / 179.5</td><td>0.0%</td></tr>
+<tr><td>0.05</td><td>10</td><td>10.32 / 177.2</td><td>0.0%</td><td>134.9 / 179.1</td><td>0.0%</td></tr>
+</tbody></table>
+<ul>
+<li><strong>A single wrong match out of 200 already breaks DLT in most scenes.</strong> With \(\varepsilon=0.005\) (one wrong match) the median rotation error is 4.1&deg; but p90 is 178&deg;: in at least 10 % of scenes the rotation error is close to 180&deg;; only 6.7% of scenes meet the success criterion.</li>
+<li><strong>Gauss-Newton refinement does not rescue it</strong> and makes it worse (median 57&deg; with one wrong match; 146&deg; with two): starting from a wrong initial solution, Gauss-Newton converges to a local minimum far from the true pose.</li>
+<li><strong>An order-of-magnitude explanation</strong> (reasoning, not measured separately): the algebraic residual of a correct match is about \(\sigma/f\cdot z\approx0.0013\times6\approx0.0075\), while that of a wrong match is typically about 0.3 normalised units times the depth, i.e. 1&ndash;2; the squared residuals differ by tens of thousands, so one wrong match can dominate the objective of the 199 correct ones.</li>
+</ul>
+<p>The main table, with outlier fractions from 0 to 60 %:</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>DLT on all matches: median / p90 (&deg;)</th><th>Success</th><th>DLT + GN on all matches: median (&deg;)</th><th>Success</th><th>RANSAC + refinement: median / p90 (&deg;)</th><th>Success</th><th>Oracle: median (&deg;)</th></tr></thead>
+<tbody>
+<tr><td>0.0</td><td>0.084 / 0.1</td><td>100.0%</td><td>0.040</td><td>100.0%</td><td>0.0403 / 0.0606</td><td>100.0%</td><td>0.0398</td></tr>
+<tr><td>0.1</td><td>152.544 / 177.9</td><td>0.0%</td><td>137.685</td><td>0.0%</td><td>0.0395 / 0.0616</td><td>100.0%</td><td>0.0378</td></tr>
+<tr><td>0.2</td><td>54.704 / 176.8</td><td>0.0%</td><td>136.572</td><td>0.0%</td><td>0.0408 / 0.0647</td><td>100.0%</td><td>0.0412</td></tr>
+<tr><td>0.3</td><td>163.327 / 178.2</td><td>0.0%</td><td>129.822</td><td>0.0%</td><td>0.0427 / 0.0683</td><td>100.0%</td><td>0.0416</td></tr>
+<tr><td>0.4</td><td>161.294 / 178.6</td><td>0.0%</td><td>119.114</td><td>0.0%</td><td>0.0477 / 0.0764</td><td>100.0%</td><td>0.0462</td></tr>
+<tr><td>0.5</td><td>169.544 / 178.1</td><td>0.0%</td><td>142.067</td><td>0.0%</td><td>0.0531 / 0.0836</td><td>98.3%</td><td>0.0504</td></tr>
+<tr><td>0.6</td><td>130.130 / 177.7</td><td>0.0%</td><td>125.214</td><td>0.0%</td><td>0.1936 / 160.1095</td><td>55.0%</td><td>0.0554</td></tr>
+</tbody></table>
+<ul>
+<li><strong>RANSAC + refinement is close to the oracle up to \(\varepsilon=0.5\)</strong>: median rotation error 0.040&deg; with no outliers and 0.053&deg; at 50 % (oracle 0.040&deg; and 0.050&deg;); 100 % success in the rows from 0 to 0.4 and 98.3% at 0.5. The error grows with \(\varepsilon\) because fewer correct matches remain to refine with.</li>
+<li><strong>At \(\varepsilon=0.6\) RANSAC collapses</strong>: success is only 55.0% and p90 of the rotation error is 160.1&deg; (the median is still 0.194&deg; because more than half of the scenes are right); the mean iteration count of 5959.6 almost always hits the cap of 6000, while the formula gives 1123. This is consistent with the Section 7 result (clean samples rarely give a good hypothesis), but the experiment does not isolate the cause and does not try a cap above 6000.</li>
+<li><strong>At \(\varepsilon=0\)</strong> RANSAC does not improve on DLT + Gauss-Newton over all matches (both 0.04&deg;), and plain DLT gives 0.084&deg;: the refinement step, not RANSAC, is what reduces error on clean data.</li>
+</ul>
+<figure><img src="/assets/img/blog/pnp-ransac-example.svg" alt="Two plots: on the left the 640x480 image plane with matches accepted by RANSAC (green dots) and rejected (red crosses), with red arrows to the position projected by the RANSAC pose; on the right a log-scale histogram of reprojection errors under two poses, plain DLT on all 200 matches (orange) and RANSAC (blue), with a vertical line at the 3 px threshold" width="920" height="390">
+<figcaption>Figure 1. One scene (seed 7) with 40 % outliers. RANSAC stopped after 4225 iterations and accepted 119 of 200 matches (119 of the 120 correct ones, 0 wrong ones); plain DLT on all 200 matches gives rotation error 33.51&deg; and places at least half of the matches behind the camera (the script assigns them infinite error; the plot clips at 999 px), while RANSAC gives 0.081&deg;; the median reprojection error of the correct matches under the RANSAC pose is 0.99 px. This is one scene; the table in Section 6 is statistics over 60 scenes.</figcaption></figure>
+
+<h2>7. Number of iterations: the formula versus reality</h2>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>\(N\) from the formula (\(s=6\), \(p=0.99\))</th><th>Mean iterations measured</th><th>Maximum iterations</th><th>Clean-sample fraction measured</th><th>\((1-\varepsilon)^6\)</th></tr></thead>
+<tbody>
+<tr><td>0.0</td><td>1</td><td>313.7</td><td>1528</td><td>1.0000</td><td>1.0000</td></tr>
+<tr><td>0.1</td><td>7</td><td>553.5</td><td>2680</td><td>0.5316</td><td>0.5314</td></tr>
+<tr><td>0.2</td><td>16</td><td>1100.3</td><td>4185</td><td>0.2572</td><td>0.2621</td></tr>
+<tr><td>0.3</td><td>37</td><td>2636.4</td><td>6000</td><td>0.1110</td><td>0.1176</td></tr>
+<tr><td>0.4</td><td>97</td><td>4489.4</td><td>6000</td><td>0.0433</td><td>0.0467</td></tr>
+<tr><td>0.5</td><td>293</td><td>5843.2</td><td>6000</td><td>0.0142</td><td>0.0156</td></tr>
+<tr><td>0.6</td><td>1123</td><td>5959.6</td><td>6000</td><td>0.0036</td><td>0.0041</td></tr>
+</tbody></table>
+<ul>
+<li><strong>The sampler is correct:</strong> the measured fraction of completely clean 6-point samples matches \((1-\varepsilon)^6\) (for example 0.5316 versus 0.5314 at \(\varepsilon=0.1\)).</li>
+<li><strong>But the actual iteration count far exceeds \(N\):</strong> at \(\varepsilon=0.3\) the formula gives 37 while RANSAC uses 2636.4 on average and some scenes hit the cap of 6000; at \(\varepsilon=0.1\) the formula gives 7 while RANSAC uses 553.5 on average; at \(\varepsilon=0\) the formula gives 1 but the mean is 313.7. The cause was measured separately (section 7 of the script output): with \(\varepsilon=0.3\), \(\sigma=1\) px, a 6-point sample that is <em>completely clean</em> yields a hypothesis that collects a median of <strong>0.0 %</strong> of the true inliers within 3 px (p90: 1.4 %), the share of clean samples collecting 90 % or more of the inliers is 0.0 %, and the rotation error of the clean hypothesis has median 2.70&deg; and p90 19.69&deg;. In other words, DLT from exactly 6 points with 1 px noise is badly conditioned: the formula for \(N\) assumes a clean sample gives a good model, which is not true here, and adapting to the best hypothesis so far stretches the iteration count.</li>
+<li>Most scenes still succeed because over thousands of tries a good clean sample occasionally appears, and the refinement step (DLT + Gauss-Newton on the inliers found) restores accuracy.</li>
+</ul>
+<figure><img src="/assets/img/blog/pnp-ransac-curves.svg" alt="Two plots against outlier fraction from 0 to 0.6: on the left rotation error (degrees, log scale, median and interquartile range) for plain DLT, DLT plus Gauss-Newton, RANSAC plus refinement and the oracle; on the right the number of iterations (log scale) from the formula, the measured mean and the measured maximum" width="920" height="370">
+<figcaption>Figure 2. Left: rotation error versus outlier fraction (60 scenes per point; shaded band is the interquartile range). Right: iterations from the formula \(N\), the measured mean and the measured maximum (cap 6000).</figcaption></figure>
+
+<h2>8. Experiment 2: pixel noise and the threshold \(\tau\)</h2>
+<p><strong>Noise.</strong> \(\varepsilon=0.3\), threshold \(\tau=3\sigma\), 60 scenes per row (rotation error in degrees; centre error in scene units):</p>
+<table>
+<thead><tr><th>\(\sigma\) (px)</th><th>RANSAC: median / p90 (&deg;)</th><th>Success</th><th>Oracle: median (&deg;)</th><th>RANSAC / oracle</th><th>Median centre error: RANSAC / oracle</th><th>Mean iterations</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>0.0211 / 0.0353</td><td>100.0%</td><td>0.0208</td><td>1.014</td><td>0.0022 / 0.0021</td><td>2451.2</td></tr>
+<tr><td>1.0</td><td>0.0421 / 0.0706</td><td>100.0%</td><td>0.0416</td><td>1.014</td><td>0.0044 / 0.0042</td><td>2453.0</td></tr>
+<tr><td>2.0</td><td>0.0843 / 0.1424</td><td>100.0%</td><td>0.0831</td><td>1.014</td><td>0.0089 / 0.0085</td><td>2461.2</td></tr>
+<tr><td>4.0</td><td>0.1685 / 0.2622</td><td>100.0%</td><td>0.1661</td><td>1.014</td><td>0.0179 / 0.0169</td><td>2906.6</td></tr>
+</tbody></table>
+<p>The error of RANSAC + refinement is proportional to \(\sigma\) and always about 1.01 times the oracle (the scenes of each row use the same standard-normal noise draws scaled by \(\sigma\), so proportionality is partly a consequence of the design). <strong>Threshold.</strong> \(\varepsilon=0.3\), \(\sigma=1\) px, 30 scenes per row; 140 matches are true inliers:</p>
+<table>
+<thead><tr><th>\(\tau\) (px)</th><th>Success</th><th>Median rotation error (&deg;)</th><th>p90 (&deg;)</th><th>Mean iterations</th><th>Matches kept (of 140 true inliers)</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>73.3%</td><td>0.3096</td><td>0.7310</td><td>6000.0</td><td>5.7</td></tr>
+<tr><td>1.0</td><td>96.7%</td><td>0.1759</td><td>0.4064</td><td>6000.0</td><td>33.0</td></tr>
+<tr><td>2.0</td><td>100.0%</td><td>0.0635</td><td>0.1130</td><td>4934.0</td><td>120.5</td></tr>
+<tr><td>3.0</td><td>100.0%</td><td>0.0411</td><td>0.0685</td><td>2678.9</td><td>138.4</td></tr>
+<tr><td>5.0</td><td>100.0%</td><td>0.0413</td><td>0.0665</td><td>844.8</td><td>140.0</td></tr>
+<tr><td>10.0</td><td>100.0%</td><td>0.0413</td><td>0.0663</td><td>168.4</td><td>140.1</td></tr>
+<tr><td>30.0</td><td>100.0%</td><td>0.0511</td><td>0.0967</td><td>45.6</td><td>140.9</td></tr>
+</tbody></table>
+<ul>
+<li><strong>A threshold that is too tight breaks RANSAC</strong>: at \(\tau=0.5\) px (smaller than the 1 px noise) only 5.7 matches are kept on average and success is 73.3%; the iteration count always hits the cap of 6000. At \(\tau=1\) px (equal to the noise) success is 96.7%.</li>
+<li><strong>A wide threshold is not free either</strong>: at \(\tau=30\) px the median rotation error rises to 0.051&deg; (against 0.041&deg; at \(\tau=3\) px), the number of matches kept is 140.9, more than the 140 true inliers, so outliers slipped in; the iteration count falls to 45.6 because almost every hypothesis collects many matches.</li>
+</ul>
+
+<h2>9. Experiment 3: coplanar points</h2>
+<p>When all 200 3D points lie on one plane (fixed depth 6), the 3&times;4 DLT is degenerate: the system matrix has rank below 11. Measured (\(\varepsilon=0.3\), \(\sigma=1\) px, 60 scenes, cap of 2000 iterations): with coplanar points DLT fails: success 0.0%, median rotation error 174.8&deg;, p90 179.4&deg;, mean iterations 2000 (the cap); with the same parameters and non-coplanar points: success 100.0%, median 0.043&deg;. A planar surface needs its own solver (for example one built on the plane homography, such as IPPE by Collins and Bartoli, 2014); this post neither implements nor tests it.</p>
+
+<h2>10. Limitations</h2>
+<ul>
+<li>Everything is synthetic data: exactly known intrinsics, no lens distortion, independent Gaussian noise, outliers that are uniformly random pixels. Real outliers have structure (repeated patterns, matches near the right place but off by tens of pixels) and are harder; they were not tested.</li>
+<li>The RANSAC solver is a 6-point DLT; Section 7 shows that hypotheses from clean samples are poor, so the iteration count is large and RANSAC fails at 60 % outliers. A minimal solver (P3P) or EPnP, which build more stable hypotheses from 3&ndash;5 points, ordered sampling (PROSAC, Chum and Matas, 2005) and the USAC framework (Raguram et al., 2013) were not tried; the post does not compare them and so does not claim how much faster they are.</li>
+<li>Success is defined as rotation error below 1&deg; and centre error below 0.1 scene units (depth 4&ndash;8); other thresholds give other rates. Scenes per row are 60 (30 in the \(\tau\) table), so the percentages carry sampling error of a few percent up to tens of percent in rows with partial failure.</li>
+<li>Run time and embedded-device performance were not measured; iteration count is the only cost measure.</li>
+</ul>
+
+<h2>11. Practical conclusions</h2>
+<ol>
+<li>Never solve linear PnP directly on unfiltered matches: in this experiment one wrong match out of 200 breaks DLT in most scenes, and Gauss-Newton from that solution does not rescue it.</li>
+<li>RANSAC + refinement on the inliers (DLT then Gauss-Newton) reaches error about 1.01 times the oracle at \(\varepsilon=0.3\) with \(\sigma\) from 0.5 to 4.0 px and still succeeds 98.3% at \(\varepsilon=0.5\); at \(\varepsilon=0.6\) (with the cap of 6000 iterations) only 55.0% remain. Condition: a threshold \(\tau\) of about \(3\sigma\) or somewhat wider.</li>
+<li>Do not trust the iteration count from \(N=\log(1-p)/\log(1-(1-\varepsilon)^s)\) when the minimal solver is poorly conditioned: measure how many inliers a clean sample collects; here it is close to zero and the actual iteration count exceeds the formula by 20 to 79 times at \(\varepsilon\) from 0.1 to 0.5.</li>
+<li>Coplanar 3D points need a dedicated solver; the 3&times;4 DLT failed in 100 % of the planar scenes in this experiment.</li>
+</ol>
+
+<div class="cta-box"><strong>Need camera localisation, 3D reconstruction or custom computer-vision work?</strong><br>
+I take on projects as a freelancer. Describe yours in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=3D%20reconstruction%20project">Get a quote</a> <a class="btn ghost" href="@@L@@/solutions/3d-reconstruction.html">3D reconstruction service</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>M. A. Fischler and R. C. Bolles. &ldquo;Random sample consensus: a paradigm for model fitting with applications to image analysis and automated cartography.&rdquo; <em>Communications of the ACM</em> 24(6), 1981, pp. 381&ndash;395. <a href="https://doi.org/10.1145/358669.358692">doi:10.1145/358669.358692</a>.</li>
+<li>X.-S. Gao, X.-R. Hou, J. Tang and H.-F. Cheng. &ldquo;Complete solution classification for the perspective-three-point problem.&rdquo; <em>IEEE TPAMI</em> 25(8), 2003, pp. 930&ndash;943. <a href="https://doi.org/10.1109/TPAMI.2003.1217599">doi:10.1109/TPAMI.2003.1217599</a>.</li>
+<li>V. Lepetit, F. Moreno-Noguer and P. Fua. &ldquo;EPnP: an accurate O(n) solution to the PnP problem.&rdquo; <em>International Journal of Computer Vision</em> 81(2), 2009, pp. 155&ndash;166. <a href="https://doi.org/10.1007/s11263-008-0152-6">doi:10.1007/s11263-008-0152-6</a>.</li>
+<li>O. Chum and J. Matas. &ldquo;Matching with PROSAC &mdash; progressive sample consensus.&rdquo; <em>CVPR 2005</em>, vol. 1, pp. 220&ndash;226. <a href="https://doi.org/10.1109/CVPR.2005.221">doi:10.1109/CVPR.2005.221</a>.</li>
+<li>R. Raguram, O. Chum, M. Pollefeys, J. Matas and J.-M. Frahm. &ldquo;USAC: a universal framework for random sample consensus.&rdquo; <em>IEEE TPAMI</em> 35(8), 2013, pp. 2022&ndash;2038. <a href="https://doi.org/10.1109/TPAMI.2012.257">doi:10.1109/TPAMI.2012.257</a>.</li>
+<li>T. Collins and A. Bartoli. &ldquo;Infinitesimal plane-based pose estimation.&rdquo; <em>International Journal of Computer Vision</em> 109(3), 2014, pp. 252&ndash;286. <a href="https://doi.org/10.1007/s11263-014-0725-5">doi:10.1007/s11263-014-0725-5</a>.</li>
+<li>R. Hartley and A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, 2nd edition. Cambridge University Press, 2004. ISBN 978-0-521-54051-3.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/pnp_ransac.py">pnp_ransac.py</a> (Python 3.12, NumPy, SciPy, Matplotlib). Every number in Sections 5&ndash;9 is output of this script, except the order-of-magnitude estimates marked in Section 6.</p>
+</article>

@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="pnp-ransac", date="2026-11-15", min=16, aff="calib",
+         og="/assets/img/blog/pnp-ransac-cover.png",
+         tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},
+         title={"vi": "PnP và RANSAC: ước lượng tư thế camera từ các khớp 2D-3D lẫn khớp sai, cài đặt từ đầu",
+                "en": "PnP and RANSAC: camera pose from 2D-3D matches with wrong matches, implemented from scratch"},
+         summary={"vi": "Định vị camera từ điểm 3D đã biết: DLT, Gauss-Newton và RANSAC cài bằng NumPy. Một khớp sai trên 200 làm DLT hỏng, RANSAC chịu được tới 50 % ngoại lai nhưng sụp đổ ở 60 %, mẫu sạch 6 điểm cho giả thuyết kém nên số lần lặp vượt công thức hàng chục lần, điểm đồng phẳng làm DLT thất bại.",
+                  "en": "Locating a camera from known 3D points: DLT, Gauss-Newton and RANSAC in NumPy. One wrong match in 200 breaks DLT, RANSAC copes with up to 50 % outliers but collapses at 60 %, clean 6-point samples give poor hypotheses so iterations exceed the formula many times over, and coplanar points make DLT fail."},
+         seo_title={"vi": "PnP và RANSAC: tư thế camera từ khớp 2D-3D có ngoại lai | Shopsmon",
+                    "en": "PnP and RANSAC: camera pose from 2D-3D matches with outliers | Shopsmon"},
+         seo_desc={"vi": "Cài đặt DLT, Gauss-Newton và RANSAC cho bài toán PnP bằng NumPy, đo trên cảnh tổng hợp: ảnh hưởng của ngoại lai, nhiễu, ngưỡng, số lần lặp và điểm đồng phẳng.",
+                   "en": "DLT, Gauss-Newton and RANSAC for PnP implemented in NumPy and measured on synthetic scenes: effect of outliers, noise, threshold, iteration count and coplanar points."}),
     dict(slug="stream-change-detection", date="2026-11-12", min=14, aff="iot",
          og="/assets/img/blog/stream-change-detection-cover.png",
          tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},

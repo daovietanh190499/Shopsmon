@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PnP và RANSAC: tư thế camera từ khớp 2D-3D có ngoại lai | Shopsmon</title>
+<meta name="description" content="Cài đặt DLT, Gauss-Newton và RANSAC cho bài toán PnP bằng NumPy, đo trên cảnh tổng hợp: ảnh hưởng của ngoại lai, nhiễu, ngưỡng, số lần lặp và điểm đồng phẳng.">
+<link rel="canonical" href="https://shopsmon.com/blog/pnp-ransac.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/pnp-ransac.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/pnp-ransac.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/pnp-ransac.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="PnP và RANSAC: tư thế camera từ khớp 2D-3D có ngoại lai | Shopsmon">
+<meta property="og:description" content="Cài đặt DLT, Gauss-Newton và RANSAC cho bài toán PnP bằng NumPy, đo trên cảnh tổng hợp: ảnh hưởng của ngoại lai, nhiễu, ngưỡng, số lần lặp và điểm đồng phẳng.">
+<meta property="og:url" content="https://shopsmon.com/blog/pnp-ransac.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/pnp-ransac-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/" class=active>Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/pnp-ransac.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-15 &middot; Tái tạo 3D &middot; ~16 phút đọc</p>
+<h1>PnP và RANSAC: ước lượng tư thế camera từ các khớp 2D&ndash;3D lẫn khớp sai, cài đặt từ đầu</h1>
+<p class="meta">Sau khi đã có điểm 3D (tam giác hoá, bundle adjustment), một ảnh mới phải được định vị so với chúng: biết điểm 3D \(X_i\) và pixel \(u_i\) tương ứng, tìm \(R,t\) của camera. Đó là bài toán Perspective-n-Point (PnP). Khớp đặc trưng ngoài đời luôn lẫn khớp sai, và bài này đo cụ thể điều đó gây ra gì: bộ giải tuyến tính DLT, tinh chỉnh Gauss-Newton và RANSAC được cài đặt bằng NumPy, thử trên cảnh tổng hợp có nghiệm đúng biết trước.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Trong chuỗi bài về tái tạo 3D trên blog này, <a href="/blog/essential-matrix.html">ma trận thiết yếu</a> cho chuyển động tương đối giữa hai ảnh, <a href="/blog/triangulation-dlt.html">tam giác hoá</a> cho điểm 3D và <a href="/blog/bundle-adjustment.html">bundle adjustment</a> tinh chỉnh tất cả. Khi bản đồ điểm 3D đã có, các ảnh tiếp theo thường không được xử lý lại từ đầu: người ta ghép đặc trưng của ảnh mới với các điểm 3D đã biết rồi giải PnP để lấy tư thế camera. Hai vấn đề thực tế quyết định chất lượng: (1) ghép đặc trưng luôn sinh ra một tỉ lệ khớp sai (ngoại lai), và (2) bộ giải phải đủ ổn định khi chỉ có số ít điểm. Bài này cài đặt một đường ống tối giản (DLT, Gauss-Newton, RANSAC), đo từng mắt xích và nêu rõ chỗ nó không đủ tốt.</p>
+
+<h2>2. Bài toán</h2>
+<p>Camera có ma trận nội tại \(K\) đã biết. Điểm 3D \(X_i\) (hệ thế giới) chiếu lên pixel \(u_i\) theo \(\lambda_i\,K^{-1}\tilde u_i = R X_i + t\), nghĩa là sau khi chuẩn hoá tọa độ \(x_i=K^{-1}\tilde u_i=(x_i,y_i,1)^\top\) thì \(x_i\sim [R\,|\,t]\,\tilde X_i\). Ẩn số là \(R\in SO(3)\) và \(t\in\mathbb R^3\): 6 bậc tự do, mỗi khớp cho 2 phương trình, nên về nguyên tắc cần tối thiểu 3 khớp. Với 3 điểm (bài toán P3P) có tối đa 4 nghiệm (Gao và cs, 2003), nên thực tế cần thêm ít nhất một điểm để chọn nghiệm. EPnP (Lepetit và cs, 2009) giải với \(n\ge4\) có độ phức tạp \(O(n)\). Bài này không cài P3P hay EPnP mà dùng DLT; lý do và cái giá được đo ở Mục 8 và 9.</p>
+
+<h2>3. Ba thành phần</h2>
+<p><strong>DLT (Direct Linear Transform).</strong> Đặt \(P=[R\,|\,t]\) có các hàng \(p_1^\top,p_2^\top,p_3^\top\) và \(\tilde X_i\) là tọa độ thuần nhất. Mỗi khớp cho hai phương trình tuyến tính trong 12 phần tử của \(P\):</p>
+$$x_i\,(p_3^\top\tilde X_i)-p_1^\top\tilde X_i=0,\qquad y_i\,(p_3^\top\tilde X_i)-p_2^\top\tilde X_i=0.$$
+<p>Với \(n\ge6\) khớp ta có \(2n\ge12\) phương trình và nghiệm \(P\) (sai khác hệ số) là vector suy biến phải ứng với giá trị suy biến nhỏ nhất (SVD). Sau đó cần ép khối \(3\times3\) bên trái về ma trận quay: phân rã SVD \(P_{:,1:3}=U\,\mathrm{diag}(s)\,V^\top\), lấy \(R=UV^\top\), hệ số \(s=\mathrm{mean}(s_i)\) và \(t=P_{:,4}/s\) (đổi dấu \(P\) nếu định thức âm). DLT không dùng ràng buộc \(R\in SO(3)\) khi giải và không tối thiểu sai số tái chiếu; nó cho nghiệm khởi tạo.</p>
+<p><strong>Gauss-Newton trên sai số tái chiếu.</strong> Cực tiểu \(\sum_i\|\pi(RX_i+t)-u_i\|^2\), với \(\pi\) là phép chiếu. Cập nhật \(R\leftarrow\exp([\omega]_\times)R\), \(t\leftarrow t+\delta t\); với \(X_c=RX+t\) thì \(\delta X_c=-[X_c]_\times\omega+\delta t\), nên Jacobian của một khớp là \(\partial\pi/\partial X_c\cdot[-[X_c]_\times\,|\,I]\) (ma trận \(2\times6\)). Giải \((J^\top J+\lambda\,\mathrm{diag}(J^\top J))\,\Delta=-J^\top r\) với \(\lambda=10^{-6}\), lặp tối đa 15&ndash;30 lần.</p>
+<p><strong>RANSAC</strong> (Fischler và Bolles, 1981). Lặp: chọn ngẫu nhiên \(s\) khớp, giải DLT, đếm số khớp có sai số tái chiếu nhỏ hơn ngưỡng \(\tau\) (inlier), giữ giả thuyết nhiều inlier nhất (hoà thì chọn giả thuyết có chi phí cắt cụt nhỏ hơn), cuối cùng ước lượng lại bằng mọi inlier (DLT rồi Gauss-Newton, tối đa 3 vòng). Số lần lặp chọn thích nghi: nếu tỉ lệ inlier là \(w=1-\varepsilon\), xác suất một mẫu \(s\) điểm hoàn toàn sạch là \(w^s\), nên để xác suất \(p\) có ít nhất một mẫu sạch cần</p>
+$$N=\left\lceil\frac{\log(1-p)}{\log\bigl(1-(1-\varepsilon)^s\bigr)}\right\rceil.$$
+<p>Ở đây \(s=6\) (cỡ mẫu tối thiểu của DLT), \(p=0{,}99\), trần 6000 lần lặp, và \(w\) lấy từ giả thuyết tốt nhất tính đến lúc đó. Công thức này đếm mẫu sạch; một mẫu sạch chưa chắc cho mô hình tốt, điều Mục 7 đo trực tiếp. Bảng giá trị \(N\) theo \(s\) (công thức, không phải đo đạc):</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>\(s=3\)</th><th>\(s=4\)</th><th>\(s=6\)</th><th>\(s=8\)</th></tr></thead>
+<tbody>
+<tr><td>0,1</td><td>4</td><td>5</td><td>7</td><td>9</td></tr>
+<tr><td>0,3</td><td>11</td><td>17</td><td>37</td><td>78</td></tr>
+<tr><td>0,5</td><td>35</td><td>72</td><td>293</td><td>1177</td></tr>
+<tr><td>0,7</td><td>169</td><td>567</td><td>6315</td><td>70188</td></tr>
+</tbody></table>
+
+<h2>4. Cài đặt</h2>
+<p><a href="/blog/code/pnp_ransac.py">Script đầy đủ</a> (cảnh tổng hợp, 3 bộ giải, các thí nghiệm, hai hình; khoảng 15 phút trên một lõi) tải về được. Lõi của DLT và vòng RANSAC:</p>
+<pre><code class="language-python">def dlt_pose(X, uv):
+    xn = (uv[:, 0] - CX) / F; yn = (uv[:, 1] - CY) / F          # normalised coordinates
+    Xh = np.column_stack([X, np.ones(len(X))])
+    A = np.zeros((2 * len(X), 12))
+    A[0::2, 0:4] = Xh;  A[0::2, 8:12] = -xn[:, None] * Xh      # x (p3.X) - p1.X = 0
+    A[1::2, 4:8] = Xh;  A[1::2, 8:12] = -yn[:, None] * Xh      # y (p3.X) - p2.X = 0
+    P = np.linalg.svd(A, full_matrices=False)[2][-1].reshape(3, 4)
+    if np.linalg.det(P[:, :3]) &lt; 0: P = -P
+    U, S, Vt = np.linalg.svd(P[:, :3])
+    return U @ Vt, P[:, 3] / S.mean()                           # R in SO(3), t
+
+def ransac(X, uv, tau, rng, p=0.99, s=6, max_iter=6000):
+    best_cnt, best_cost, need, it = -1, np.inf, max_iter, 0
+    while it &lt; min(need, max_iter):
+        it += 1
+        idx = rng.choice(len(X), s, replace=False)
+        R, t = dlt_pose(X[idx], uv[idx])
+        r = residuals(R, t, X, uv)
+        cnt, cost = int((r &lt; tau).sum()), float((np.minimum(r, tau) ** 2).sum())
+        if cnt &gt; best_cnt or (cnt == best_cnt and cost &lt; best_cost):
+            best_cnt, best_cost, best = cnt, cost, (R, t)
+            need = n_iter_needed(cnt / len(X), s, p)            # adaptive stopping
+    return refine(X, uv, *best, tau)                            # DLT + Gauss-Newton on all inliers
+</code></pre>
+
+<h2>5. Thiết lập thí nghiệm</h2>
+<p>Cảnh tổng hợp: 200 điểm 3D, camera \(f=800\) px, điểm chính \((320,240)\), ảnh \(640\times480\). Mỗi điểm được đặt ở độ sâu \(z\) ngẫu nhiên trong \([4,8]\) (đơn vị cảnh), vị trí ảnh ngẫu nhiên đều trong \([40,600]\times[40,440]\); camera xoay ngẫu nhiên 5&ndash;30&deg; quanh một trục ngẫu nhiên, tâm camera cách gốc cỡ 0,3. Mỗi tọa độ pixel được cộng nhiễu \(N(0,\sigma^2)\) (mặc định \(\sigma=1\) px). Ngoại lai: một phần \(\varepsilon\) khớp được thay bằng pixel ngẫu nhiên đều trên toàn ảnh (khớp sai hoàn toàn); các tập ngoại lai lồng nhau theo một thứ tự hoán vị cố định, nên các hàng của một bảng dùng cùng các cảnh. Mọi thứ có seed cố định. Thành công nghĩa là sai số quay nhỏ hơn 1&deg; <em>và</em> sai số vị trí tâm camera nhỏ hơn 0,1 đơn vị cảnh. &ldquo;Oracle&rdquo; là DLT + Gauss-Newton chỉ trên các khớp đúng (cận dưới mà RANSAC không thể vượt, vì nó không biết khớp nào đúng). Số cảnh mỗi hàng: 60 (riêng bảng ngưỡng \(\tau\) là 30).</p>
+<p><strong>Kiểm tra trước khi tin.</strong> Không nhiễu: DLT trên 200 điểm cho sai số quay 0 (đến độ chính xác số) và sai số tâm \(5{,}9\times10^{-16}\); trên đúng 6 điểm sai số quay vẫn 0. Gauss-Newton của bài và <code>scipy.optimize.least_squares</code> (phương pháp LM) chạy trên cùng một cảnh nhiễu \(\sigma=1\) cho cùng nghiệm: tâm camera lệch nhau \(4{,}2\times10^{-10}\), RMS tái chiếu cùng bằng 1,4616 px; giá trị kỳ vọng của RMS tại nghiệm bình phương tối thiểu là \(\sigma\sqrt{2(1-6/400)}\approx1{,}404\) px, và 1,46 px là một mẫu ngẫu nhiên gần giá trị đó.</p>
+
+<h2>6. Thí nghiệm 1: bộ giải tuyến tính không chịu nổi ngoại lai; RANSAC chịu được đến 50 %</h2>
+<p>Trước hết, bao nhiêu khớp sai thì DLT hỏng? Bảng dưới đây dùng 200 điểm, \(\sigma=1\) px, 60 cảnh mỗi hàng; số khớp sai là \(200\varepsilon\).</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>Số khớp sai</th><th>DLT mọi khớp: sai số quay trung vị / p90 (&deg;)</th><th>Thành công</th><th>DLT + Gauss-Newton: trung vị / p90 (&deg;)</th><th>Thành công</th></tr></thead>
+<tbody>
+<tr><td>0,0</td><td>0</td><td>0,08 / 0,1</td><td>100,0 %</td><td>0,0 / 0,1</td><td>100,0 %</td></tr>
+<tr><td>0,005</td><td>1</td><td>4,09 / 178,1</td><td>6,7 %</td><td>57,4 / 179,4</td><td>28,3 %</td></tr>
+<tr><td>0,01</td><td>2</td><td>7,85 / 179,0</td><td>0,0 %</td><td>146,0 / 179,7</td><td>1,7 %</td></tr>
+<tr><td>0,02</td><td>4</td><td>9,06 / 177,0</td><td>0,0 %</td><td>144,5 / 179,5</td><td>0,0 %</td></tr>
+<tr><td>0,05</td><td>10</td><td>10,32 / 177,2</td><td>0,0 %</td><td>134,9 / 179,1</td><td>0,0 %</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Chỉ một khớp sai trên 200 đã làm DLT hỏng ở phần lớn cảnh.</strong> Với \(\varepsilon=0{,}005\) (một khớp sai) sai số quay trung vị là 4,1&deg; nhưng p90 là 178&deg;: ở ít nhất 10 % cảnh sai số quay gần 180&deg;; chỉ 6,7 % cảnh thoả tiêu chí thành công.</li>
+<li><strong>Tinh chỉnh bằng Gauss-Newton không cứu được</strong> mà còn làm xấu đi (trung vị 57&deg; với một khớp sai; 146&deg; với hai): bắt đầu từ nghiệm khởi tạo sai, Gauss-Newton hội tụ về cực tiểu cục bộ xa nghiệm đúng.</li>
+<li><strong>Một cách giải thích bậc độ lớn</strong> (suy luận, không đo riêng): phần dư đại số của một khớp đúng cỡ \(\sigma/f\cdot z\approx0{,}0013\times6\approx0{,}0075\), còn của một khớp sai thường cỡ 0,3 độ dài chuẩn hoá nhân độ sâu, tức khoảng 1&ndash;2; bình phương phần dư chênh nhau hàng vạn lần, nên một khớp sai có thể chi phối cả hàm mục tiêu của 199 khớp đúng.</li>
+</ul>
+<p>Bảng chính, với tỉ lệ ngoại lai từ 0 đến 60 %:</p>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>DLT mọi khớp: trung vị / p90 (&deg;)</th><th>Thành công</th><th>DLT + GN mọi khớp: trung vị (&deg;)</th><th>Thành công</th><th>RANSAC + tinh chỉnh: trung vị / p90 (&deg;)</th><th>Thành công</th><th>Oracle: trung vị (&deg;)</th></tr></thead>
+<tbody>
+<tr><td>0,0</td><td>0,084 / 0,1</td><td>100,0 %</td><td>0,040</td><td>100,0 %</td><td>0,0403 / 0,0606</td><td>100,0 %</td><td>0,0398</td></tr>
+<tr><td>0,1</td><td>152,544 / 177,9</td><td>0,0 %</td><td>137,685</td><td>0,0 %</td><td>0,0395 / 0,0616</td><td>100,0 %</td><td>0,0378</td></tr>
+<tr><td>0,2</td><td>54,704 / 176,8</td><td>0,0 %</td><td>136,572</td><td>0,0 %</td><td>0,0408 / 0,0647</td><td>100,0 %</td><td>0,0412</td></tr>
+<tr><td>0,3</td><td>163,327 / 178,2</td><td>0,0 %</td><td>129,822</td><td>0,0 %</td><td>0,0427 / 0,0683</td><td>100,0 %</td><td>0,0416</td></tr>
+<tr><td>0,4</td><td>161,294 / 178,6</td><td>0,0 %</td><td>119,114</td><td>0,0 %</td><td>0,0477 / 0,0764</td><td>100,0 %</td><td>0,0462</td></tr>
+<tr><td>0,5</td><td>169,544 / 178,1</td><td>0,0 %</td><td>142,067</td><td>0,0 %</td><td>0,0531 / 0,0836</td><td>98,3 %</td><td>0,0504</td></tr>
+<tr><td>0,6</td><td>130,130 / 177,7</td><td>0,0 %</td><td>125,214</td><td>0,0 %</td><td>0,1936 / 160,1095</td><td>55,0 %</td><td>0,0554</td></tr>
+</tbody></table>
+<ul>
+<li><strong>RANSAC + tinh chỉnh gần bằng oracle tới \(\varepsilon=0{,}5\)</strong>: sai số quay trung vị 0,040&deg; khi không có ngoại lai và 0,053&deg; ở 50 % (oracle 0,040&deg; và 0,050&deg;); thành công 100 % ở các hàng từ 0 đến 0,4 và 98,3 % ở 0,5. Sai số tăng theo \(\varepsilon\) vì chỉ còn ít khớp đúng để tinh chỉnh.</li>
+<li><strong>Ở \(\varepsilon=0{,}6\) RANSAC sụp đổ</strong>: thành công chỉ 55,0 % và p90 của sai số quay là 160,1&deg; (trung vị vẫn 0,194&deg; vì hơn một nửa số cảnh còn đúng); số lần lặp trung bình 5959,6 gần như luôn chạm trần 6000, trong khi công thức cho 1123. Điều này phù hợp với kết quả ở Mục 7 (mẫu sạch hiếm khi cho giả thuyết tốt), nhưng thí nghiệm không tách riêng nguyên nhân và không thử trần lặp lớn hơn 6000.</li>
+<li><strong>Ở \(\varepsilon=0\)</strong> RANSAC không cải thiện so với DLT + Gauss-Newton trên mọi khớp (cùng 0,04&deg;), và DLT thô cho 0,084&deg;: bước tinh chỉnh, không phải RANSAC, là thứ giảm sai số khi dữ liệu sạch.</li>
+</ul>
+<figure><img src="/assets/img/blog/pnp-ransac-example.svg" alt="Hai đồ thị: bên trái là mặt phẳng ảnh 640x480 với các khớp được RANSAC chấp nhận (chấm xanh lá) và bị loại (dấu x đỏ) cùng mũi tên đỏ tới vị trí chiếu theo tư thế RANSAC; bên phải là histogram sai số tái chiếu theo thang log dưới hai tư thế, DLT thô trên toàn bộ 200 khớp (cam) và RANSAC (xanh dương), với đường dọc tại ngưỡng 3 px" width="920" height="390">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Một cảnh (seed 7) với 40 % ngoại lai. RANSAC dừng sau 4225 lần lặp, chấp nhận 119 trên 200 khớp (119 trong 120 khớp đúng, 0 khớp sai); DLT thô trên toàn bộ 200 khớp cho sai số quay 33,51&deg; và đặt ít nhất một nửa số khớp sau camera (script gán sai số vô hạn, hình cắt ở 999 px), còn RANSAC cho 0,081&deg;; sai số tái chiếu trung vị của các khớp đúng là 0,99 px dưới tư thế RANSAC. Đây là một cảnh; bảng ở Mục 6 là thống kê trên 60 cảnh.</figcaption></figure>
+
+<h2>7. Số lần lặp: công thức và thực tế</h2>
+<table>
+<thead><tr><th>\(\varepsilon\)</th><th>\(N\) theo công thức (\(s=6\), \(p=0{,}99\))</th><th>Lặp trung bình đo được</th><th>Lặp tối đa</th><th>Tỉ lệ mẫu sạch đo được</th><th>\((1-\varepsilon)^6\)</th></tr></thead>
+<tbody>
+<tr><td>0,0</td><td>1</td><td>313,7</td><td>1528</td><td>1,0000</td><td>1,0000</td></tr>
+<tr><td>0,1</td><td>7</td><td>553,5</td><td>2680</td><td>0,5316</td><td>0,5314</td></tr>
+<tr><td>0,2</td><td>16</td><td>1100,3</td><td>4185</td><td>0,2572</td><td>0,2621</td></tr>
+<tr><td>0,3</td><td>37</td><td>2636,4</td><td>6000</td><td>0,1110</td><td>0,1176</td></tr>
+<tr><td>0,4</td><td>97</td><td>4489,4</td><td>6000</td><td>0,0433</td><td>0,0467</td></tr>
+<tr><td>0,5</td><td>293</td><td>5843,2</td><td>6000</td><td>0,0142</td><td>0,0156</td></tr>
+<tr><td>0,6</td><td>1123</td><td>5959,6</td><td>6000</td><td>0,0036</td><td>0,0041</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Bộ lấy mẫu đúng:</strong> tỉ lệ mẫu 6 điểm hoàn toàn sạch đo được trùng \((1-\varepsilon)^6\) (ví dụ 0,5316 so với 0,5314 ở \(\varepsilon=0{,}1\)).</li>
+<li><strong>Nhưng số lần lặp thực tế vượt xa \(N\):</strong> ở \(\varepsilon=0{,}3\) công thức cho 37 lần mà RANSAC dùng trung bình 2636,4 lần và đã có cảnh chạm trần 6000; ở \(\varepsilon=0{,}1\) công thức cho 7 lần mà RANSAC dùng trung bình 553,5; ở \(\varepsilon=0\) công thức cho 1 lần nhưng trung bình 313,7. Nguyên nhân đã đo riêng (Mục 7 trong đầu ra của script): với \(\varepsilon=0{,}3\), \(\sigma=1\) px, một mẫu 6 điểm <em>hoàn toàn sạch</em> cho giả thuyết gom được trung vị <strong>0,0 %</strong> số inlier thật trong ngưỡng 3 px (p90: 1,4 %), tỉ lệ mẫu sạch gom được từ 90 % inlier trở lên là 0,0 %, và sai số quay của giả thuyết sạch có trung vị 2,70&deg;, p90 19,69&deg;. Nói cách khác, DLT với đúng 6 điểm nhiễu 1 px rất ít điều kiện: công thức \(N\) giả định mẫu sạch cho mô hình tốt, và ở đây điều đó không đúng; thích nghi theo giả thuyết tốt nhất tới lúc đó nên số lần lặp bị kéo dài.</li>
+<li>Phần lớn các cảnh vẫn thành công vì với hàng nghìn lần thử, thỉnh thoảng một mẫu sạch tốt xuất hiện và vòng tinh chỉnh (DLT + Gauss-Newton trên các inlier tìm được) lấy lại độ chính xác.</li>
+</ul>
+<figure><img src="/assets/img/blog/pnp-ransac-curves.svg" alt="Hai đồ thị theo tỉ lệ ngoại lai từ 0 đến 0,6: bên trái là sai số quay (độ, thang log, trung vị và khoảng tứ phân vị) cho DLT thô, DLT cộng Gauss-Newton, RANSAC cộng tinh chỉnh và oracle; bên phải là số lần lặp (thang log) theo công thức, trung bình đo được và tối đa đo được" width="920" height="370">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Trái: sai số quay theo tỉ lệ ngoại lai (60 cảnh mỗi điểm; vùng tô là khoảng tứ phân vị). Phải: số lần lặp theo công thức \(N\), trung bình đo được và tối đa đo được (trần 6000).</figcaption></figure>
+
+<h2>8. Thí nghiệm 2: nhiễu pixel và ngưỡng \(\tau\)</h2>
+<p><strong>Nhiễu.</strong> \(\varepsilon=0{,}3\), ngưỡng \(\tau=3\sigma\), 60 cảnh mỗi hàng (sai số quay, độ; sai số tâm theo đơn vị cảnh):</p>
+<table>
+<thead><tr><th>\(\sigma\) (px)</th><th>RANSAC: trung vị / p90 (&deg;)</th><th>Thành công</th><th>Oracle: trung vị (&deg;)</th><th>RANSAC / oracle</th><th>Sai số tâm trung vị: RANSAC / oracle</th><th>Lặp trung bình</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>0,0211 / 0,0353</td><td>100,0 %</td><td>0,0208</td><td>1,014</td><td>0,0022 / 0,0021</td><td>2451,2</td></tr>
+<tr><td>1,0</td><td>0,0421 / 0,0706</td><td>100,0 %</td><td>0,0416</td><td>1,014</td><td>0,0044 / 0,0042</td><td>2453,0</td></tr>
+<tr><td>2,0</td><td>0,0843 / 0,1424</td><td>100,0 %</td><td>0,0831</td><td>1,014</td><td>0,0089 / 0,0085</td><td>2461,2</td></tr>
+<tr><td>4,0</td><td>0,1685 / 0,2622</td><td>100,0 %</td><td>0,1661</td><td>1,014</td><td>0,0179 / 0,0169</td><td>2906,6</td></tr>
+</tbody></table>
+<p>Sai số của RANSAC + tinh chỉnh tỉ lệ thuận với \(\sigma\) và luôn bằng khoảng 1,01 lần oracle (các cảnh của mỗi hàng dùng cùng các mẫu nhiễu chuẩn tắc nhân với \(\sigma\), nên tính tỉ lệ thuận một phần là hệ quả của cách thiết kế). <strong>Ngưỡng.</strong> \(\varepsilon=0{,}3\), \(\sigma=1\) px, 30 cảnh mỗi hàng; 140 khớp là inlier thật:</p>
+<table>
+<thead><tr><th>\(\tau\) (px)</th><th>Thành công</th><th>Sai số quay trung vị (&deg;)</th><th>p90 (&deg;)</th><th>Lặp trung bình</th><th>Số khớp giữ lại (trên 140 inlier thật)</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>73,3 %</td><td>0,3096</td><td>0,7310</td><td>6000,0</td><td>5,7</td></tr>
+<tr><td>1,0</td><td>96,7 %</td><td>0,1759</td><td>0,4064</td><td>6000,0</td><td>33,0</td></tr>
+<tr><td>2,0</td><td>100,0 %</td><td>0,0635</td><td>0,1130</td><td>4934,0</td><td>120,5</td></tr>
+<tr><td>3,0</td><td>100,0 %</td><td>0,0411</td><td>0,0685</td><td>2678,9</td><td>138,4</td></tr>
+<tr><td>5,0</td><td>100,0 %</td><td>0,0413</td><td>0,0665</td><td>844,8</td><td>140,0</td></tr>
+<tr><td>10,0</td><td>100,0 %</td><td>0,0413</td><td>0,0663</td><td>168,4</td><td>140,1</td></tr>
+<tr><td>30,0</td><td>100,0 %</td><td>0,0511</td><td>0,0967</td><td>45,6</td><td>140,9</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Ngưỡng quá chặt phá RANSAC</strong>: ở \(\tau=0{,}5\) px (nhỏ hơn nhiễu 1 px) chỉ giữ lại trung bình 5,7 khớp và thành công 73,3 %; số lần lặp luôn chạm trần 6000. Ở \(\tau=1\) px (bằng nhiễu) thành công 96,7 %.</li>
+<li><strong>Ngưỡng rộng cũng không miễn phí</strong>: ở \(\tau=30\) px sai số quay trung vị tăng lên 0,051&deg; (so với 0,041&deg; ở \(\tau=3\) px), số khớp giữ lại là 140,9, nhiều hơn 140 inlier thật, tức có ngoại lai lọt vào; số lần lặp giảm còn 45,6 vì gần như mọi giả thuyết đều gom được nhiều khớp.</li>
+</ul>
+
+<h2>9. Thí nghiệm 3: điểm đồng phẳng</h2>
+<p>Khi toàn bộ 200 điểm 3D nằm trên một mặt phẳng (độ sâu cố định 6), DLT 3&times;4 suy biến: ma trận hệ có hạng nhỏ hơn 11. Kết quả đo (\(\varepsilon=0{,}3\), \(\sigma=1\) px, 60 cảnh, trần 2000 lần lặp): với điểm đồng phẳng DLT thất bại: thành công 0,0 %, sai số quay trung vị 174,8&deg;, p90 179,4&deg;, số lần lặp trung bình 2000 (chạm trần); cùng tham số với điểm không đồng phẳng: thành công 100,0 %, trung vị 0,043&deg;. Với bề mặt phẳng phải dùng bộ giải riêng (ví dụ tách đồng nhất phẳng, như IPPE của Collins và Bartoli, 2014); bài này không cài đặt hay thử nó.</p>
+
+<h2>10. Hạn chế</h2>
+<ul>
+<li>Toàn bộ là dữ liệu tổng hợp: ma trận nội tại biết chính xác, không méo ống kính, nhiễu Gauss độc lập, ngoại lai là pixel ngẫu nhiên đều. Ngoại lai thật có cấu trúc (mẫu lặp, khớp gần đúng vị trí nhưng lệch vài chục pixel) khó hơn và không được thử.</li>
+<li>Bộ giải của RANSAC là DLT với 6 điểm; Mục 7 cho thấy giả thuyết từ mẫu sạch kém, nên số lần lặp lớn và RANSAC hỏng ở 60 % ngoại lai. Bộ giải tối thiểu (P3P) hoặc EPnP, sinh giả thuyết ổn định hơn từ 3&ndash;5 điểm, và các biến thể lấy mẫu có thứ tự (PROSAC, Chum và Matas, 2005) hay khung USAC (Raguram và cs, 2013) đều không được thử; bài không so sánh chúng, nên không khẳng định chúng nhanh hơn bao nhiêu.</li>
+<li>Thành công định nghĩa là sai số quay nhỏ hơn 1&deg; và sai số tâm nhỏ hơn 0,1 đơn vị cảnh (độ sâu 4&ndash;8); ngưỡng khác cho tỉ lệ khác. Số cảnh mỗi hàng là 60 (30 ở bảng \(\tau\)), nên các tỉ lệ phần trăm có sai số lấy mẫu vài phần trăm đến hàng chục phần trăm ở các hàng thất bại một phần.</li>
+<li>Không đo thời gian chạy hay chạy trên thiết bị biên; số lần lặp là đại lượng duy nhất đo về chi phí.</li>
+</ul>
+
+<h2>11. Kết luận thực hành</h2>
+<ol>
+<li>Không bao giờ giải PnP tuyến tính trực tiếp trên khớp chưa lọc: trong thí nghiệm này, một khớp sai trên 200 làm DLT hỏng ở phần lớn cảnh, và Gauss-Newton từ nghiệm đó không cứu được.</li>
+<li>RANSAC + tinh chỉnh bằng inlier (DLT rồi Gauss-Newton) đạt sai số cỡ 1,01 lần oracle ở \(\varepsilon=0{,}3\) với \(\sigma\) từ 0,5 đến 4,0 px, và vẫn thành công 98,3 % ở \(\varepsilon=0{,}5\); ở \(\varepsilon=0{,}6\) (và trần 6000 lần lặp) chỉ còn 55,0 %. Điều kiện: ngưỡng \(\tau\) cỡ \(3\sigma\) hoặc rộng hơn một chút.</li>
+<li>Đừng tin số lần lặp từ công thức \(N=\log(1-p)/\log(1-(1-\varepsilon)^s)\) khi bộ giải tối thiểu kém điều kiện: đo số inlier mà một mẫu sạch gom được; ở đây nó gần bằng 0 và số lần lặp thực tế vượt công thức 20 đến 79 lần ở \(\varepsilon\) từ 0,1 đến 0,5.</li>
+<li>Điểm 3D đồng phẳng cần bộ giải riêng; DLT 3&times;4 thất bại ở 100 % cảnh phẳng trong thí nghiệm này.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần định vị camera, tái tạo 3D hoặc xử lý ảnh/thị giác máy tính theo yêu cầu?</strong><br>
+Tôi nhận làm với tư cách freelancer. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi cố định.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=3D%20reconstruction%20project">Nhận báo giá</a> <a class="btn ghost" href="/solutions/3d-reconstruction.html">Dịch vụ tái tạo 3D</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>M. A. Fischler và R. C. Bolles. &ldquo;Random sample consensus: a paradigm for model fitting with applications to image analysis and automated cartography.&rdquo; <em>Communications of the ACM</em> 24(6), 1981, tr. 381&ndash;395. <a href="https://doi.org/10.1145/358669.358692">doi:10.1145/358669.358692</a>.</li>
+<li>X.-S. Gao, X.-R. Hou, J. Tang và H.-F. Cheng. &ldquo;Complete solution classification for the perspective-three-point problem.&rdquo; <em>IEEE TPAMI</em> 25(8), 2003, tr. 930&ndash;943. <a href="https://doi.org/10.1109/TPAMI.2003.1217599">doi:10.1109/TPAMI.2003.1217599</a>.</li>
+<li>V. Lepetit, F. Moreno-Noguer và P. Fua. &ldquo;EPnP: an accurate O(n) solution to the PnP problem.&rdquo; <em>International Journal of Computer Vision</em> 81(2), 2009, tr. 155&ndash;166. <a href="https://doi.org/10.1007/s11263-008-0152-6">doi:10.1007/s11263-008-0152-6</a>.</li>
+<li>O. Chum và J. Matas. &ldquo;Matching with PROSAC &mdash; progressive sample consensus.&rdquo; <em>CVPR 2005</em>, tập 1, tr. 220&ndash;226. <a href="https://doi.org/10.1109/CVPR.2005.221">doi:10.1109/CVPR.2005.221</a>.</li>
+<li>R. Raguram, O. Chum, M. Pollefeys, J. Matas và J.-M. Frahm. &ldquo;USAC: a universal framework for random sample consensus.&rdquo; <em>IEEE TPAMI</em> 35(8), 2013, tr. 2022&ndash;2038. <a href="https://doi.org/10.1109/TPAMI.2012.257">doi:10.1109/TPAMI.2012.257</a>.</li>
+<li>T. Collins và A. Bartoli. &ldquo;Infinitesimal plane-based pose estimation.&rdquo; <em>International Journal of Computer Vision</em> 109(3), 2014, tr. 252&ndash;286. <a href="https://doi.org/10.1007/s11263-014-0725-5">doi:10.1007/s11263-014-0725-5</a>.</li>
+<li>R. Hartley và A. Zisserman. <em>Multiple View Geometry in Computer Vision</em>, xuất bản lần 2. Cambridge University Press, 2004. ISBN 978-0-521-54051-3.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/pnp_ransac.py">pnp_ransac.py</a> (Python 3.12, NumPy, SciPy, Matplotlib). Mọi con số ở Mục 5&ndash;9 là đầu ra của script này, trừ các ước lượng bậc độ lớn đã ghi rõ ở Mục 6.</p>
+<aside class="aff-box"><h3>Thiết bị để tự hiệu chuẩn camera</h3><p>Webcam USB và một bàn cờ in trên giấy phẳng là đủ để làm lại thí nghiệm trong bài. Nên cố định lấy nét khi chụp vì tiêu cự đổi theo lấy nét.</p><ul><li><a href="https://s.shopee.vn/8VAEjvGDOM" rel="sponsored nofollow noopener" target="_blank">Webcam Full HD có mic cho PC/laptop</a> <span class="price">₫178.000</span></li><li><a href="https://s.shopee.vn/40hpNfO0O7" rel="sponsored nofollow noopener" target="_blank">Webcam 4K/2K có mic cho PC/laptop</a> <span class="price">₫164.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>
