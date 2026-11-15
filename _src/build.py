@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-12"
+TODAY = "2026-11-15"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin

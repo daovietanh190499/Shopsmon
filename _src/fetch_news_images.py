@@ -40,7 +40,13 @@ OVERRIDE = {
     "u-blox-sam-m11n-gnss": "https://content.u-blox.com/sites/default/files/2026-06/SAM-M11N-top-bottom.png",
     # Business Wire blocks scripts (403): product image from Quectel's own release on PR Newswire Asia.
     "quectel-sp900bf-ap-edge-ai": "https://mmx.prnasia.com/media/MS2032716/20261111052431EST_image_1.jpg?id=OA3072233&p=original",
+    # TDK's own press page only has a generic stock image: use the platform photo that the trade press publishes with the release.
+    "tdk-microchip-robot-sensor-nodes": "https://www.bisinfotech.com/wp-content/uploads/2026/11/TDK-and-Microchip.jpg",
+    # The article's cover is only a logo on black: use the chart from the article body.
+    "edge0-145b-on-device-llm": "https://cdn.hashnode.com/uploads/gql/6aea03219fa4aa99923b5acf/aeeae022-73c9-4d31-847a-d495a5af3200.png",
 }
+# Images that must be shown whole (letterboxed) because captions/logos sit near the edge.
+LETTERBOX = {"tdk-microchip-robot-sensor-nodes", "edge0-145b-on-device-llm"}
 # Credit for OVERRIDE images that come from a different outlet than the news source.
 CREDIT_OVERRIDE = {
     "openai-gpt-6-cyber": "Reuters / The Indian Express",
@@ -50,6 +56,7 @@ CREDIT_OVERRIDE = {
     "infineon-aurix-rc1-risc-v": "Infineon",
     "u-blox-sam-m11n-gnss": "u-blox",
     "quectel-sp900bf-ap-edge-ai": "Quectel / PR Newswire Asia",
+    "tdk-microchip-robot-sensor-nodes": "TDK / Microchip (BIS Infotech)",
 }
 
 
@@ -67,7 +74,7 @@ def find_image(page_url, html):
     return None
 
 
-def to_cover(data, dest):
+def to_cover(data, dest, letterbox=False):
     im = Image.open(io.BytesIO(data))
     if im.mode in ("RGBA", "LA", "P"):
         im = im.convert("RGBA")
@@ -78,7 +85,7 @@ def to_cover(data, dest):
     if w < 480 or h < 300:
         raise ValueError(f"too small {w}x{h}")
     target = 1200 / 630
-    if w < 600 or w / h < 1.25:
+    if letterbox or w < 600 or w / h < 1.25:
         # Small or near-square official image: show it whole, scaled to the cover height, over a blurred copy of itself.
         from PIL import ImageFilter
         bg = im.resize((1200, 630), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
@@ -119,7 +126,7 @@ def main(only):
                 continue
             ir = requests.get(img, headers={**UA, "Referer": n["url"]}, timeout=30)
             ir.raise_for_status()
-            size = to_cover(ir.content, os.path.join(OUT, slug + ".jpg"))
+            size = to_cover(ir.content, os.path.join(OUT, slug + ".jpg"), letterbox=slug in LETTERBOX)
             reg[slug] = {"credit": CREDIT_OVERRIDE.get(slug, n["src"]), "image_url": img, "orig_size": list(size)}
             print(slug, "OK", size, img[:90])
         except Exception as e:  # noqa: BLE001

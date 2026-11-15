@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Edge0 open-sources Edge0-145B: a 145-billion-parameter model running on a laptop with 29 GB peak memory and over 80 tokens per second | Shopsmon</title>
+<meta name="description" content="According to a post by Edge0 (Nov 12, 2026), the company is open-sourcing two models, Edge0-145B and Edge0-120B, together with a unified inference…">
+<link rel="canonical" href="https://shopsmon.com/en/news/edge0-145b-on-device-llm.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/news/edge0-145b-on-device-llm.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/news/edge0-145b-on-device-llm.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/news/edge0-145b-on-device-llm.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Edge0 open-sources Edge0-145B: a 145-billion-parameter model running on a laptop with 29 GB peak memory and over 80 tokens per second | Shopsmon">
+<meta property="og:description" content="According to a post by Edge0 (Nov 12, 2026), the company is open-sourcing two models, Edge0-145B and Edge0-120B, together with a unified inference…">
+<meta property="og:url" content="https://shopsmon.com/en/news/edge0-145b-on-device-llm.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/news/edge0-145b-on-device-llm.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/">Blog</a><a href="/en/news/" class=active>News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/news/edge0-145b-on-device-llm.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post newspost">
+<p class="crumbs"><a href="/en/news/">News</a> &rsaquo; <a href="/en/news/#ai">AI & LLM</a></p>
+<span class="tag cat-ai">AI & LLM</span>
+<h1>Edge0 open-sources Edge0-145B: a 145-billion-parameter model running on a laptop with 29 GB peak memory and over 80 tokens per second</h1>
+<p class="meta">2026-11-12 &middot; Source: <a href="https://edge0.ai/blog/introducing-edge0-145b-frontier-ai-capabilities-on-your-own-computer" rel="noopener nofollow" target="_blank">Edge0</a></p>
+<figure class="cover"><img src="/assets/img/news/edge0-145b-on-device-llm.jpg" width="1200" height="630" alt="Edge0 open-sources Edge0-145B: a 145-billion-parameter model running on a laptop with 29 GB peak memory and over 80 tokens per second"><figcaption>Image: Edge0</figcaption></figure>
+<p class="standfirst">According to a post by Edge0 (Nov 12, 2026), the company is open-sourcing two models, Edge0-145B and Edge0-120B, together with a unified inference framework and deployment tools; Edge0 calls Edge0-145B the first open-source on-device AI model with 145 billion parameters. According to Edge0, on a compatible laptop (for example a MacBook Pro) the model uses 29 GB of peak memory, processes prompts at over 1,100 tokens per second, generates over 80 tokens per second, draws approximately 120 W typically and keeps speed essentially constant at 128K&ndash;256K tokens of context; the company says a 48 GB configuration is enough to run it locally. On architecture, the model uses sparse mixture-of-experts: each group of 64 experts shares two large matrices while each expert keeps a small set of parameters capturing its differences, and of the 145 billion parameters only about 10 billion take part in computation on each inference step. The model is trained in its on-device architecture from the start rather than compressed from a cloud model; at run time frequently used experts stay in GPU memory, an expert library of about 40 GB sits in system memory and about 48 GB of vocabulary data sits on the SSD and is read on demand; the CPU and GPU compute in parallel and speculative decoding verifies several candidate tokens at once. According to Edge0&rsquo;s internal evaluations, Edge0-145B scores 64.6 on DeepSWE 1.1 (Qwen3.8-Flash-Next: 58.7; DeepSeek-V4-Flash-0731: 54.4), 86.52 on Terminal-Bench 2.1 (83.3; 82.7; Claude 78.2), 90.4 on GPQA-Diamond (DeepSeek-V4-Flash-0731: 90.8; Claude-Opus-4.6 Max: 91.3) and 80.6 on IFBench (79.2; Claude 62.5); the mean across six benchmarks is 72.8 versus 71.7 for Qwen3.8-Flash-Next, which needs about 70 GB in standard 4-bit deployment (memory figures for the compared models are estimates, not measurements). Edge0 states that the full evaluation setup and reproduction instructions will come with its technical report, and that very low-compute devices cannot yet run a 145-billion-parameter model locally. Demonstrations published by Edge0 include building a Manhattan scene in Blender, writing a program for a real drone and designing a circuit board in KiCad, all run locally. Day-one support covers macOS, Windows and Linux, including Apple M-series chips and NVIDIA platforms such as RTX Spark, RTX 4090 and RTX 5090; the weights are on Hugging Face, the inference framework and deployment guides are on GitHub, and an Edge0 app runs offline. Earlier, according to Edge0, Edge0-35B (Sep 10, 2026) ran on an iPhone 18 Pro Max at over 37 tokens per second using about 2.5 GB of memory.</p>
+<p class="srcline">Source: <a href="https://edge0.ai/blog/introducing-edge0-145b-frontier-ai-capabilities-on-your-own-computer" rel="noopener nofollow" target="_blank">Edge0</a></p>
+
+<div class="cta-box"><h3 style="margin-top:0">Need an LLM chatbot or agent for your business?</h3><p>Describe your need briefly; you will get clarifying questions and a scoped proposal before any work starts.</p>
+<p><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Send a request</a> <a class="btn ghost" href="/en/solutions/llm-chatbot-agent.html">See the service</a></p></div>
+<h2>Related news</h2>
+<div class="newsgrid related"><a class="ncard" href="/en/news/google-gemini-4-hydrogen.html"><img src="/assets/img/news/google-gemini-4-hydrogen.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-12</span><h3>Google launches Gemini 4 Hydrogen: $1.50/$7.50 per million tokens, 57% on Terminal-Bench 4.1 and 2.5x faster than Gemini 3.8 Flash at the default thinking level</h3></div></a><a class="ncard" href="/en/news/anthropic-claude-fable-5-2.html"><img src="/assets/img/news/anthropic-claude-fable-5-2.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-09</span><h3>Anthropic releases Claude Fable 5.2 and Mythos 5.2: price cut to $8/$40 per million tokens, 49.1% on FrontierCode 2.0, and 1,000 agents formalise Fermat's Last Theorem in 30 hours</h3></div></a><a class="ncard" href="/en/news/meta-muse-specialized-models.html"><img src="/assets/img/news/meta-muse-specialized-models.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-06</span><h3>Meta moves Muse and Meta AI to specialised models trained with Muse Wonder: 2.4x less forgetting of critical information and 67% better completion of tasks that hit snags</h3></div></a></div>
+</article>
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>

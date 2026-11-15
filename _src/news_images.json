@@ -238,5 +238,29 @@
    1000,
    626
   ]
+ },
+ "google-gemini-4-hydrogen": {
+  "credit": "Google",
+  "image_url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini-4-hydrogen__key-art__lockup__16-9.width-1300.jpg",
+  "orig_size": [
+   1300,
+   731
+  ]
+ },
+ "edge0-145b-on-device-llm": {
+  "credit": "Edge0",
+  "image_url": "https://cdn.hashnode.com/uploads/gql/6aea03219fa4aa99923b5acf/aeeae022-73c9-4d31-847a-d495a5af3200.png",
+  "orig_size": [
+   1280,
+   720
+  ]
+ },
+ "tdk-microchip-robot-sensor-nodes": {
+  "credit": "TDK / Microchip (BIS Infotech)",
+  "image_url": "https://www.bisinfotech.com/wp-content/uploads/2026/11/TDK-and-Microchip.jpg",
+  "orig_size": [
+   770,
+   515
+  ]
  }
 }
