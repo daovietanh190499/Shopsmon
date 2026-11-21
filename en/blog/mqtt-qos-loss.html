@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MQTT QoS 0, 1 and 2 under packet loss: simulation and formulas | Shopsmon</title>
+<meta name="description" content="Closed forms and NumPy simulation for MQTT QoS 0/1/2 on a lossy link: undelivered rate, duplicates, packet count, delay, retries needed and burst loss.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/mqtt-qos-loss.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/mqtt-qos-loss.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/mqtt-qos-loss.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/mqtt-qos-loss.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="MQTT QoS 0, 1 and 2 under packet loss: simulation and formulas | Shopsmon">
+<meta property="og:description" content="Closed forms and NumPy simulation for MQTT QoS 0/1/2 on a lossy link: undelivered rate, duplicates, packet count, delay, retries needed and burst loss.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/mqtt-qos-loss.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/mqtt-qos-loss-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/mqtt-qos-loss.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-21 &middot; IoT / AIoT &middot; ~12 min read</p>
+<h1>MQTT QoS 0, 1 and 2 on a lossy link: closed forms, simulation and burst loss</h1>
+<p class="meta">A sensor node on a weak radio link has to choose a delivery guarantee: send once and hope (QoS 0), retry until acknowledged (QoS 1), or run a four-packet handshake for exactly-once delivery (QoS 2). This post derives what each level delivers, what it costs in packets and delay and how often the sender is told &ldquo;failed&rdquo; although the message arrived, checks every formula by simulation, and then shows what happens when losses come in bursts instead of independently.</p>
+
+<h2>1. Background and scope</h2>
+<p>MQTT defines three quality-of-service levels for a PUBLISH: QoS 0 (at most once), QoS 1 (at least once, acknowledged by PUBACK) and QoS 2 (exactly once, PUBLISH/PUBREC/PUBREL/PUBCOMP). A common mental model is &ldquo;the client retransmits until the broker acknowledges&rdquo;. That is only true for some transports. In MQTT 3.1.1 (OASIS, 2014, section 4.4) the only case where a client or server is <em>required</em> to redeliver is a reconnect with CleanSession = 0; MQTT 5.0 (OASIS, 2019, section 4.4) goes further and says clients and servers must not resend at any other time. The reason is that MQTT normally runs over TCP, which already retransmits lost segments; the specification's non-normative note says retransmission at the MQTT layer was historically needed on some older TCP networks.</p>
+<p>The picture is different on UDP-style links. MQTT-SN, the variant for sensor networks (Stanford-Clark and Truong, IBM, version 1.2, 2013), keeps the same QoS levels but section 6.13 specifies a retry timer \(T_\text{retry}\) and a retry counter \(N_\text{retry}\): every unicast message that expects a reply is retransmitted when the timer expires, and after \(N_\text{retry}\) retransmissions the client assumes its connection to the gateway is lost. Section 7.2 lists best-practice values of 10&ndash;15 s for \(T_\text{retry}\) and 3&ndash;5 for \(N_\text{retry}\). This post models exactly that behaviour on a single lossy hop. It is <strong>not</strong> a model of MQTT over TCP, where the loss that matters is a connection drop, not a single packet.</p>
+
+<h2>2. Model and metrics</h2>
+<p>A sender transmits one message to a receiver over a link. Every packet, in either direction, is lost with probability \(p\), independently (Sections 3&ndash;8; Section 9 relaxes this). The sender is stop-and-wait: it sends, waits \(T_\text{retry}\), and retransmits (same message id, DUP = 1) at most \(N=3\) times, so there are \(A=N+1=4\) attempts.</p>
+<ul>
+<li><strong>QoS 0:</strong> one PUBLISH, no reply.</li>
+<li><strong>QoS 1:</strong> PUBLISH, then PUBACK. The receiver hands the message to the application on <em>every</em> PUBLISH it receives, duplicates included, and answers each with a PUBACK.</li>
+<li><strong>QoS 2:</strong> PUBLISH, then PUBREC; then PUBREL, then PUBCOMP. The receiver hands the message over once, on the first PUBLISH (one of the two methods the specification allows), and answers every PUBLISH with a PUBREC and every PUBREL with a PUBCOMP. The second phase starts only if the first was confirmed.</li>
+</ul>
+<figure><img src="/assets/img/blog/mqtt-qos-flows.svg" alt="Three message sequence charts between a sender and a receiver: QoS 0 with a single PUBLISH; QoS 1 where the PUBACK is lost and the sender retransmits PUBLISH with DUP=1; QoS 2 where the PUBREC is lost, the sender retransmits, and the exchange completes with PUBREL and PUBCOMP" width="828" height="374">
+<figcaption>Figure 1. The three handshakes with one lost acknowledgement. In QoS 1 the receiver gets the PUBLISH twice and, as modelled here, hands it to the application twice; in QoS 2 the second PUBLISH is recognised as a duplicate.</figcaption></figure>
+<p>Metrics, per message: the probability that no PUBLISH ever reaches the receiver (<em>never delivered</em>); the probability that the sender gives up without the reply (<em>unconfirmed</em> for QoS 1, <em>incomplete</em> for QoS 2); the number of times the application receives the message; the number of packets on the link in both directions; and the time until the sender sees the PUBACK.</p>
+
+<h2>3. Closed forms for independent losses</h2>
+<p>An exchange (a PUBLISH and its reply) succeeds with probability \(q=(1-p)^2\). Write \(A=N+1\).</p>
+<ul>
+<li>Never delivered (QoS 1 and 2): all \(A\) PUBLISH packets are lost, \(p^A\).</li>
+<li>QoS 1 unconfirmed: every attempt's exchange fails, \((1-q)^A\).</li>
+<li>Expected PUBLISH transmissions: \(E[T]=\sum_{k=0}^{A-1}(1-q)^k=\dfrac{1-(1-q)^A}{q}\).</li>
+<li>Expected application deliveries in QoS 1: \((1-p)\,E[T]\). The event &ldquo;attempt \(k\) is sent&rdquo; depends only on earlier attempts, and attempt \(k\)'s PUBLISH arrives independently with probability \(1-p\), so Wald's identity applies.</li>
+<li>Packets in QoS 1: PUBLISH packets plus one PUBACK per received PUBLISH, \((2-p)\,E[T]\).</li>
+<li>QoS 2: phase 1 is confirmed with probability \(1-(1-q)^A\); the sender is incomplete with probability \(1-\bigl(1-(1-q)^A\bigr)^2\); expected packets \((2-p)\,E[T]\,\bigl(1+1-(1-q)^A\bigr)\).</li>
+<li>Unconfirmed but delivered (QoS 1): \((1-q)^A-p^A\), the sender reports failure although the receiver has the message.</li>
+</ul>
+
+<h2>4. Implementation</h2>
+<p>The <a href="/blog/code/mqtt_qos_loss.py">full script</a> (closed forms, simulation, the burst channel with an exact check, three figures; about 20 seconds) can be downloaded. The core of the QoS 1 simulation, vectorised over messages:</p>
+<pre><code class="language-python">A = 4                                            # 1 transmission + 3 retransmissions
+pub = rng.random((n, A)) &gt;= p                    # PUBLISH of attempt k arrives
+rep = rng.random((n, A)) &gt;= p                    # its PUBACK arrives
+ok = pub &amp; rep                                   # whole exchange succeeds
+confirmed = ok.any(1)
+first = np.where(confirmed, ok.argmax(1), A - 1)  # index of the successful (or last) attempt
+sent = np.arange(A)[None, :] &lt; (first + 1)[:, None]
+deliveries = (pub &amp; sent).sum(1)                 # one application delivery per received PUBLISH
+packets = (first + 1) + deliveries               # PUBLISH sent + PUBACK sent
+</code></pre>
+
+<h2>5. Setup</h2>
+<p>\(N=3\) retransmissions (four attempts; MQTT-SN recommends 3&ndash;5), \(T_\text{retry}=10\) s (the lower end of the recommended range), one-way delay 50 ms (an assumption), 400,000 messages per row, fixed seed 20261121; the script prints the same numbers on every run (checked by running it twice and comparing the output). The table cells give the simulated value with the closed form in brackets.</p>
+
+<h2>6. Experiment 1: how often does a message get lost?</h2>
+<figure><img src="/assets/img/blog/mqtt-qos-failure.svg" alt="Log-log plot of failure probability against per-packet loss probability for QoS 0 (message lost), QoS 1 and 2 (never delivered), QoS 1 (sender unconfirmed) and QoS 2 (sender incomplete), each as a line from the closed form with dots from the simulation" width="461" height="317">
+<figcaption>Figure 2. Failure probabilities with four attempts. Lines: closed form; dots: simulation (400,000 messages per loss rate).</figcaption></figure>
+<table>
+<thead><tr><th>\(p\)</th><th>QoS 0: lost</th><th>QoS 1/2: never delivered</th><th>QoS 1: sender unconfirmed</th><th>QoS 2: sender incomplete</th></tr></thead>
+<tbody>
+<tr><td>0.10</td><td>0.1003 (0.1000)</td><td>0.00009 (0.00010)</td><td>0.00124 (0.00130)</td><td>0.00255 (0.00260)</td></tr>
+<tr><td>0.20</td><td>0.1994 (0.2000)</td><td>0.00159 (0.00160)</td><td>0.01639 (0.01680)</td><td>0.03283 (0.03331)</td></tr>
+<tr><td>0.30</td><td>0.2997 (0.3000)</td><td>0.00813 (0.00810)</td><td>0.06780 (0.06765)</td><td>0.13051 (0.13073)</td></tr>
+<tr><td>0.50</td><td>0.4997 (0.5000)</td><td>0.06222 (0.06250)</td><td>0.31618 (0.31641)</td><td>0.53392 (0.53270)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Simulation and formulas agree.</strong> The largest absolute difference in the table is 0.0012 (QoS 2 at \(p=0.5\), where the standard error is 0.0008); relative to its own standard error the largest is about 2 (QoS 1 at \(p=0.2\): 0.0004 against 0.0002). Every cell is within about two standard errors.</li>
+<li><strong>Retries cut the real loss by orders of magnitude.</strong> At \(p=0.1\) QoS 1 and 2 never deliver in 0.009% of cases against 10% for QoS 0 (about 1,000 times fewer); at \(p=0.3\), 0.81% against 30% (37 times); at \(p=0.5\), 6.2% against 50%.</li>
+<li><strong>The sender's view is much worse than reality.</strong> At \(p=0.3\) the QoS 1 sender gives up on 6.8% of messages although only 0.81% never arrived: 5.97% of all messages (88% of the &ldquo;failures&rdquo;) were delivered and only their PUBACK was lost (table in Section 7). At \(p=0.2\) the share is 90%.</li>
+<li><strong>QoS 2 gives up about twice as often as QoS 1</strong> (3.28% against 1.64% at \(p=0.2\); 1.7 to 2.0 times across the table) because the sender needs two successful round trips, not one.</li>
+</ul>
+
+<h2>7. Experiment 2: duplicates, packets and delay</h2>
+<table>
+<thead><tr><th>\(p\)</th><th>PUBLISH sent (QoS 1)</th><th>App deliveries per message (QoS 1)</th><th>Messages delivered 2+ times</th><th>Unconfirmed but delivered</th><th>Packets: QoS 1</th><th>Packets: QoS 2</th><th>Mean time to PUBACK (s)</th></tr></thead>
+<tbody>
+<tr><td>0.05</td><td>1.109</td><td>1.053</td><td>5.1%</td><td>0.009%</td><td>2.16</td><td>4.32</td><td>1.18</td></tr>
+<tr><td>0.10</td><td>1.232</td><td>1.109</td><td>9.9%</td><td>0.116%</td><td>2.34</td><td>4.68</td><td>2.38</td></tr>
+<tr><td>0.20</td><td>1.537</td><td>1.230</td><td>19.5%</td><td>1.48%</td><td>2.77</td><td>5.49</td><td>5.06</td></tr>
+<tr><td>0.30</td><td>1.903</td><td>1.331</td><td>27.4%</td><td>5.97%</td><td>3.23</td><td>6.25</td><td>7.60</td></tr>
+<tr><td>0.50</td><td>2.734</td><td>1.369</td><td>34.5%</td><td>25.4%</td><td>4.10</td><td>6.91</td><td>11.59</td></tr>
+</tbody></table>
+<p>QoS 0 always costs one packet. The closed forms for PUBLISH sent, deliveries per message and packets match the simulation within 0.2% in every row. The time column is the mean over messages whose PUBACK arrived, with \(T_\text{retry}=10\) s and a 100 ms round trip; the longest confirmed message waited 30.1 s (three timer expiries).</p>
+<ul>
+<li><strong>QoS 1 duplicates are common, not rare.</strong> At \(p=0.2\) one message in five reaches the application at least twice, and the application receives 1.23 copies per message on average. A consumer that adds each reading to a total (an energy counter, a pulse count) would overcount by 23% unless it deduplicates, for example on a sequence number carried in the payload.</li>
+<li><strong>QoS 2 removes duplicates at a price.</strong> By construction it hands over exactly one copy; the price at \(p=0.2\) is 5.49 packets per message against 2.77 for QoS 1 and 1 for QoS 0; across the table QoS 2 uses 1.7 to 2.0 times the packets of QoS 1.</li>
+<li><strong>Delay is set by the timer, not the link.</strong> One lost packet costs a full \(T_\text{retry}\): at \(p=0.2\) the mean time to confirmation is 5.06 s, fifty times the 0.1 s round trip.</li>
+</ul>
+
+<h2>8. Experiment 3: how many retransmissions are enough?</h2>
+<p>Setting \((1-q)^A\le\varepsilon\) gives \(A\ge\ln\varepsilon/\ln(1-q)\). Closed form, independent losses:</p>
+<table>
+<thead><tr><th>\(p\)</th><th>\(q\)</th><th>Attempts for \(\varepsilon=10^{-3}\)</th><th>Attempts for \(\varepsilon=10^{-6}\)</th></tr></thead>
+<tbody>
+<tr><td>0.05</td><td>0.9025</td><td>3 (2 retransmissions)</td><td>6 (5)</td></tr>
+<tr><td>0.10</td><td>0.8100</td><td>5 (4)</td><td>9 (8)</td></tr>
+<tr><td>0.20</td><td>0.6400</td><td>7 (6)</td><td>14 (13)</td></tr>
+<tr><td>0.30</td><td>0.4900</td><td>11 (10)</td><td>21 (20)</td></tr>
+<tr><td>0.50</td><td>0.2500</td><td>25 (24)</td><td>49 (48)</td></tr>
+</tbody></table>
+<p>Two values checked by simulation with 2,000,000 messages: \(p=0.3\) with 11 attempts gives 0.000625 unconfirmed (formula 0.000607); \(p=0.5\) with 25 attempts gives 0.000764 (formula 0.000753). The recommended \(N_\text{retry}\) of 3&ndash;5 (four to six attempts) therefore meets a 0.1% sender-failure target at 10% loss (5 attempts, 4 retransmissions) but not at 20% (7 attempts, 6 retransmissions); at \(p=0.3\) the same target needs 10 retransmissions, and with \(T_\text{retry}=10\) s the last one would leave 100 s after the first transmission.</p>
+
+<h2>9. Experiment 4: losses that come in bursts</h2>
+<p>Radio loss is rarely independent: interference, a person walking past or a door closing makes the link bad for a while. The classic two-state model is due to Gilbert (1960) and Elliott (1963). Here, per attempt the channel is Good (loss 0) or Bad (loss 0.8) with stationary probability 0.25 of Bad, so the mean loss is 0.25 &times; 0.8 = 0.20, the same as the \(p=0.20\) row above. Both packets of one exchange see the same state. Between consecutive attempts the state is kept with probability \(\rho\) and otherwise redrawn from the stationary law, so \(\rho\) is the correlation between consecutive attempts: \(\rho=0\) means every retry sees a fresh channel, \(\rho\to1\) means a burst longer than the whole retry sequence. The script computes each probability exactly (a two-state forward recursion) and by simulation (400,000 messages).</p>
+<figure><img src="/assets/img/blog/mqtt-qos-burst.svg" alt="Semi-log plot against state persistence rho from 0 to 0.99: two rising curves for the burst channel, probability never delivered and probability the sender is unconfirmed, and two horizontal dashed lines for the same quantities with independent losses at mean loss 0.20; dots from simulation lie on the curves" width="461" height="317">
+<figcaption>Figure 3. QoS 1 with four attempts and mean loss 0.20. Curves: exact; dots: simulation; dashed lines: independent losses.</figcaption></figure>
+<table>
+<thead><tr><th>Channel</th><th>Never delivered: exact (sim.)</th><th>Sender unconfirmed: exact (sim.)</th></tr></thead>
+<tbody>
+<tr><td>Independent losses, \(p=0.20\)</td><td>0.00160</td><td>0.01680</td></tr>
+<tr><td>Burst, \(\rho=0\)</td><td>0.00160 (0.00155)</td><td>0.00332 (0.00328)</td></tr>
+<tr><td>Burst, \(\rho=0.5\)</td><td>0.02500 (0.02523)</td><td>0.05184 (0.05223)</td></tr>
+<tr><td>Burst, \(\rho=0.8\)</td><td>0.06289 (0.06254)</td><td>0.13040 (0.13032)</td></tr>
+<tr><td>Burst, \(\rho=0.95\)</td><td>0.09131 (0.09136)</td><td>0.18933 (0.18990)</td></tr>
+<tr><td>Burst, \(\rho=0.99\)</td><td>0.10011 (0.10030)</td><td>0.20759 (0.20791)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Across attempts, correlation hurts a lot.</strong> With the same mean loss, the probability that no PUBLISH ever arrives rises from 0.16% (independent) to 2.5% at \(\rho=0.5\) (15.6 times), 6.3% at \(\rho=0.8\) (39 times) and 10.0% at \(\rho=0.99\) (63 times). The limit is easy to read: if the whole retry sequence sits in one state, the message is lost with probability \(0.25\times0.8^4=0.1024\).</li>
+<li><strong>Inside one exchange, correlation helps.</strong> At \(\rho=0\) the never-delivered probability equals the independent case (0.00160, since attempts are independent with the same marginal loss), but the sender is unconfirmed five times less often (0.00332 against 0.01680): when the PUBLISH got through the link is probably good, so the PUBACK probably does too. An exchange succeeds with probability \(0.75+0.25\times0.2^2=0.76\) instead of \(0.8^2=0.64\). For \(\rho\ge0.5\) this advantage is lost: unconfirmed rises to 3.1 times (\(\rho=0.5\)) and 12.4 times (\(\rho=0.99\)) the independent value.</li>
+<li><strong>More retransmissions help little when bursts are longer than the retry spacing.</strong> At \(\rho=0.95\), going from 4 to 20 attempts lowers the never-delivered probability only from 9.13% to 0.139% (6 attempts: 5.41%; 10 attempts: 1.90%), while independent losses with 20 attempts reach \(10^{-14}\) (about \(6.4\times10^{-5}\) at 6 attempts and \(1.0\times10^{-7}\) at 10). The sender-unconfirmed probability at 20 attempts is 5.3% against \(1.3\times10^{-9}\) for independent losses.</li>
+</ul>
+
+<h2>10. Limitations</h2>
+<ul>
+<li>One hop, stop-and-wait, fixed \(T_\text{retry}\); no queueing, congestion, back-off, sleep cycles or gateway hop. A real MQTT-SN deployment also has a TCP leg between gateway and broker, and the loss that matters on that leg is a connection drop, which is not modelled.</li>
+<li>Over TCP the packet-level model does not apply: retries are TCP's job, and MQTT itself resends only after a reconnect. The numbers describe UDP-style links such as MQTT-SN, not a typical MQTT 3.1.1 client on Wi-Fi.</li>
+<li>Duplicate handling follows the assumptions in Section 2: the QoS 1 receiver hands every received PUBLISH to the application, and the QoS 2 receiver hands over on the first PUBLISH. Implementations differ, and the second method in the specification delivers on PUBREL instead; the script does not model it, nor the receiver state that stays allocated when the sender aborts QoS 2 after the first phase.</li>
+<li>One burst configuration (0.25 probability of Bad, loss 0.8, no loss in Good), with the state redrawn per attempt, not a continuous-time process; the delay and \(T_\text{retry}\) are not part of the burst model. The conclusions about \(\rho\) are therefore qualitative; the real value of \(\rho\) depends on how long bursts last compared with \(T_\text{retry}\) and was not measured on a real link.</li>
+<li>Simulation only. No measurement on a device or radio, and energy is not computed; the packet counts are a proxy and ignore packet length and listening time.</li>
+</ul>
+
+<h2>11. Practical conclusions</h2>
+<ol>
+<li>Pick the transport first. Over TCP, MQTT retransmits only after a reconnect (3.1.1 requires it with CleanSession = 0; 5.0 forbids it otherwise), so QoS 1 and 2 are about surviving connection drops. The formulas above apply to UDP-style links, where the retry timer and counter are part of the protocol.</li>
+<li>On such a link at 10% loss, four attempts reduce a lost message from 10% (QoS 0) to 0.009%; at 30% loss the same four attempts still leave 0.81%.</li>
+<li>Do not treat a missing PUBACK as proof of loss: at 30% loss, 88% of QoS 1 &ldquo;failures&rdquo; were delivered messages whose acknowledgement was lost. Either make the consumer idempotent or accept duplicates.</li>
+<li>QoS 1 delivers 1.23 copies per message at 20% loss (19.5% of messages arrive at least twice); if the consumer is not idempotent, either deduplicate by sequence number or pay about twice the packets for QoS 2 (5.49 against 2.77 at 20%).</li>
+<li>Size the retry count from \((1-q)^A\le\varepsilon\), not from the default: 0.1% needs 5 attempts at 10% loss and 11 at 30% loss, and each attempt costs a full timer.</li>
+<li>If losses are bursty, extra retries spaced closer than the bursts add little (at \(\rho=0.95\), 20 attempts still leave 0.14% undelivered, against \(10^{-14}\) for independent losses); the independent-loss formula is optimistic. Measure burst length on the real link before choosing \(T_\text{retry}\) and \(N_\text{retry}\).</li>
+</ol>
+
+
+<div class="cta-box"><strong>Need an IoT data pipeline, reliable device-to-cloud messaging or an edge-AI prototype?</strong><br>
+I take this on as a freelancer. Describe the project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=IoT%20messaging%20project">Get a quote</a> <a class="btn ghost" href="/en/solutions/custom-ai-tools.html">Custom AI tools</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>A. Banks and R. Gupta (eds.). <em>MQTT Version 3.1.1</em>. OASIS Standard, 29 October 2014, sections 4.3 (quality of service) and 4.4 (message delivery retry). <a href="https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html">docs.oasis-open.org/mqtt/mqtt/v3.1.1</a>.</li>
+<li>A. Banks, E. Briggs, K. Borgendale and R. Gupta (eds.). <em>MQTT Version 5.0</em>. OASIS Standard, 7 March 2019, section 4.4 (message delivery retry). <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">docs.oasis-open.org/mqtt/mqtt/v5.0</a>.</li>
+<li>A. Stanford-Clark and H. L. Truong. <em>MQTT For Sensor Networks (MQTT-SN) Protocol Specification, Version 1.2</em>. IBM, 14 November 2013, sections 6.13 (client's retransmission procedure) and 7.2 (best-practice values of timers and counters).</li>
+<li>E. N. Gilbert. &ldquo;Capacity of a burst-noise channel.&rdquo; <em>Bell System Technical Journal</em> 39(5), 1960, pp. 1253&ndash;1265. <a href="https://doi.org/10.1002/j.1538-7305.1960.tb03959.x">doi:10.1002/j.1538-7305.1960.tb03959.x</a>.</li>
+<li>E. O. Elliott. &ldquo;Estimates of error rates for codes on burst-noise channels.&rdquo; <em>Bell System Technical Journal</em> 42(5), 1963, pp. 1977&ndash;1997. <a href="https://doi.org/10.1002/j.1538-7305.1963.tb00955.x">doi:10.1002/j.1538-7305.1963.tb00955.x</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/mqtt_qos_loss.py">mqtt_qos_loss.py</a> (Python 3.12, NumPy, Matplotlib; about 20 seconds). Every number in Sections 6&ndash;9 is output of this script, except the arithmetic of ratios quoted in the text (for example 15.6, 39, 63 times) and the limits 0.1024 and 0.76, which are computed from the stated formulas by hand.</p>
+<aside class="aff-box"><h3>Common IoT / AIoT parts</h3><p>Boards and sensors commonly used for prototyping: ESP32-S3 for small models, a temperature/humidity sensor and a Zigbee bridge for sensor networks.</p><ul><li><a href="https://s.shopee.vn/AUvJ7Ugukh" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED</a> <span class="price">₫105.000</span></li><li><a href="https://s.shopee.vn/3B8iO1zd11" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)</a> <span class="price">₫170.000</span></li><li><a href="https://s.shopee.vn/4qGwN7QQYU" rel="sponsored nofollow noopener" target="_blank">SHT40/SHT41/SHT45 temperature &amp; humidity sensor module</a> <span class="price">₫123.640</span></li><li><a href="https://s.shopee.vn/7fb7kNXg67" rel="sponsored nofollow noopener" target="_blank">SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge</a> <span class="price">₫504.900</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

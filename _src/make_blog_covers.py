@@ -17,6 +17,7 @@ CARDS = {
     "pca-svd": ("PCA through the SVD", "Stability and sensor data compression  |  NumPy", "#14b8a6"),
     "bundle-adjustment": ("Bundle adjustment", "Levenberg-Marquardt and the Schur complement  |  NumPy, SciPy", "#8b5cf6"),
     "stream-change-detection": ("Change detection on sensor streams", "Shewhart, EWMA and CUSUM at equal false alarms  |  NumPy", "#0ea5e9"),
+    "mqtt-qos-loss": ("MQTT QoS 0, 1, 2 on a lossy link", "Closed forms, simulation, burst loss  |  NumPy", "#10b981"),
     "pnp-ransac": ("PnP and RANSAC", "Camera pose from matches with outliers  |  DLT, Gauss-Newton, NumPy", "#f43f5e"),
 }
 ONLY = set(__import__("sys").argv[1:])

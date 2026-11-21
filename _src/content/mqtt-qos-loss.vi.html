@@ -1,0 +1,149 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-21 &middot; IoT / AIoT &middot; ~12 phút đọc</p>
+<h1>MQTT QoS 0, 1 và 2 trên đường truyền mất gói: công thức đóng, mô phỏng và mất gói theo cụm</h1>
+<p class="meta">Một nút cảm biến trên đường truyền vô tuyến yếu phải chọn mức đảm bảo giao nhận: gửi một lần rồi chờ may rủi (QoS 0), gửi lại đến khi được xác nhận (QoS 1), hay chạy bắt tay bốn gói để giao đúng một lần (QoS 2). Bài này dẫn xuất mỗi mức giao được gì, tốn bao nhiêu gói và độ trễ, bao nhiêu lần bên gửi nhận thông báo &ldquo;thất bại&rdquo; dù tin nhắn đã đến nơi, kiểm tra từng công thức bằng mô phỏng, rồi xem điều gì xảy ra khi mất gói xảy ra theo cụm thay vì độc lập.</p>
+
+<h2>1. Bối cảnh và phạm vi</h2>
+<p>MQTT định nghĩa ba mức chất lượng dịch vụ cho một gói PUBLISH: QoS 0 (nhiều nhất một lần), QoS 1 (ít nhất một lần, xác nhận bằng PUBACK) và QoS 2 (đúng một lần, PUBLISH/PUBREC/PUBREL/PUBCOMP). Mô hình thường gặp là &ldquo;client gửi lại đến khi broker xác nhận&rdquo;. Điều đó chỉ đúng với một số giao thức vận chuyển. Trong MQTT 3.1.1 (OASIS, 2014, mục 4.4) trường hợp duy nhất client hoặc server <em>bắt buộc</em> giao lại là khi kết nối lại với CleanSession = 0; MQTT 5.0 (OASIS, 2019, mục 4.4) đi xa hơn và quy định client, server không được gửi lại vào bất kỳ thời điểm nào khác. Lý do là MQTT thường chạy trên TCP, vốn đã tự truyền lại các đoạn bị mất; ghi chú không bắt buộc của đặc tả nói việc truyền lại ở tầng MQTT từng cần thiết trên một số mạng TCP cũ.</p>
+<p>Với đường truyền kiểu UDP thì khác. MQTT-SN, biến thể cho mạng cảm biến (Stanford-Clark và Truong, IBM, phiên bản 1.2, 2013), giữ các mức QoS nhưng mục 6.13 quy định bộ đếm giờ \(T_\text{retry}\) và bộ đếm số lần thử lại \(N_\text{retry}\): mọi bản tin unicast chờ phản hồi đều được gửi lại khi hết giờ, và sau \(N_\text{retry}\) lần gửi lại client coi như mất kết nối tới gateway. Mục 7.2 nêu giá trị khuyến nghị 10&ndash;15 s cho \(T_\text{retry}\) và 3&ndash;5 cho \(N_\text{retry}\). Bài này mô hình đúng hành vi đó trên một chặng truyền mất gói. Nó <strong>không</strong> phải mô hình của MQTT trên TCP, nơi sự cố đáng kể là đứt kết nối chứ không phải mất một gói.</p>
+
+<h2>2. Mô hình và thước đo</h2>
+<p>Bên gửi truyền một tin nhắn tới bên nhận qua một đường truyền. Mỗi gói, theo cả hai chiều, mất với xác suất \(p\), độc lập (Mục 3&ndash;8; Mục 9 bỏ giả thiết này). Bên gửi dừng-và-chờ: gửi, chờ \(T_\text{retry}\), rồi gửi lại (cùng mã tin nhắn, DUP = 1) tối đa \(N=3\) lần, tức \(A=N+1=4\) lần thử.</p>
+<ul>
+<li><strong>QoS 0:</strong> một PUBLISH, không có phản hồi.</li>
+<li><strong>QoS 1:</strong> PUBLISH, rồi PUBACK. Bên nhận chuyển tin nhắn cho ứng dụng <em>mỗi lần</em> nhận được PUBLISH, kể cả bản trùng, và trả lời mỗi lần bằng một PUBACK.</li>
+<li><strong>QoS 2:</strong> PUBLISH, rồi PUBREC; sau đó PUBREL, rồi PUBCOMP. Bên nhận chuyển cho ứng dụng một lần, ở PUBLISH đầu tiên (một trong hai phương án đặc tả cho phép), trả lời mọi PUBLISH bằng PUBREC và mọi PUBREL bằng PUBCOMP. Pha thứ hai chỉ bắt đầu nếu pha đầu đã được xác nhận.</li>
+</ul>
+<figure><img src="/assets/img/blog/mqtt-qos-flows.svg" alt="Ba lưu đồ trình tự giữa bên gửi và bên nhận: QoS 0 với một PUBLISH; QoS 1 trong đó PUBACK bị mất và bên gửi gửi lại PUBLISH với DUP=1; QoS 2 trong đó PUBREC bị mất, bên gửi gửi lại và trao đổi hoàn tất bằng PUBREL và PUBCOMP" width="828" height="374">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Ba kiểu bắt tay khi một gói xác nhận bị mất. Ở QoS 1 bên nhận nhận PUBLISH hai lần và, theo mô hình này, chuyển cho ứng dụng hai lần; ở QoS 2 PUBLISH thứ hai được nhận ra là bản trùng.</figcaption></figure>
+<p>Thước đo cho mỗi tin nhắn: xác suất không PUBLISH nào đến được bên nhận (<em>không bao giờ được giao</em>); xác suất bên gửi bỏ cuộc khi chưa có phản hồi (<em>chưa được xác nhận</em> với QoS 1, <em>chưa hoàn tất</em> với QoS 2); số lần ứng dụng nhận tin nhắn; số gói trên đường truyền theo cả hai chiều; và thời gian tới khi bên gửi thấy PUBACK.</p>
+
+<h2>3. Công thức đóng khi mất gói độc lập</h2>
+<p>Một lượt trao đổi (một PUBLISH và phản hồi của nó) thành công với xác suất \(q=(1-p)^2\). Đặt \(A=N+1\).</p>
+<ul>
+<li>Không bao giờ được giao (QoS 1 và 2): cả \(A\) gói PUBLISH đều mất, \(p^A\).</li>
+<li>QoS 1 chưa được xác nhận: lượt trao đổi của mọi lần thử đều hỏng, \((1-q)^A\).</li>
+<li>Số lần truyền PUBLISH kỳ vọng: \(E[T]=\sum_{k=0}^{A-1}(1-q)^k=\dfrac{1-(1-q)^A}{q}\).</li>
+<li>Số lần ứng dụng nhận ở QoS 1 kỳ vọng: \((1-p)\,E[T]\). Biến cố &ldquo;lần thử \(k\) được gửi&rdquo; chỉ phụ thuộc các lần thử trước, và PUBLISH của lần thử \(k\) đến nơi độc lập với xác suất \(1-p\), nên áp dụng được đẳng thức Wald.</li>
+<li>Số gói ở QoS 1: số PUBLISH cộng một PUBACK cho mỗi PUBLISH nhận được, \((2-p)\,E[T]\).</li>
+<li>QoS 2: pha 1 được xác nhận với xác suất \(1-(1-q)^A\); bên gửi chưa hoàn tất với xác suất \(1-\bigl(1-(1-q)^A\bigr)^2\); số gói kỳ vọng \((2-p)\,E[T]\,\bigl(1+1-(1-q)^A\bigr)\).</li>
+<li>Chưa được xác nhận nhưng đã được giao (QoS 1): \((1-q)^A-p^A\), bên gửi báo thất bại dù bên nhận đã có tin nhắn.</li>
+</ul>
+
+<h2>4. Cài đặt</h2>
+<p><a href="/blog/code/mqtt_qos_loss.py">Script đầy đủ</a> (công thức đóng, mô phỏng, kênh theo cụm kèm kiểm tra chính xác, ba hình; chạy khoảng 20 giây) tải về được. Lõi của mô phỏng QoS 1, vector hoá theo tin nhắn:</p>
+<pre><code class="language-python">A = 4                                            # 1 transmission + 3 retransmissions
+pub = rng.random((n, A)) &gt;= p                    # PUBLISH of attempt k arrives
+rep = rng.random((n, A)) &gt;= p                    # its PUBACK arrives
+ok = pub &amp; rep                                   # whole exchange succeeds
+confirmed = ok.any(1)
+first = np.where(confirmed, ok.argmax(1), A - 1)  # index of the successful (or last) attempt
+sent = np.arange(A)[None, :] &lt; (first + 1)[:, None]
+deliveries = (pub &amp; sent).sum(1)                 # one application delivery per received PUBLISH
+packets = (first + 1) + deliveries               # PUBLISH sent + PUBACK sent
+</code></pre>
+
+<h2>5. Thiết lập</h2>
+<p>\(N=3\) lần gửi lại (bốn lần thử; MQTT-SN khuyến nghị 3&ndash;5), \(T_\text{retry}=10\) s (đầu dưới của khoảng khuyến nghị), trễ một chiều 50 ms (giả định), 400.000 tin nhắn cho mỗi dòng, seed cố định 20261121; script in ra đúng cùng số liệu ở mọi lần chạy (đã kiểm tra bằng cách chạy hai lần và so kết quả). Mỗi ô của bảng ghi giá trị mô phỏng, công thức đóng đặt trong ngoặc.</p>
+
+<h2>6. Thí nghiệm 1: tin nhắn bị mất bao nhiêu lần?</h2>
+<figure><img src="/assets/img/blog/mqtt-qos-failure.svg" alt="Đồ thị log-log của xác suất thất bại theo xác suất mất gói: QoS 0 (mất tin nhắn), QoS 1 và 2 (không bao giờ được giao), QoS 1 (bên gửi chưa được xác nhận) và QoS 2 (bên gửi chưa hoàn tất); mỗi đại lượng là một đường từ công thức đóng với các chấm từ mô phỏng" width="461" height="317">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Xác suất thất bại với bốn lần thử. Đường: công thức đóng; chấm: mô phỏng (400.000 tin nhắn mỗi mức mất gói).</figcaption></figure>
+<table>
+<thead><tr><th>\(p\)</th><th>QoS 0: mất</th><th>QoS 1/2: không bao giờ được giao</th><th>QoS 1: bên gửi chưa được xác nhận</th><th>QoS 2: bên gửi chưa hoàn tất</th></tr></thead>
+<tbody>
+<tr><td>0,10</td><td>0,1003 (0,1000)</td><td>0,00009 (0,00010)</td><td>0,00124 (0,00130)</td><td>0,00255 (0,00260)</td></tr>
+<tr><td>0,20</td><td>0,1994 (0,2000)</td><td>0,00159 (0,00160)</td><td>0,01639 (0,01680)</td><td>0,03283 (0,03331)</td></tr>
+<tr><td>0,30</td><td>0,2997 (0,3000)</td><td>0,00813 (0,00810)</td><td>0,06780 (0,06765)</td><td>0,13051 (0,13073)</td></tr>
+<tr><td>0,50</td><td>0,4997 (0,5000)</td><td>0,06222 (0,06250)</td><td>0,31618 (0,31641)</td><td>0,53392 (0,53270)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Mô phỏng và công thức khớp nhau.</strong> Chênh lệch tuyệt đối lớn nhất trong bảng là 0,0012 (QoS 2 ở \(p=0{,}5\), sai số chuẩn 0,0008); so với sai số chuẩn của chính ô đó, lớn nhất khoảng 2 (QoS 1 ở \(p=0{,}2\): 0,0004 so với 0,0002). Mọi ô nằm trong khoảng hai sai số chuẩn.</li>
+<li><strong>Gửi lại giảm mất mát thực tế hàng nghìn lần.</strong> Ở \(p=0{,}1\) QoS 1 và 2 không bao giờ giao được trong 0,009 % trường hợp, so với 10 % của QoS 0 (ít hơn khoảng 1.000 lần); ở \(p=0{,}3\) là 0,81 % so với 30 % (37 lần); ở \(p=0{,}5\) là 6,2 % so với 50 %.</li>
+<li><strong>Cái bên gửi thấy tệ hơn thực tế nhiều.</strong> Ở \(p=0{,}3\) bên gửi QoS 1 bỏ cuộc với 6,8 % tin nhắn dù chỉ 0,81 % thật sự không đến: 5,97 % tổng số tin nhắn (88 % các &ldquo;thất bại&rdquo;) đã được giao và chỉ PUBACK của chúng bị mất (bảng ở Mục 7). Ở \(p=0{,}2\) tỉ lệ này là 90 %.</li>
+<li><strong>QoS 2 bỏ cuộc nhiều gấp khoảng hai lần QoS 1</strong> (3,28 % so với 1,64 % ở \(p=0{,}2\); từ 1,7 đến 2,0 lần trong bảng) vì bên gửi cần hai lượt khứ hồi thành công, không phải một.</li>
+</ul>
+
+<h2>7. Thí nghiệm 2: bản trùng, số gói và độ trễ</h2>
+<table>
+<thead><tr><th>\(p\)</th><th>PUBLISH đã gửi (QoS 1)</th><th>Số lần ứng dụng nhận mỗi tin (QoS 1)</th><th>Tin nhận từ 2 lần trở lên</th><th>Chưa xác nhận nhưng đã giao</th><th>Số gói: QoS 1</th><th>Số gói: QoS 2</th><th>Thời gian trung bình tới PUBACK (s)</th></tr></thead>
+<tbody>
+<tr><td>0,05</td><td>1,109</td><td>1,053</td><td>5,1 %</td><td>0,009 %</td><td>2,16</td><td>4,32</td><td>1,18</td></tr>
+<tr><td>0,10</td><td>1,232</td><td>1,109</td><td>9,9 %</td><td>0,116 %</td><td>2,34</td><td>4,68</td><td>2,38</td></tr>
+<tr><td>0,20</td><td>1,537</td><td>1,230</td><td>19,5 %</td><td>1,48 %</td><td>2,77</td><td>5,49</td><td>5,06</td></tr>
+<tr><td>0,30</td><td>1,903</td><td>1,331</td><td>27,4 %</td><td>5,97 %</td><td>3,23</td><td>6,25</td><td>7,60</td></tr>
+<tr><td>0,50</td><td>2,734</td><td>1,369</td><td>34,5 %</td><td>25,4 %</td><td>4,10</td><td>6,91</td><td>11,59</td></tr>
+</tbody></table>
+<p>QoS 0 luôn tốn một gói. Công thức đóng cho số PUBLISH đã gửi, số lần ứng dụng nhận mỗi tin và số gói khớp mô phỏng trong phạm vi 0,2 % ở mọi dòng. Cột thời gian là trung bình trên các tin nhắn có PUBACK đến nơi, với \(T_\text{retry}=10\) s và khứ hồi 100 ms; tin nhắn được xác nhận chờ lâu nhất mất 30,1 s (ba lần hết giờ).</p>
+<ul>
+<li><strong>Bản trùng ở QoS 1 là chuyện thường, không hiếm.</strong> Ở \(p=0{,}2\) cứ năm tin nhắn có một tin đến ứng dụng ít nhất hai lần, trung bình ứng dụng nhận 1,23 bản cho mỗi tin. Một bên tiêu thụ cộng dồn từng số đo vào tổng (bộ đếm điện năng, bộ đếm xung) sẽ đếm dư 23 % nếu không khử trùng, ví dụ theo số thứ tự nằm trong payload.</li>
+<li><strong>QoS 2 loại bỏ bản trùng với một cái giá.</strong> Theo cấu trúc, nó giao đúng một bản; giá phải trả ở \(p=0{,}2\) là 5,49 gói mỗi tin so với 2,77 của QoS 1 và 1 của QoS 0; trong cả bảng QoS 2 dùng từ 1,7 đến 2,0 lần số gói của QoS 1.</li>
+<li><strong>Độ trễ do bộ đếm giờ quyết định, không phải đường truyền.</strong> Một gói mất tốn trọn một \(T_\text{retry}\): ở \(p=0{,}2\) thời gian trung bình tới khi được xác nhận là 5,06 s, gấp năm mươi lần khứ hồi 0,1 s.</li>
+</ul>
+
+<h2>8. Thí nghiệm 3: gửi lại bao nhiêu lần là đủ?</h2>
+<p>Đặt \((1-q)^A\le\varepsilon\) cho \(A\ge\ln\varepsilon/\ln(1-q)\). Công thức đóng, mất gói độc lập:</p>
+<table>
+<thead><tr><th>\(p\)</th><th>\(q\)</th><th>Số lần thử cho \(\varepsilon=10^{-3}\)</th><th>Số lần thử cho \(\varepsilon=10^{-6}\)</th></tr></thead>
+<tbody>
+<tr><td>0,05</td><td>0,9025</td><td>3 (2 lần gửi lại)</td><td>6 (5)</td></tr>
+<tr><td>0,10</td><td>0,8100</td><td>5 (4)</td><td>9 (8)</td></tr>
+<tr><td>0,20</td><td>0,6400</td><td>7 (6)</td><td>14 (13)</td></tr>
+<tr><td>0,30</td><td>0,4900</td><td>11 (10)</td><td>21 (20)</td></tr>
+<tr><td>0,50</td><td>0,2500</td><td>25 (24)</td><td>49 (48)</td></tr>
+</tbody></table>
+<p>Hai giá trị được kiểm tra bằng mô phỏng với 2.000.000 tin nhắn: \(p=0{,}3\) với 11 lần thử cho 0,000625 chưa được xác nhận (công thức 0,000607); \(p=0{,}5\) với 25 lần thử cho 0,000764 (công thức 0,000753). Do đó \(N_\text{retry}\) khuyến nghị 3&ndash;5 (bốn đến sáu lần thử) đạt mục tiêu thất bại phía bên gửi 0,1 % ở mức mất gói 10 % (5 lần thử, 4 lần gửi lại) nhưng không đạt ở 20 % (7 lần thử, 6 lần gửi lại); ở \(p=0{,}3\) cùng mục tiêu cần 10 lần gửi lại, và với \(T_\text{retry}=10\) s lần gửi cuối cách lần truyền đầu 100 s.</p>
+
+<h2>9. Thí nghiệm 4: mất gói theo cụm</h2>
+<p>Mất gói vô tuyến hiếm khi độc lập: nhiễu, người đi ngang qua hay một cánh cửa đóng lại làm đường truyền xấu đi một lúc. Mô hình hai trạng thái cổ điển do Gilbert (1960) và Elliott (1963) đề xuất. Ở đây, theo từng lần thử, kênh ở trạng thái Tốt (mất 0) hoặc Xấu (mất 0,8) với xác suất dừng của trạng thái Xấu là 0,25, nên mức mất trung bình là 0,25 &times; 0,8 = 0,20, bằng dòng \(p=0{,}20\) ở trên. Hai gói của cùng một lượt trao đổi thấy cùng một trạng thái. Giữa hai lần thử liên tiếp, trạng thái được giữ với xác suất \(\rho\) và nếu không thì được rút lại từ phân bố dừng, nên \(\rho\) là hệ số tương quan giữa hai lần thử liên tiếp: \(\rho=0\) nghĩa là mỗi lần gửi lại thấy một kênh mới, \(\rho\to1\) nghĩa là một cụm dài hơn cả chuỗi gửi lại. Script tính từng xác suất chính xác (đệ quy tiến hai trạng thái) và bằng mô phỏng (400.000 tin nhắn).</p>
+<figure><img src="/assets/img/blog/mqtt-qos-burst.svg" alt="Đồ thị bán log theo độ bền trạng thái rho từ 0 đến 0,99: hai đường tăng cho kênh theo cụm, xác suất không bao giờ được giao và xác suất bên gửi chưa được xác nhận, và hai đường nét đứt nằm ngang cho cùng các đại lượng khi mất gói độc lập ở mức mất trung bình 0,20; các chấm mô phỏng nằm trên đường cong" width="461" height="317">
+<figcaption>Hình 3 (nhãn hình bằng tiếng Anh). QoS 1 với bốn lần thử và mức mất trung bình 0,20. Đường cong: chính xác; chấm: mô phỏng; đường nét đứt: mất gói độc lập.</figcaption></figure>
+<table>
+<thead><tr><th>Kênh</th><th>Không bao giờ được giao: chính xác (mô phỏng)</th><th>Bên gửi chưa được xác nhận: chính xác (mô phỏng)</th></tr></thead>
+<tbody>
+<tr><td>Mất gói độc lập, \(p=0{,}20\)</td><td>0,00160</td><td>0,01680</td></tr>
+<tr><td>Theo cụm, \(\rho=0\)</td><td>0,00160 (0,00155)</td><td>0,00332 (0,00328)</td></tr>
+<tr><td>Theo cụm, \(\rho=0{,}5\)</td><td>0,02500 (0,02523)</td><td>0,05184 (0,05223)</td></tr>
+<tr><td>Theo cụm, \(\rho=0{,}8\)</td><td>0,06289 (0,06254)</td><td>0,13040 (0,13032)</td></tr>
+<tr><td>Theo cụm, \(\rho=0{,}95\)</td><td>0,09131 (0,09136)</td><td>0,18933 (0,18990)</td></tr>
+<tr><td>Theo cụm, \(\rho=0{,}99\)</td><td>0,10011 (0,10030)</td><td>0,20759 (0,20791)</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Giữa các lần thử, tương quan gây hại rất nhiều.</strong> Với cùng mức mất trung bình, xác suất không PUBLISH nào đến tăng từ 0,16 % (độc lập) lên 2,5 % ở \(\rho=0{,}5\) (15,6 lần), 6,3 % ở \(\rho=0{,}8\) (39 lần) và 10,0 % ở \(\rho=0{,}99\) (63 lần). Giới hạn dễ đọc: nếu cả chuỗi gửi lại nằm trong một trạng thái, tin nhắn mất với xác suất \(0{,}25\times0{,}8^4=0{,}1024\).</li>
+<li><strong>Trong một lượt trao đổi, tương quan lại có lợi.</strong> Ở \(\rho=0\) xác suất không bao giờ được giao bằng trường hợp độc lập (0,00160, vì các lần thử độc lập với cùng xác suất mất biên), nhưng bên gửi chưa được xác nhận ít hơn năm lần (0,00332 so với 0,01680): khi PUBLISH đã qua được thì đường truyền nhiều khả năng đang tốt, nên PUBACK cũng nhiều khả năng qua được. Một lượt trao đổi thành công với xác suất \(0{,}75+0{,}25\times0{,}2^2=0{,}76\) thay vì \(0{,}8^2=0{,}64\). Với \(\rho\ge0{,}5\) lợi thế này mất đi: số chưa được xác nhận tăng lên 3,1 lần (\(\rho=0{,}5\)) và 12,4 lần (\(\rho=0{,}99\)) giá trị độc lập.</li>
+<li><strong>Gửi lại thêm giúp được rất ít khi cụm dài hơn khoảng cách giữa các lần gửi.</strong> Ở \(\rho=0{,}95\), tăng từ 4 lên 20 lần thử chỉ hạ xác suất không bao giờ được giao từ 9,13 % xuống 0,139 % (6 lần thử: 5,41 %; 10 lần thử: 1,90 %), trong khi mất gói độc lập với 20 lần thử đạt \(10^{-14}\) (khoảng \(6{,}4\times10^{-5}\) ở 6 lần thử và \(1{,}0\times10^{-7}\) ở 10). Xác suất bên gửi chưa được xác nhận ở 20 lần thử là 5,3 % so với \(1{,}3\times10^{-9}\) khi mất gói độc lập.</li>
+</ul>
+
+<h2>10. Hạn chế</h2>
+<ul>
+<li>Một chặng, dừng-và-chờ, \(T_\text{retry}\) cố định; không có hàng đợi, tắc nghẽn, back-off, chu kỳ ngủ hay chặng gateway. Một hệ thống MQTT-SN thực còn có chặng TCP giữa gateway và broker, và sự cố đáng kể trên chặng đó là đứt kết nối, không được mô hình hoá.</li>
+<li>Trên TCP mô hình mức gói không áp dụng: việc gửi lại là của TCP, và bản thân MQTT chỉ gửi lại sau khi kết nối lại. Các con số mô tả đường truyền kiểu UDP như MQTT-SN, không phải một client MQTT 3.1.1 điển hình trên Wi-Fi.</li>
+<li>Xử lý bản trùng theo các giả định ở Mục 2: bên nhận QoS 1 chuyển mọi PUBLISH nhận được cho ứng dụng, và bên nhận QoS 2 chuyển ở PUBLISH đầu tiên. Các cài đặt khác nhau, và phương án thứ hai trong đặc tả chuyển ở PUBREL; script không mô hình hoá phương án đó, cũng như trạng thái bên nhận vẫn bị giữ khi bên gửi bỏ cuộc sau pha đầu của QoS 2.</li>
+<li>Một cấu hình theo cụm (xác suất Xấu 0,25, mất 0,8, Tốt không mất), trạng thái rút lại theo từng lần thử, không phải quá trình liên tục theo thời gian; độ trễ và \(T_\text{retry}\) không nằm trong mô hình theo cụm. Vì vậy kết luận về \(\rho\) mang tính định tính; giá trị thực của \(\rho\) phụ thuộc độ dài cụm so với \(T_\text{retry}\) và chưa được đo trên đường truyền thật.</li>
+<li>Chỉ là mô phỏng. Không có phép đo trên thiết bị hay vô tuyến, và năng lượng không được tính; số gói chỉ là đại lượng thay thế, bỏ qua độ dài gói và thời gian nghe.</li>
+</ul>
+
+<h2>11. Kết luận thực hành</h2>
+<ol>
+<li>Chọn giao thức vận chuyển trước. Trên TCP, MQTT chỉ gửi lại sau khi kết nối lại (3.1.1 yêu cầu với CleanSession = 0; 5.0 cấm ở mọi trường hợp khác), nên QoS 1 và 2 là để vượt qua đứt kết nối. Các công thức ở trên áp dụng cho đường truyền kiểu UDP, nơi bộ đếm giờ và bộ đếm gửi lại là một phần của giao thức.</li>
+<li>Trên đường truyền như vậy ở mức mất 10 %, bốn lần thử hạ tỉ lệ mất tin nhắn từ 10 % (QoS 0) xuống 0,009 %; ở mức mất 30 % cùng bốn lần thử vẫn để lại 0,81 %.</li>
+<li>Đừng coi thiếu PUBACK là bằng chứng của mất mát: ở mức mất 30 %, 88 % &ldquo;thất bại&rdquo; của QoS 1 là tin nhắn đã được giao mà xác nhận bị mất. Hoặc làm bên tiêu thụ idempotent, hoặc chấp nhận bản trùng.</li>
+<li>QoS 1 giao 1,23 bản mỗi tin ở mức mất 20 % (19,5 % tin nhắn đến ít nhất hai lần); nếu bên tiêu thụ không idempotent, hoặc khử trùng theo số thứ tự, hoặc trả khoảng gấp đôi số gói cho QoS 2 (5,49 so với 2,77 ở 20 %).</li>
+<li>Chọn số lần gửi lại từ \((1-q)^A\le\varepsilon\), không dùng mặc định: 0,1 % cần 5 lần thử ở mức mất 10 % và 11 lần ở mức mất 30 %, mỗi lần thử tốn trọn một bộ đếm giờ.</li>
+<li>Nếu mất gói theo cụm, các lần gửi lại cách nhau gần hơn độ dài cụm bổ sung được rất ít (ở \(\rho=0{,}95\), 20 lần thử vẫn để lại 0,14 % không được giao, so với \(10^{-14}\) khi mất gói độc lập); công thức mất gói độc lập quá lạc quan. Hãy đo độ dài cụm trên đường truyền thật trước khi chọn \(T_\text{retry}\) và \(N_\text{retry}\).</li>
+</ol>
+
+<div class="cta-box"><strong>Cần một đường dữ liệu IoT, nhắn tin thiết bị-đám mây đáng tin cậy hay một nguyên mẫu edge AI?</strong><br>
+Tôi nhận việc này theo hình thức freelance. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20nh%E1%BA%AFn%20tin%20IoT">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/solutions/custom-ai-tools.html">Công cụ AI theo yêu cầu</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>A. Banks và R. Gupta (chủ biên). <em>MQTT Version 3.1.1</em>. OASIS Standard, 29/10/2014, mục 4.3 (chất lượng dịch vụ) và 4.4 (gửi lại tin nhắn). <a href="https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html">docs.oasis-open.org/mqtt/mqtt/v3.1.1</a>.</li>
+<li>A. Banks, E. Briggs, K. Borgendale và R. Gupta (chủ biên). <em>MQTT Version 5.0</em>. OASIS Standard, 07/03/2019, mục 4.4 (gửi lại tin nhắn). <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">docs.oasis-open.org/mqtt/mqtt/v5.0</a>.</li>
+<li>A. Stanford-Clark và H. L. Truong. <em>MQTT For Sensor Networks (MQTT-SN) Protocol Specification, Version 1.2</em>. IBM, 14/11/2013, mục 6.13 (thủ tục gửi lại của client) và 7.2 (giá trị khuyến nghị của bộ đếm giờ và bộ đếm).</li>
+<li>E. N. Gilbert. &ldquo;Capacity of a burst-noise channel.&rdquo; <em>Bell System Technical Journal</em> 39(5), 1960, tr. 1253&ndash;1265. <a href="https://doi.org/10.1002/j.1538-7305.1960.tb03959.x">doi:10.1002/j.1538-7305.1960.tb03959.x</a>.</li>
+<li>E. O. Elliott. &ldquo;Estimates of error rates for codes on burst-noise channels.&rdquo; <em>Bell System Technical Journal</em> 42(5), 1963, tr. 1977&ndash;1997. <a href="https://doi.org/10.1002/j.1538-7305.1963.tb00955.x">doi:10.1002/j.1538-7305.1963.tb00955.x</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/mqtt_qos_loss.py">mqtt_qos_loss.py</a> (Python 3.12, NumPy, Matplotlib; khoảng 20 giây). Mọi con số ở Mục 6&ndash;9 là đầu ra của script này, trừ các tỉ số được nêu trong văn bản (ví dụ 15,6, 39, 63 lần) và các giới hạn 0,1024 và 0,76, được tính tay từ các công thức đã nêu.</p>
+</article>

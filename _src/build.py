@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-15"
+TODAY = "2026-11-21"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="mqtt-qos-loss", date="2026-11-21", min=12, aff="iot",
+         og="/assets/img/blog/mqtt-qos-loss-cover.png",
+         tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
+         title={"vi": "MQTT QoS 0, 1 và 2 trên đường truyền mất gói: công thức đóng, mô phỏng và mất gói theo cụm",
+                "en": "MQTT QoS 0, 1 and 2 on a lossy link: closed forms, simulation and burst loss"},
+         summary={"vi": "Bắt tay gửi lại của QoS 0/1/2 theo kiểu MQTT-SN: ở mức mất 30 %, bốn lần thử đưa tỉ lệ không giao được từ 30 % xuống 0,81 % nhưng 88 % \"thất bại\" phía bên gửi là tin đã đến nơi; QoS 1 giao bản trùng cho 19,5 % tin ở mức mất 20 %, và mất gói theo cụm làm tỉ lệ không giao được tăng tới 63 lần.",
+                  "en": "The retry handshakes of QoS 0/1/2 in the MQTT-SN style: at 30 % loss four attempts cut undelivered messages from 30 % to 0.81 %, yet 88 % of the sender's \"failures\" were messages that arrived; QoS 1 hands duplicates to 19.5 % of messages at 20 % loss, and burst loss raises the undelivered rate up to 63 times."},
+         seo_title={"vi": "MQTT QoS 0, 1, 2 khi mất gói: mô phỏng và công thức | Shopsmon",
+                    "en": "MQTT QoS 0, 1 and 2 under packet loss: simulation and formulas | Shopsmon"},
+         seo_desc={"vi": "Công thức đóng và mô phỏng NumPy cho MQTT QoS 0/1/2 trên đường truyền mất gói: tỉ lệ không giao được, bản trùng, số gói, độ trễ, số lần gửi lại cần thiết và mất gói theo cụm.",
+                   "en": "Closed forms and NumPy simulation for MQTT QoS 0/1/2 on a lossy link: undelivered rate, duplicates, packet count, delay, retries needed and burst loss."}),
     dict(slug="pnp-ransac", date="2026-11-15", min=16, aff="calib",
          og="/assets/img/blog/pnp-ransac-cover.png",
          tag={"vi": "Tái tạo 3D", "en": "3D reconstruction"},

@@ -262,5 +262,29 @@
    770,
    515
   ]
+ },
+ "eurotech-reliagate-15a-14": {
+  "credit": "Eurotech",
+  "image_url": "https://www.eurotech.com/wp-content/uploads/2026/11/News_Family_Gateway15A-14-scaled.webp",
+  "orig_size": [
+   2560,
+   2560
+  ]
+ },
+ "xiaomi-18-pro-global-launch": {
+  "credit": "Android Authority",
+  "image_url": "https://www.androidauthority.com/wp-content/uploads/2026/11/Xiaomi-18-Pro-Stood-Up-.jpg",
+  "orig_size": [
+   1920,
+   1080
+  ]
+ },
+ "alibaba-qwen4-max": {
+  "credit": "Alibaba (TheEdge)",
+  "image_url": "https://assets.theedgemarkets.com/Photo_3_20261119173922_Alibaba.jpg",
+  "orig_size": [
+   1200,
+   800
+  ]
  }
 }

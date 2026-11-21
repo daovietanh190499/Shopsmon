@@ -44,6 +44,10 @@ OVERRIDE = {
     "tdk-microchip-robot-sensor-nodes": "https://www.bisinfotech.com/wp-content/uploads/2026/11/TDK-and-Microchip.jpg",
     # The article's cover is only a logo on black: use the chart from the article body.
     "edge0-145b-on-device-llm": "https://cdn.hashnode.com/uploads/gql/6aea03219fa4aa99923b5acf/aeeae022-73c9-4d31-847a-d495a5af3200.png",
+    # Alibaba's press page only has a generic partner-logo image (and the host does not resolve here): use the Alibaba photo from the TheEdge report on the Qwen4-Max launch event.
+    "alibaba-qwen4-max": "https://assets.theedgemarkets.com/Photo_3_20261119173922_Alibaba.jpg",
+    # Eurotech's news page does not answer scripted requests: fetch the release image directly.
+    "eurotech-reliagate-15a-14": "https://www.eurotech.com/wp-content/uploads/2026/11/News_Family_Gateway15A-14-scaled.webp",
 }
 # Images that must be shown whole (letterboxed) because captions/logos sit near the edge.
 LETTERBOX = {"tdk-microchip-robot-sensor-nodes", "edge0-145b-on-device-llm"}
@@ -57,6 +61,9 @@ CREDIT_OVERRIDE = {
     "u-blox-sam-m11n-gnss": "u-blox",
     "quectel-sp900bf-ap-edge-ai": "Quectel / PR Newswire Asia",
     "tdk-microchip-robot-sensor-nodes": "TDK / Microchip (BIS Infotech)",
+    "alibaba-qwen4-max": "Alibaba (TheEdge)",
+    "xiaomi-18-pro-global-launch": "Android Authority",
+    "eurotech-reliagate-15a-14": "Eurotech",
 }
 
 
