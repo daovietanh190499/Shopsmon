@@ -1,0 +1,145 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-22 &middot; IoT / AIoT &middot; ~13 phút đọc</p>
+<h1>Gửi khi có thay đổi (send-on-delta): bớt được bao nhiêu thông điệp cảm biến và sai số là bao nhiêu</h1>
+<p class="meta">Nhiều nền tảng IoT chỉ gửi giá trị mới của cảm biến khi nó lệch khỏi giá trị đã gửi lần trước quá một ngưỡng, thay vì gửi theo chu kỳ cố định. Bài này dẫn xuất tỉ lệ thông điệp và sai số tái tạo của cách làm đó trên hai loại tín hiệu (nhiễu trắng quanh một giá trị không đổi, và bước ngẫu nhiên không nhiễu), so với lấy mẫu theo chu kỳ cùng số thông điệp, rồi đo trên tín hiệu có nhiễu đo, nơi kết quả không như trực giác. Mọi con số là đầu ra của một script có seed cố định.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Bộ lọc thay đổi dữ liệu (DataChangeFilter) của OPC UA có tuỳ chọn vùng chết (deadband): khi đăng ký theo dõi một biến, máy chủ chỉ báo giá trị mới nếu \(|\text{giá trị lưu gần nhất} - \text{giá trị hiện tại}| &gt; \text{AbsoluteDeadband}\), trong đó giá trị lưu gần nhất là giá trị cuối cùng đã đẩy vào hàng đợi (OPC 10000-4, mục 7.22.2). Dạng PercentDeadband dùng tỉ lệ phần trăm của EURange của biến (OPC 10000-8, mục 7.2). Đặc tả mô tả mục đích của vùng chết là giữ cho tín hiệu nhiễu không cập nhật máy khách một cách không cần thiết (OPC 10000-4, mục 3.1.2). Bộ thu thập OPC UA trong Azure IoT Operations 2610 cũng có tuỳ chọn bỏ qua các giá trị gần như không đổi, theo bài đăng của Microsoft ngày 17/11/2026 (<a href="@@L@@/news/azure-iot-operations-2610.html">tin liên quan</a>).</p>
+<p>Trong tài liệu về lấy mẫu theo sự kiện, quy tắc này gọi là <em>send-on-delta</em> (Miskowicz, 2006): bên gửi giữ giá trị đã gửi gần nhất (giá trị tham chiếu) và gửi mẫu mới chỉ khi nó lệch khỏi tham chiếu quá \(\delta\). Bên nhận giữ nguyên giá trị nhận được cuối cùng (zero-order hold, ZOH). So sánh lấy mẫu theo chu kỳ và theo sự kiện cho hệ ngẫu nhiên bậc nhất do Åström và Bernhardsson (2002) nghiên cứu. Bài này không lặp lại bài báo đó: nó tự dẫn xuất hai công thức đơn giản, kiểm tra chúng bằng mô phỏng và đo thêm trường hợp tín hiệu có nhiễu đo.</p>
+
+<h2>2. Mô hình và thước đo</h2>
+<p>Cảm biến lấy mẫu mỗi tick. Bên gửi truyền mẫu đầu tiên, rồi truyền mẫu \(x_t\) khi \(|x_t - r| &gt; \delta\) (bất đẳng thức chặt như OPC UA), với \(r\) là mẫu đã truyền gần nhất; sau khi truyền, \(r \leftarrow x_t\). Bên nhận dựng lại tín hiệu bằng ZOH. Ba đại lượng được đo: số thông điệp trên mỗi mẫu (<em>tỉ lệ thông điệp</em>), sai số căn quân phương (RMSE) và sai số tuyệt đối lớn nhất giữa tín hiệu dựng lại và tín hiệu thật, tính ở mọi tick.</p>
+<figure><img src="/assets/img/blog/send-on-delta-trace.svg" alt="Hai đồ thị cùng trục: tín hiệu bước ngẫu nhiên màu xám, bên nhận giữ giá trị (đường bậc thang xanh) và các thông điệp (chấm đỏ); phía trên là send-on-delta với delta 6 và 19 thông điệp, phía dưới là lấy mẫu chu kỳ mỗi 37 tick cũng với 19 thông điệp; phía dưới có các đoạn bậc thang lệch xa tín hiệu hơn" width="620" height="460">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Cùng một tín hiệu bước ngẫu nhiên 700 mẫu và cùng 19 thông điệp. Send-on-delta với \(\delta=6\) có sai số tuyệt đối lớn nhất 5,916; lấy mẫu theo chu kỳ mỗi 37 tick có 21,046.</figcaption></figure>
+
+<h2>3. Hai công thức</h2>
+<p><strong>Tín hiệu không đổi trong nhiễu trắng \(N(0,\sigma^2)\).</strong> Nếu tham chiếu là một mẫu nhiễu cố định \(n_r\) và mẫu mới độc lập, hiệu \(n_t-n_r\sim N(0,2\sigma^2)\) và xác suất vượt ngưỡng là</p>
+$$P_\text{naive}=2\Bigl(1-\Phi\bigl(\tfrac{\delta}{\sigma\sqrt2}\bigr)\Bigr).$$
+<p>Công thức này bỏ qua việc tham chiếu chính là mẫu vừa vượt ngưỡng nên không còn là một mẫu nhiễu bất kỳ. Cách tính đúng: độ lệch tham chiếu \(a\) (nhiễu của mẫu đã gửi gần nhất) là một chuỗi Markov qua các lần gửi; với \(P_a=P(|n-a|&gt;\delta)\), mẫu gửi kế tiếp có mật độ \(\varphi(a')\,\mathbf 1[|a'-a|&gt;\delta]/P_a\) và một chu kỳ dài trung bình \(1/P_a\) tick. Gọi \(\pi\) là phân bố dừng của chuỗi, tỉ lệ thông điệp là \(1/E_\pi[1/P_a]\). Script tính \(\pi\) bằng lặp luỹ thừa trên lưới 1801 điểm.</p>
+<p><strong>Bước ngẫu nhiên không nhiễu.</strong> Với \(x_t=x_{t-1}+w_t\), \(w_t\sim N(0,\sigma_w^2)\), lấy giới hạn liên tục (chuyển động Brown với phương sai \(\sigma_w^2\) mỗi tick). Thời gian thoát khỏi \((-\delta,\delta)\) có kỳ vọng \(E[\tau]=\delta^2/\sigma_w^2\), nên tỉ lệ thông điệp là</p>
+$$\frac{1}{E[\tau]}=\frac{\sigma_w^2}{\delta^2}.$$
+<p>Sai số ZOH là \(e=x-r\). Hàm \(u(x)=E_x\!\int_0^\tau B_t^2\,dt\) thoả \(\tfrac{\sigma_w^2}{2}u''=-x^2\), \(u(\pm\delta)=0\), nên \(u(0)=\delta^4/(6\sigma_w^2)\) và bình phương sai số trung bình theo thời gian bằng \(u(0)/E[\tau]=\delta^2/6\), tức RMSE \(=\delta/\sqrt6\approx0{,}408\,\delta\). Lấy mẫu theo chu kỳ có số thông điệp bằng nhau cần chu kỳ \(P=\delta^2/\sigma_w^2\) tick; sau \(k\) tick phương sai sai số là \(k\sigma_w^2\) nên trung bình \(\sigma_w^2(P-1)/2\approx\delta^2/2\), tức RMSE \(\approx\delta/\sqrt2\). Tỉ số RMSE là \(\sqrt{1/3}\approx0{,}577\). Ngoài ra send-on-delta có sai số tuyệt đối không bao giờ vượt \(\delta\) theo cấu trúc, còn sai số của lấy mẫu theo chu kỳ không bị chặn.</p>
+
+<h2>4. Cài đặt</h2>
+<p><a href="/blog/code/send_on_delta.py">Script đầy đủ</a> (bốn thí nghiệm, ba hình; chạy khoảng hai phút) tải về được. Lõi của bộ gửi và của bên nhận:</p>
+<pre><code class="language-python">def sod_indices(x, delta):
+    """Indices at which a send-on-delta reporter transmits (the first sample is always sent)."""
+    xs = x.tolist()
+    ref = xs[0]
+    idx = [0]
+    for i in range(1, len(xs)):
+        v = xs[i]
+        if v - ref &gt; delta or ref - v &gt; delta:
+            ref = v
+            idx.append(i)
+    return np.array(idx)
+
+def zoh(n, idx, vals):
+    """Receiver reconstruction: hold the last received value."""
+    return np.repeat(vals, np.diff(np.append(idx, n)))
+</code></pre>
+
+<h2>5. Thiết lập</h2>
+<p>Seed cố định 20261122; script in đúng cùng số liệu ở mọi lần chạy (đã chạy hai lần và so sánh đầu ra). Thí nghiệm 1: 10 chuỗi, mỗi chuỗi 200.000 mẫu \(N(0,1)\). Thí nghiệm 2: 10 chuỗi bước ngẫu nhiên 400.000 mẫu (\(\sigma_w=1\)). Thí nghiệm 3: tín hiệu thật là bước ngẫu nhiên với độ lệch chuẩn bước 0,05, cộng nhiễu \(N(0,1)\); ngưỡng của từng phương pháp được hiệu chỉnh bằng chia đôi trên một chuỗi riêng 100.000 mẫu rồi kiểm tra trên 6 chuỗi khác, mỗi chuỗi 100.000 mẫu. Thí nghiệm 4: 10 chuỗi bước ngẫu nhiên 400.000 mẫu với \(\delta=10\). Dấu \(\pm\) và số trong ngoặc là sai số chuẩn giữa các chuỗi.</p>
+
+<h2>6. Thí nghiệm 1: chỉ có nhiễu thì gửi bao nhiêu?</h2>
+<figure><img src="/assets/img/blog/send-on-delta-noise-rate.svg" alt="Đồ thị bán log của tỉ lệ thông điệp theo delta chia sigma từ 0,3 đến 4,2: đường cong chính xác từ chuỗi Markov và đường nét đứt của công thức đơn giản gần như trùng nhau, các chấm mô phỏng nằm trên đường cong" width="480" height="330">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Tín hiệu không đổi trong nhiễu \(N(0,\sigma^2)\): số thông điệp trên mỗi mẫu theo \(\delta/\sigma\). Đường liền: chuỗi Markov; nét đứt: công thức với tham chiếu cố định; chấm: mô phỏng (2 sai số chuẩn).</figcaption></figure>
+<table>
+<thead><tr><th>\(\delta/\sigma\)</th><th>Mô phỏng (sai số chuẩn)</th><th>Chuỗi Markov</th><th>Tham chiếu cố định</th></tr></thead>
+<tbody>
+<tr><td>0,5</td><td>0,7236 (0,0004)</td><td>0,7238</td><td>0,7237</td></tr>
+<tr><td>1,0</td><td>0,4799 (0,0004)</td><td>0,4798</td><td>0,4795</td></tr>
+<tr><td>1,5</td><td>0,2891 (0,0004)</td><td>0,2891</td><td>0,2888</td></tr>
+<tr><td>2,0</td><td>0,1573 (0,0004)</td><td>0,1575</td><td>0,1573</td></tr>
+<tr><td>3,0</td><td>0,0338 (0,0004)</td><td>0,0340</td><td>0,0339</td></tr>
+<tr><td>4,0</td><td>0,00453 (0,00026)</td><td>0,00470</td><td>0,00468</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Mô phỏng và chuỗi Markov khớp nhau</strong> trong phạm vi một sai số chuẩn ở cả sáu dòng.</li>
+<li><strong>Giả thuyết ban đầu không đúng.</strong> Giả thuyết là việc tham chiếu chính là mẫu đã vượt ngưỡng sẽ làm tỉ lệ thông điệp khác rõ so với công thức tham chiếu cố định. Số đo cho thấy chênh lệch nhỏ: tỉ số chính xác/đơn giản từ 1,000 (\(\delta=0{,}5\sigma\)) đến 1,005 (\(\delta=4\sigma\)). Với mục đích chọn ngưỡng, công thức đơn giản là đủ.</li>
+<li><strong>Vùng chết quanh \(\sigma\) gần như không giảm được gì.</strong> Ở \(\delta=\sigma\) khoảng một nửa số mẫu (48 %) vẫn được gửi; ở \(2\sigma\) là 15,7 %; ở \(3\sigma\) vẫn có 3,4 % (khoảng một thông điệp mỗi 30 mẫu) trên một tín hiệu hoàn toàn không đổi. Ví dụ với PercentDeadband: nếu EURange rộng 100 đơn vị và nhiễu đo có \(\sigma=0{,}5\), vùng chết 1 % (ngưỡng 1,0 = \(2\sigma\)) vẫn gửi khoảng 15,7 % số mẫu.</li>
+</ul>
+
+<h2>7. Thí nghiệm 2: bước ngẫu nhiên không nhiễu</h2>
+<table>
+<thead><tr><th>\(\delta\)</th><th>Tỉ lệ thông điệp (sai số chuẩn)</th><th>\(1/\delta^2\)</th><th>Tỉ lệ \(\times\delta^2\)</th><th>Chu kỳ tương đương</th><th>RMSE send-on-delta</th><th>RMSE chu kỳ</th><th>Tỉ số RMSE</th><th>Sai số lớn nhất: send-on-delta</th><th>Sai số lớn nhất: chu kỳ</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>0,1447 (0,0001)</td><td>0,2500</td><td>0,579</td><td>7,0</td><td>0,927</td><td>1,731</td><td>0,536</td><td>2,000</td><td>10,91</td></tr>
+<tr><td>5</td><td>0,0318 (0,0001)</td><td>0,0400</td><td>0,795</td><td>31,4</td><td>2,218</td><td>3,899</td><td>0,569</td><td>5,000</td><td>22,85</td></tr>
+<tr><td>10</td><td>0,00887 (0,00002)</td><td>0,0100</td><td>0,887</td><td>112,7</td><td>4,286</td><td>7,453</td><td>0,575</td><td>10,000</td><td>41,10</td></tr>
+<tr><td>20</td><td>0,00237 (0,00003)</td><td>0,0025</td><td>0,947</td><td>422,9</td><td>8,379</td><td>14,538</td><td>0,576</td><td>20,000</td><td>72,57</td></tr>
+</tbody></table>
+<p>Chu kỳ tương đương là chu kỳ của lấy mẫu theo chu kỳ có cùng số thông điệp (làm tròn), trung bình trên các chuỗi. Sai số lớn nhất của send-on-delta là giá trị lớn nhất trên cả 10 chuỗi; của lấy mẫu theo chu kỳ là trung bình của giá trị lớn nhất mỗi chuỗi.</p>
+<ul>
+<li><strong>Tỉ lệ thông điệp tiến tới \(\sigma_w^2/\delta^2\) từ phía dưới:</strong> tỉ lệ \(\times\delta^2\) là 0,58 ở \(\delta=2\sigma_w\), 0,80, 0,89 rồi 0,95 ở \(\delta=20\sigma_w\). Công thức liên tục đúng khi \(\delta\) lớn hơn nhiều bước đơn lẻ; ở \(\delta=2\sigma_w\) nó đoán nhiều hơn thực tế khoảng 1,7 lần. Chênh lệch này phù hợp với hiệu ứng bước rời rạc (bước ngẫu nhiên nhảy qua biên thay vì chạm biên liên tục); cơ chế này chưa được kiểm tra riêng.</li>
+<li><strong>RMSE khớp dự đoán.</strong> RMSE/\(\delta\) của send-on-delta là 0,464, 0,444, 0,429, 0,419, giảm dần về \(1/\sqrt6=0{,}408\). Tỉ số RMSE so với lấy mẫu chu kỳ cùng số thông điệp là 0,536 đến 0,576, tiến sát \(\sqrt{1/3}=0{,}577\): send-on-delta có sai số căn quân phương thấp hơn khoảng 42 % đến 46 %.</li>
+<li><strong>Sai số lớn nhất là điểm khác biệt lớn hơn.</strong> Send-on-delta không bao giờ vượt \(\delta\) (giá trị đo được làm tròn bằng \(\delta\) ở ba chữ số thập phân); với cùng số thông điệp, lấy mẫu theo chu kỳ có sai số lớn nhất 5,5 lần \(\delta\) (\(\delta=2\)), 4,6, 4,1 và 3,6 lần (\(\delta=20\)).</li>
+</ul>
+
+<h2>8. Thí nghiệm 3: tín hiệu có nhiễu đo</h2>
+<p>Tín hiệu thật \(s_t\) là bước ngẫu nhiên với độ lệch chuẩn bước 0,05, cảm biến trả \(x_t=s_t+n_t\) với \(n_t\sim N(0,1)\). Bốn phương pháp được đặt cùng ngân sách thông điệp: (a) lấy mẫu theo chu kỳ, gửi mẫu thô; (b) lấy mẫu theo chu kỳ, gửi trung bình của khối mẫu vừa qua; (c) send-on-delta trên mẫu thô; (d) send-on-delta trên tín hiệu lọc EWMA \(y_t=y_{t-1}+\alpha(x_t-y_{t-1})\) với \(\alpha=0{,}1\) (gửi giá trị \(y\)). RMSE được tính so với \(s_t\), không phải so với mẫu nhiễu. Nếu gửi mọi mẫu thô thì RMSE là 0,999, và tín hiệu EWMA (chưa bị hạn chế số thông điệp) có RMSE 0,251.</p>
+<figure><img src="/assets/img/blog/send-on-delta-budget.svg" alt="Đồ thị RMSE theo ngân sách thông điệp trên mỗi mẫu từ 1/200 đến 1/10 cho bốn phương pháp: lấy mẫu chu kỳ thô và send-on-delta thô nằm gần 1,0 đến 1,4; lấy mẫu chu kỳ có trung bình khối nằm từ 0,64 xuống khoảng 0,30 rồi tăng nhẹ lên 0,34; send-on-delta trên EWMA thấp nhất, từ 0,40 xuống 0,26" width="480" height="330">
+<figcaption>Hình 3 (nhãn hình bằng tiếng Anh). RMSE so với tín hiệu thật theo ngân sách thông điệp; thanh sai số là 2 sai số chuẩn trên 6 chuỗi.</figcaption></figure>
+<table>
+<thead><tr><th>Ngân sách</th><th>\(\delta\) thô</th><th>\(\delta\) EWMA</th><th>(a) chu kỳ, thô</th><th>(b) chu kỳ, trung bình khối</th><th>(c) send-on-delta, thô</th><th>(d) send-on-delta, EWMA</th></tr></thead>
+<tbody>
+<tr><td>1/200</td><td>4,39</td><td>0,97</td><td>1,084</td><td>0,641</td><td>1,387</td><td>0,400</td></tr>
+<tr><td>1/100</td><td>3,84</td><td>0,73</td><td>1,043</td><td>0,461</td><td>1,207</td><td>0,332</td></tr>
+<tr><td>1/50</td><td>3,36</td><td>0,56</td><td>1,020</td><td>0,348</td><td>1,092</td><td>0,295</td></tr>
+<tr><td>1/20</td><td>2,82</td><td>0,36</td><td>1,006</td><td>0,296</td><td>1,041</td><td>0,267</td></tr>
+<tr><td>1/10</td><td>2,36</td><td>0,25</td><td>1,002</td><td>0,342</td><td>1,022</td><td>0,258</td></tr>
+</tbody></table>
+<p>Sai số chuẩn của mỗi ô RMSE nằm trong khoảng 0,001 đến 0,018. Do ngưỡng được hiệu chỉnh trên một chuỗi khác, số thông điệp đạt được lệch khỏi ngân sách: phương pháp (c) từ &minus;0,4 % đến +7 % (0,0214 thay vì 0,0200 ở ngân sách 1/50), phương pháp (d) từ &minus;8 % đến 0 % (0,0046 thay vì 0,0050 ở 1/200). Ở ba ngân sách thưa nhất (1/200 đến 1/50), (c) gửi nhiều hơn (a) từ 4 % đến 7 % mà vẫn kém hơn; (d) gửi ít hơn hoặc bằng ngân sách mà vẫn tốt hơn (b) ở cả năm ngân sách.</p>
+<ul>
+<li><strong>Send-on-delta trên mẫu thô tệ hơn cả lấy mẫu chu kỳ thô:</strong> 1,387 so với 1,084 ở ngân sách 1/200 (cao hơn 28 %) và 1,092 so với 1,020 ở 1/50. Ngưỡng cần thiết (từ 2,4 đến 4,4 lần \(\sigma\)) khiến mỗi thông điệp, theo cấu trúc, là mẫu lệch nhiều nhất so với lần gửi trước; nhiễu được chọn chứ không bị trung bình hoá. Giải thích này phù hợp với số đo, nhưng cơ chế chưa được tách riêng bằng thí nghiệm.</li>
+<li><strong>Lọc trước khi so ngưỡng là yếu tố chính.</strong> Send-on-delta trên EWMA có RMSE từ 0,400 (1/200) xuống 0,258 (1/10), thấp hơn trung bình khối 38 %, 28 %, 15 %, 10 % và 25 % ở năm ngân sách (từ 1/200 đến 1/10); ở 1/10 nó chỉ cách mức sàn của bộ lọc EWMA (0,251) 0,007.</li>
+<li><strong>Trung bình khối có điểm tối ưu của riêng nó:</strong> RMSE giảm từ 0,641 (khối 200) xuống 0,296 (khối 20) rồi tăng lên 0,342 ở khối 10, vì khối ngắn trung bình ít nhiễu hơn. Hệ số \(\alpha=0{,}1\) của EWMA được giữ cố định ở mọi ngân sách, không tối ưu riêng cho từng ngân sách.</li>
+</ul>
+
+<h2>9. Thí nghiệm 4: im lặng và nhịp tim (heartbeat)</h2>
+<p>Send-on-delta không gửi gì khi tín hiệu không đổi, nên bên nhận không phân biệt được &ldquo;không đổi&rdquo; với &ldquo;cảm biến hỏng hoặc đứt kết nối&rdquo;. Một cách khắc phục là gửi thêm sau tối đa \(H\) tick kể từ thông điệp trước. Bước ngẫu nhiên không nhiễu, \(\delta=10\):</p>
+<table>
+<thead><tr><th>\(H\)</th><th>Tỉ lệ thông điệp</th><th>So với không heartbeat</th><th>Khoảng im lặng dài nhất (10 chuỗi)</th><th>Phân vị 99 của khoảng im lặng</th><th>RMSE</th></tr></thead>
+<tbody>
+<tr><td>không</td><td>0,00896</td><td>1,00</td><td>946</td><td>440,8</td><td>4,287</td></tr>
+<tr><td>200</td><td>0,01008</td><td>1,13</td><td>200</td><td>200,0</td><td>4,256</td></tr>
+<tr><td>100</td><td>0,01356</td><td>1,51</td><td>100</td><td>100,0</td><td>4,129</td></tr>
+<tr><td>50</td><td>0,02199</td><td>2,45</td><td>50</td><td>50,0</td><td>3,823</td></tr>
+</tbody></table>
+<ul>
+<li>Không có heartbeat, khoảng im lặng trung bình là khoảng 112 tick (\(1/0{,}00896\)), nhưng phân vị 99 là 441 và khoảng dài nhất đo được là 946, khoảng 8,5 lần giá trị trung bình.</li>
+<li>Heartbeat chặn khoảng im lặng đúng bằng \(H\), với chi phí thêm 13 % thông điệp ở \(H=200\), 51 % ở \(H=100\) và 145 % ở \(H=50\); RMSE giảm nhẹ (từ 4,287 xuống 3,823 ở \(H=50\)).</li>
+</ul>
+
+<h2>10. Hạn chế</h2>
+<ul>
+<li>Chỉ hai dạng tín hiệu tổng hợp: nhiễu trắng quanh một hằng số, và bước ngẫu nhiên (có hoặc không nhiễu đo). Bước ngẫu nhiên có độ lệch chuẩn bước cố định, nên lợi thế của send-on-delta ở đây chỉ là hệ số 0,577 về RMSE; với tín hiệu hầu như đứng yên rồi thỉnh thoảng thay đổi mạnh (bậc, đóng mở), mức tiết kiệm có thể lớn hơn nhiều, nhưng bài này không đo.</li>
+<li>Nhiễu đo là nhiễu trắng Gauss độc lập. Nhiễu tự tương quan, nhiễu có đuôi nặng hay độ trôi (drift) của cảm biến sẽ cho tỉ lệ thông điệp khác Mục 6; các trường hợp này chưa được đo.</li>
+<li>Bộ lọc EWMA dùng \(\alpha=0{,}1\) cố định và ngưỡng được hiệu chỉnh trên một chuỗi có cùng mức nhiễu; trong thực tế độ lệch chuẩn nhiễu phải được ước lượng từ dữ liệu. Phương pháp (b) gửi một giá trị trung bình mỗi khối, nên độ trễ của nó (giá trị chỉ có sau khi hết khối) cũng không được tính vào RMSE.</li>
+<li>Trễ truyền, mất gói và hành vi hàng đợi không nằm trong mô hình; mỗi thông điệp được coi là có chi phí như nhau (không tính độ dài gói, năng lượng hay QoS). Bài trước về <a href="@@L@@/blog/mqtt-qos-loss.html">MQTT QoS trên đường truyền mất gói</a> bàn về chi phí và độ tin cậy của một thông điệp.</li>
+<li>Mô phỏng ZOH đo sai số ở mọi tick, không đo độ trễ phát hiện một thay đổi đột ngột; EWMA làm chậm phản ứng với bậc nhảy, điều không được đo ở đây.</li>
+</ul>
+
+<h2>11. Kết luận thực hành</h2>
+<ol>
+<li>Đo độ lệch chuẩn nhiễu của cảm biến trước khi đặt vùng chết: trên một tín hiệu không đổi, \(\delta=\sigma\) vẫn gửi 48 % số mẫu, \(2\sigma\) gửi 15,7 % và \(3\sigma\) gửi 3,4 %. Vùng chết nhỏ hơn khoảng \(3\sigma\) chủ yếu lọc không được nhiễu.</li>
+<li>Với tín hiệu không nhiễu, send-on-delta bảo đảm sai số tái tạo không vượt \(\delta\), điều lấy mẫu theo chu kỳ không đảm bảo (sai số lớn nhất lớn hơn 3,6 đến 5,5 lần \(\delta\) ở cùng số thông điệp), và với bước ngẫu nhiên giảm RMSE khoảng 42 % đến 46 % ở cùng số thông điệp.</li>
+<li>Khi cảm biến có nhiễu đo, lọc (EWMA hoặc trung bình) trước khi so ngưỡng. Trong thí nghiệm, send-on-delta trên mẫu thô tệ hơn cả gửi mẫu thô theo chu kỳ, còn send-on-delta trên tín hiệu lọc EWMA tốt hơn trung bình khối từ 10 % đến 38 % về RMSE.</li>
+<li>Gửi heartbeat nếu bên nhận cần biết cảm biến còn sống: khoảng im lặng dài nhất không có heartbeat bằng khoảng 8,5 lần giá trị trung bình trong mô phỏng, còn heartbeat chặn đúng bằng \(H\) với chi phí 13 % thông điệp thêm ở \(H=200\) trên cấu hình này.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần giảm lưu lượng cảm biến, thiết kế bộ lọc ở biên hay một nguyên mẫu edge AI?</strong><br>
+Tôi nhận việc này theo hình thức freelance. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20d%E1%BB%AF%20li%E1%BB%87u%20c%E1%BA%A3m%20bi%E1%BA%BFn%20IoT">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/solutions/custom-ai-tools.html">Công cụ AI theo yêu cầu</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>OPC Foundation. <em>OPC Unified Architecture, Part 4: Services</em>, mục 7.22.2 (DataChangeFilter) và 3.1.2 (Deadband). <a href="https://reference.opcfoundation.org/specs/OPC-10000-4/7.22.2">reference.opcfoundation.org/specs/OPC-10000-4/7.22.2</a>.</li>
+<li>OPC Foundation. <em>OPC Unified Architecture, Part 8: Data Access</em>, mục 7.2 (PercentDeadband). <a href="https://reference.opcfoundation.org/specs/OPC-10000-8/7.2">reference.opcfoundation.org/specs/OPC-10000-8/7.2</a>.</li>
+<li>M. Miskowicz. &ldquo;Send-on-delta concept: an event-based data reporting strategy.&rdquo; <em>Sensors</em> 6(1), 2006, tr. 49&ndash;63. <a href="https://doi.org/10.3390/s6010049">doi:10.3390/s6010049</a>.</li>
+<li>K. J. Åström và B. M. Bernhardsson. &ldquo;Comparison of Riemann and Lebesgue sampling for first order stochastic systems.&rdquo; <em>Proceedings of the 41st IEEE Conference on Decision and Control</em>, 2002. <a href="https://doi.org/10.1109/CDC.2002.1184824">doi:10.1109/CDC.2002.1184824</a>.</li>
+<li>Microsoft. &ldquo;Azure IoT Operations 2610 is now available: Scaling the foundation for Physical AI.&rdquo; Microsoft Community Hub, 17/11/2026. <a href="https://techcommunity.microsoft.com/blog/iotblog/azure-iot-operations-2610-is-now-available-scaling-the-foundation-for-physical-a/4572675">techcommunity.microsoft.com</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/send_on_delta.py">send_on_delta.py</a> (Python 3.12, NumPy, Matplotlib; khoảng hai phút). Mọi con số ở Mục 6&ndash;9 là đầu ra của script này, trừ các tỉ số được nêu trong văn bản (ví dụ 42 % đến 46 %, 38 %, 28 %, 1,7 lần, 8,5 lần, các tỉ lệ so với \(\delta\), +13 %, +51 %, +145 %), được tính tay từ các bảng.</p>
+</article>

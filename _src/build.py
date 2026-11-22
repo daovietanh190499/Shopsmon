@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-21"
+TODAY = "2026-11-22"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="send-on-delta", date="2026-11-22", min=13, aff="iot",
+         og="/assets/img/blog/send-on-delta-cover.png",
+         tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
+         title={"vi": "Gửi khi có thay đổi (send-on-delta): bớt được bao nhiêu thông điệp cảm biến và sai số là bao nhiêu",
+                "en": "Send-on-delta: how many sensor messages it saves and what it costs in error"},
+         summary={"vi": "Vùng chết quanh một sigma vẫn gửi 48 % số mẫu trên tín hiệu không đổi; trên bước ngẫu nhiên không nhiễu, send-on-delta giảm RMSE 42 % đến 46 % so với lấy mẫu chu kỳ cùng số thông điệp và không bao giờ vượt ngưỡng; trên tín hiệu có nhiễu, so ngưỡng trên mẫu thô còn tệ hơn gửi mẫu thô theo chu kỳ, còn so trên EWMA thì tốt hơn trung bình khối 10 % đến 38 %.",
+                  "en": "A deadband of one sigma still sends 48 % of samples on a constant signal; on a noiseless random walk send-on-delta cuts RMSE by 42 % to 46 % against periodic sampling at the same message count and never exceeds its threshold; on a noisy signal, thresholding raw samples is worse than periodic raw sending, while thresholding an EWMA beats the block mean by 10 % to 38 %."},
+         seo_title={"vi": "Send-on-delta: bớt thông điệp cảm biến, sai số bao nhiêu | Shopsmon",
+                    "en": "Send-on-delta: sensor message savings and error | Shopsmon"},
+         seo_desc={"vi": "Tỉ lệ thông điệp và sai số tái tạo của send-on-delta (vùng chết OPC UA): công thức, mô phỏng NumPy với seed cố định, nhiễu đo, lọc EWMA và heartbeat.",
+                   "en": "Message rate and reconstruction error of send-on-delta (OPC UA deadband): formulas, fixed-seed NumPy simulation, measurement noise, EWMA filtering and heartbeat."}),
     dict(slug="mqtt-qos-loss", date="2026-11-21", min=12, aff="iot",
          og="/assets/img/blog/mqtt-qos-loss-cover.png",
          tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},

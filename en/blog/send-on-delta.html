@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Send-on-delta: sensor message savings and error | Shopsmon</title>
+<meta name="description" content="Message rate and reconstruction error of send-on-delta (OPC UA deadband): formulas, fixed-seed NumPy simulation, measurement noise, EWMA filtering and heartbeat.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/send-on-delta.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/send-on-delta.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/send-on-delta.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/send-on-delta.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Send-on-delta: sensor message savings and error | Shopsmon">
+<meta property="og:description" content="Message rate and reconstruction error of send-on-delta (OPC UA deadband): formulas, fixed-seed NumPy simulation, measurement noise, EWMA filtering and heartbeat.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/send-on-delta.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/send-on-delta-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/send-on-delta.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-22 &middot; IoT / AIoT &middot; ~13 min read</p>
+<h1>Send-on-delta: how many sensor messages it saves and what it costs in error</h1>
+<p class="meta">Many IoT platforms send a sensor's new value only when it differs from the last value sent by more than a threshold, instead of sending at a fixed period. This post derives the message rate and the reconstruction error of that rule on two kinds of signal (white noise around a constant, and a noiseless random walk), compares it with periodic sampling at the same number of messages, and then measures it on a signal with measurement noise, where the result is not what intuition suggests. Every number is output of a script with a fixed seed.</p>
+
+<h2>1. Background</h2>
+<p>The OPC UA DataChangeFilter has a deadband option: when a variable is monitored, the server reports a new value only if \(|\text{last cached value} - \text{current value}| &gt; \text{AbsoluteDeadband}\), where the last cached value is the last value that was put in the queue (OPC 10000-4, section 7.22.2). PercentDeadband uses a percentage of the variable's EURange (OPC 10000-8, section 7.2). The specification describes the purpose of the deadband as keeping a noisy signal from updating the client unnecessarily (OPC 10000-4, section 3.1.2). The OPC UA connector in Azure IoT Operations 2610 also has an option to ignore values that barely change, according to Microsoft's post of 17 November 2026 (<a href="/en/news/azure-iot-operations-2610.html">related news</a>).</p>
+<p>In the event-based sampling literature this rule is called <em>send-on-delta</em> (Miskowicz, 2006): the sender keeps the last value it sent (the reference) and sends a new sample only when it differs from the reference by more than \(\delta\). The receiver holds the last received value (zero-order hold, ZOH). Åström and Bernhardsson (2002) studied periodic versus event-based sampling for first-order stochastic systems. This post does not repeat that paper: it derives two simple formulas, checks them by simulation, and adds a measurement of the case with measurement noise.</p>
+
+<h2>2. Model and metrics</h2>
+<p>The sensor is sampled every tick. The sender transmits the first sample, then transmits sample \(x_t\) whenever \(|x_t - r| &gt; \delta\) (strict inequality, as in OPC UA), where \(r\) is the last transmitted sample; after a transmission, \(r \leftarrow x_t\). The receiver reconstructs the signal with ZOH. Three quantities are measured: messages per sample (the <em>message rate</em>), the root-mean-square error (RMSE) and the maximum absolute error between the reconstructed and the true signal, evaluated at every tick.</p>
+<figure><img src="/assets/img/blog/send-on-delta-trace.svg" alt="Two plots on the same axes: a random-walk signal in grey, the receiver's held value (blue staircase) and the messages (red dots); top is send-on-delta with delta 6 and 19 messages, bottom is periodic sampling every 37 ticks, also with 19 messages; the bottom staircase segments deviate further from the signal" width="620" height="460">
+<figcaption>Figure 1. The same 700-sample random-walk signal and the same 19 messages. Send-on-delta with \(\delta=6\) has a maximum absolute error of 5.916; periodic sampling every 37 ticks has 21.046.</figcaption></figure>
+
+<h2>3. Two formulas</h2>
+<p><strong>A constant signal in white noise \(N(0,\sigma^2)\).</strong> If the reference were one fixed noise sample \(n_r\) and the new sample independent, the difference \(n_t-n_r\sim N(0,2\sigma^2)\) and the probability of exceeding the threshold is</p>
+$$P_\text{naive}=2\Bigl(1-\Phi\bigl(\tfrac{\delta}{\sigma\sqrt2}\bigr)\Bigr).$$
+<p>This formula ignores that the reference is the very sample that exceeded the threshold, so it is not an arbitrary noise sample. The exact calculation: the reference offset \(a\) (the noise of the last sent sample) is a Markov chain over transmissions; with \(P_a=P(|n-a|&gt;\delta)\), the next sent sample has density \(\varphi(a')\,\mathbf 1[|a'-a|&gt;\delta]/P_a\) and a cycle lasts \(1/P_a\) ticks on average. With \(\pi\) the stationary distribution of the chain, the message rate is \(1/E_\pi[1/P_a]\). The script computes \(\pi\) by power iteration on a grid of 1801 points.</p>
+<p><strong>A noiseless random walk.</strong> With \(x_t=x_{t-1}+w_t\), \(w_t\sim N(0,\sigma_w^2)\), take the continuous limit (Brownian motion with variance \(\sigma_w^2\) per tick). The exit time from \((-\delta,\delta)\) has expectation \(E[\tau]=\delta^2/\sigma_w^2\), so the message rate is</p>
+$$\frac{1}{E[\tau]}=\frac{\sigma_w^2}{\delta^2}.$$
+<p>The ZOH error is \(e=x-r\). The function \(u(x)=E_x\!\int_0^\tau B_t^2\,dt\) satisfies \(\tfrac{\sigma_w^2}{2}u''=-x^2\), \(u(\pm\delta)=0\), so \(u(0)=\delta^4/(6\sigma_w^2)\) and the time-averaged squared error is \(u(0)/E[\tau]=\delta^2/6\), that is RMSE \(=\delta/\sqrt6\approx0.408\,\delta\). Periodic sampling with the same number of messages needs a period \(P=\delta^2/\sigma_w^2\) ticks; after \(k\) ticks the error variance is \(k\sigma_w^2\), so the average is \(\sigma_w^2(P-1)/2\approx\delta^2/2\), that is RMSE \(\approx\delta/\sqrt2\). The RMSE ratio is \(\sqrt{1/3}\approx0.577\). In addition, send-on-delta has an absolute error that by construction never exceeds \(\delta\), while the error of periodic sampling is unbounded.</p>
+
+<h2>4. Implementation</h2>
+<p>The <a href="/blog/code/send_on_delta.py">full script</a> (four experiments, three figures; about two minutes to run) can be downloaded. The core of the sender and of the receiver:</p>
+<pre><code class="language-python">def sod_indices(x, delta):
+    """Indices at which a send-on-delta reporter transmits (the first sample is always sent)."""
+    xs = x.tolist()
+    ref = xs[0]
+    idx = [0]
+    for i in range(1, len(xs)):
+        v = xs[i]
+        if v - ref &gt; delta or ref - v &gt; delta:
+            ref = v
+            idx.append(i)
+    return np.array(idx)
+
+def zoh(n, idx, vals):
+    """Receiver reconstruction: hold the last received value."""
+    return np.repeat(vals, np.diff(np.append(idx, n)))
+</code></pre>
+
+<h2>5. Setup</h2>
+<p>Fixed seed 20261122; the script prints identical numbers on every run (it was run twice and the outputs compared). Experiment 1: 10 series of 200,000 samples \(N(0,1)\) each. Experiment 2: 10 random-walk series of 400,000 samples (\(\sigma_w=1\)). Experiment 3: the true signal is a random walk with step standard deviation 0.05 plus noise \(N(0,1)\); the threshold of each method is calibrated by bisection on a separate series of 100,000 samples and then tested on 6 other series of 100,000 samples each. Experiment 4: 10 random-walk series of 400,000 samples with \(\delta=10\). Numbers in parentheses are standard errors across series.</p>
+
+<h2>6. Experiment 1: how much is sent when there is only noise?</h2>
+<figure><img src="/assets/img/blog/send-on-delta-noise-rate.svg" alt="Semi-log plot of the message rate against delta over sigma from 0.3 to 4.2: the exact Markov-chain curve and the dashed curve of the simple formula almost coincide, and the simulation dots lie on the curve" width="480" height="330">
+<figcaption>Figure 2. A constant signal in noise \(N(0,\sigma^2)\): messages per sample against \(\delta/\sigma\). Solid line: Markov chain; dashed: formula with a fixed reference; dots: simulation (2 standard errors).</figcaption></figure>
+<table>
+<thead><tr><th>\(\delta/\sigma\)</th><th>Simulation (standard error)</th><th>Markov chain</th><th>Fixed reference</th></tr></thead>
+<tbody>
+<tr><td>0.5</td><td>0.7236 (0.0004)</td><td>0.7238</td><td>0.7237</td></tr>
+<tr><td>1.0</td><td>0.4799 (0.0004)</td><td>0.4798</td><td>0.4795</td></tr>
+<tr><td>1.5</td><td>0.2891 (0.0004)</td><td>0.2891</td><td>0.2888</td></tr>
+<tr><td>2.0</td><td>0.1573 (0.0004)</td><td>0.1575</td><td>0.1573</td></tr>
+<tr><td>3.0</td><td>0.0338 (0.0004)</td><td>0.0340</td><td>0.0339</td></tr>
+<tr><td>4.0</td><td>0.00453 (0.00026)</td><td>0.00470</td><td>0.00468</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Simulation and Markov chain agree</strong> within one standard error in all six rows.</li>
+<li><strong>The initial hypothesis was wrong.</strong> The hypothesis was that the reference being the sample that just crossed the threshold would make the message rate differ clearly from the fixed-reference formula. The measurements show a small difference: the exact/simple ratio goes from 1.000 (\(\delta=0.5\sigma\)) to 1.005 (\(\delta=4\sigma\)). For choosing a threshold, the simple formula is enough.</li>
+<li><strong>A deadband around \(\sigma\) removes almost nothing.</strong> At \(\delta=\sigma\) about half of the samples (48%) are still sent; at \(2\sigma\) it is 15.7%; at \(3\sigma\) there are still 3.4% (about one message per 30 samples) on a perfectly constant signal. An example with PercentDeadband: if the EURange is 100 units wide and the measurement noise has \(\sigma=0.5\), a 1% deadband (threshold 1.0 = \(2\sigma\)) still sends about 15.7% of the samples.</li>
+</ul>
+
+<h2>7. Experiment 2: a noiseless random walk</h2>
+<table>
+<thead><tr><th>\(\delta\)</th><th>Message rate (standard error)</th><th>\(1/\delta^2\)</th><th>Rate \(\times\delta^2\)</th><th>Equivalent period</th><th>RMSE send-on-delta</th><th>RMSE periodic</th><th>RMSE ratio</th><th>Max error: send-on-delta</th><th>Max error: periodic</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>0.1447 (0.0001)</td><td>0.2500</td><td>0.579</td><td>7.0</td><td>0.927</td><td>1.731</td><td>0.536</td><td>2.000</td><td>10.91</td></tr>
+<tr><td>5</td><td>0.0318 (0.0001)</td><td>0.0400</td><td>0.795</td><td>31.4</td><td>2.218</td><td>3.899</td><td>0.569</td><td>5.000</td><td>22.85</td></tr>
+<tr><td>10</td><td>0.00887 (0.00002)</td><td>0.0100</td><td>0.887</td><td>112.7</td><td>4.286</td><td>7.453</td><td>0.575</td><td>10.000</td><td>41.10</td></tr>
+<tr><td>20</td><td>0.00237 (0.00003)</td><td>0.0025</td><td>0.947</td><td>422.9</td><td>8.379</td><td>14.538</td><td>0.576</td><td>20.000</td><td>72.57</td></tr>
+</tbody></table>
+<p>The equivalent period is the period of periodic sampling with the same number of messages (rounded), averaged over the series. The maximum error of send-on-delta is the largest value over all 10 series; that of periodic sampling is the average of each series' maximum.</p>
+<ul>
+<li><strong>The message rate approaches \(\sigma_w^2/\delta^2\) from below:</strong> rate \(\times\delta^2\) is 0.58 at \(\delta=2\sigma_w\), then 0.80, 0.89 and 0.95 at \(\delta=20\sigma_w\). The continuous formula is right when \(\delta\) is much larger than a single step; at \(\delta=2\sigma_w\) it overestimates by a factor of about 1.7. The difference is consistent with a discrete-step effect (the random walk jumps across the boundary instead of touching it continuously); this mechanism was not tested separately.</li>
+<li><strong>RMSE matches the prediction.</strong> RMSE/\(\delta\) for send-on-delta is 0.464, 0.444, 0.429, 0.419, decreasing toward \(1/\sqrt6=0.408\). The RMSE ratio against periodic sampling with the same number of messages is 0.536 to 0.576, approaching \(\sqrt{1/3}=0.577\): send-on-delta has a root-mean-square error about 42% to 46% lower.</li>
+<li><strong>The maximum error is the bigger difference.</strong> Send-on-delta never exceeds \(\delta\) (the measured value rounds to \(\delta\) at three decimals); with the same number of messages, periodic sampling has a maximum error of 5.5 times \(\delta\) (\(\delta=2\)), 4.6, 4.1 and 3.6 times (\(\delta=20\)).</li>
+</ul>
+
+<h2>8. Experiment 3: a signal with measurement noise</h2>
+<p>The true signal \(s_t\) is a random walk with step standard deviation 0.05; the sensor returns \(x_t=s_t+n_t\) with \(n_t\sim N(0,1)\). Four methods are given the same message budget: (a) periodic sampling, sending the raw sample; (b) periodic sampling, sending the mean of the block of samples just passed; (c) send-on-delta on the raw sample; (d) send-on-delta on the EWMA-filtered signal \(y_t=y_{t-1}+\alpha(x_t-y_{t-1})\) with \(\alpha=0.1\) (sending the value \(y\)). RMSE is computed against \(s_t\), not against the noisy samples. If every raw sample were sent, the RMSE would be 0.999, and the EWMA signal (with no message limit) has an RMSE of 0.251.</p>
+<figure><img src="/assets/img/blog/send-on-delta-budget.svg" alt="Plot of RMSE against message budget per sample from 1/200 to 1/10 for four methods: periodic raw and send-on-delta raw lie near 1.0 to 1.4; periodic with block mean goes from 0.64 down to about 0.30 and then rises slightly to 0.34; send-on-delta on EWMA is lowest, from 0.40 down to 0.26" width="480" height="330">
+<figcaption>Figure 3. RMSE against the true signal as a function of the message budget; error bars are 2 standard errors over 6 series.</figcaption></figure>
+<table>
+<thead><tr><th>Budget</th><th>Raw \(\delta\)</th><th>EWMA \(\delta\)</th><th>(a) periodic, raw</th><th>(b) periodic, block mean</th><th>(c) send-on-delta, raw</th><th>(d) send-on-delta, EWMA</th></tr></thead>
+<tbody>
+<tr><td>1/200</td><td>4.39</td><td>0.97</td><td>1.084</td><td>0.641</td><td>1.387</td><td>0.400</td></tr>
+<tr><td>1/100</td><td>3.84</td><td>0.73</td><td>1.043</td><td>0.461</td><td>1.207</td><td>0.332</td></tr>
+<tr><td>1/50</td><td>3.36</td><td>0.56</td><td>1.020</td><td>0.348</td><td>1.092</td><td>0.295</td></tr>
+<tr><td>1/20</td><td>2.82</td><td>0.36</td><td>1.006</td><td>0.296</td><td>1.041</td><td>0.267</td></tr>
+<tr><td>1/10</td><td>2.36</td><td>0.25</td><td>1.002</td><td>0.342</td><td>1.022</td><td>0.258</td></tr>
+</tbody></table>
+<p>The standard error of each RMSE cell is between 0.001 and 0.018. Because the thresholds were calibrated on a different series, the achieved message counts deviate from the budget: method (c) from &minus;0.4% to +7% (0.0214 instead of 0.0200 at budget 1/50), method (d) from &minus;8% to 0% (0.0046 instead of 0.0050 at 1/200). At the three sparsest budgets (1/200 to 1/50), (c) sends 4% to 7% more than (a) and is still worse; (d) sends less than or equal to the budget and is still better than (b) at all five budgets.</p>
+<ul>
+<li><strong>Send-on-delta on raw samples is worse than periodic raw sampling:</strong> 1.387 versus 1.084 at budget 1/200 (28% higher) and 1.092 versus 1.020 at 1/50. The threshold needed (2.4 to 4.4 times \(\sigma\)) makes every message, by construction, the sample that deviates most from the previous one; the noise is selected rather than averaged out. This explanation is consistent with the measurements, but the mechanism was not isolated by an experiment.</li>
+<li><strong>Filtering before the threshold test is the main factor.</strong> Send-on-delta on EWMA has an RMSE from 0.400 (1/200) down to 0.258 (1/10), which is 38%, 28%, 15%, 10% and 25% lower than the block mean at the five budgets (1/200 to 1/10); at 1/10 it is only 0.007 above the floor of the EWMA filter (0.251).</li>
+<li><strong>The block mean has an optimum of its own:</strong> RMSE falls from 0.641 (block 200) to 0.296 (block 20) and then rises to 0.342 at block 10, because short blocks average out less noise. The EWMA coefficient \(\alpha=0.1\) was kept fixed at every budget, not tuned for each budget.</li>
+</ul>
+
+<h2>9. Experiment 4: silence and heartbeat</h2>
+<p>Send-on-delta sends nothing when the signal does not change, so the receiver cannot tell &ldquo;unchanged&rdquo; from &ldquo;sensor failed or connection lost&rdquo;. One remedy is to send again after at most \(H\) ticks since the previous message. Noiseless random walk, \(\delta=10\):</p>
+<table>
+<thead><tr><th>\(H\)</th><th>Message rate</th><th>Relative to no heartbeat</th><th>Longest silence (10 series)</th><th>99th percentile of silence</th><th>RMSE</th></tr></thead>
+<tbody>
+<tr><td>none</td><td>0.00896</td><td>1.00</td><td>946</td><td>440.8</td><td>4.287</td></tr>
+<tr><td>200</td><td>0.01008</td><td>1.13</td><td>200</td><td>200.0</td><td>4.256</td></tr>
+<tr><td>100</td><td>0.01356</td><td>1.51</td><td>100</td><td>100.0</td><td>4.129</td></tr>
+<tr><td>50</td><td>0.02199</td><td>2.45</td><td>50</td><td>50.0</td><td>3.823</td></tr>
+</tbody></table>
+<ul>
+<li>Without a heartbeat, the mean silence is about 112 ticks (\(1/0.00896\)), but the 99th percentile is 441 and the longest silence measured is 946, about 8.5 times the mean.</li>
+<li>A heartbeat bounds the silence at exactly \(H\), at the cost of 13% more messages at \(H=200\), 51% at \(H=100\) and 145% at \(H=50\); RMSE falls slightly (from 4.287 to 3.823 at \(H=50\)).</li>
+</ul>
+
+<h2>10. Limitations</h2>
+<ul>
+<li>Only two synthetic signal types: white noise around a constant, and a random walk (with or without measurement noise). The random walk has a constant step standard deviation, so the advantage of send-on-delta here is only the factor 0.577 in RMSE; for a signal that is mostly still and occasionally changes sharply (steps, switching), the saving could be much larger, but this post does not measure it.</li>
+<li>The measurement noise is independent Gaussian white noise. Autocorrelated noise, heavy-tailed noise or sensor drift would give message rates different from Section 6; these cases were not measured.</li>
+<li>The EWMA filter uses a fixed \(\alpha=0.1\) and the threshold is calibrated on a series with the same noise level; in practice the noise standard deviation has to be estimated from data. Method (b) sends one block mean per block, so its latency (the value is only available after the block ends) is also not counted in the RMSE.</li>
+<li>Transmission delay, packet loss and queue behaviour are not in the model; every message is treated as having the same cost (no packet length, energy or QoS). The previous post on <a href="/en/blog/mqtt-qos-loss.html">MQTT QoS over a lossy link</a> discusses the cost and reliability of a single message.</li>
+<li>The ZOH simulation measures error at every tick; it does not measure the delay in detecting a sudden change, and EWMA slows the response to a step, which is not measured here.</li>
+</ul>
+
+<h2>11. Practical conclusions</h2>
+<ol>
+<li>Measure the sensor's noise standard deviation before setting a deadband: on a constant signal, \(\delta=\sigma\) still sends 48% of the samples, \(2\sigma\) sends 15.7% and \(3\sigma\) sends 3.4%. A deadband smaller than about \(3\sigma\) mostly fails to filter the noise.</li>
+<li>For a noiseless signal, send-on-delta guarantees a reconstruction error no larger than \(\delta\), which periodic sampling does not (its maximum error is 3.6 to 5.5 times \(\delta\) at the same number of messages), and for a random walk it lowers RMSE by about 42% to 46% at the same number of messages.</li>
+<li>When the sensor has measurement noise, filter (EWMA or mean) before the threshold test. In the experiment, send-on-delta on raw samples was worse than periodic sending of raw samples, while send-on-delta on the EWMA signal was 10% to 38% better than the block mean in RMSE.</li>
+<li>Send a heartbeat if the receiver needs to know the sensor is alive: the longest silence without a heartbeat was about 8.5 times the mean in the simulation, while a heartbeat bounds it at exactly \(H\) at a cost of 13% extra messages at \(H=200\) in this configuration.</li>
+</ol>
+
+<div class="cta-box"><strong>Need to reduce sensor traffic, design an edge filter or build an edge-AI prototype?</strong><br>
+I take this on as a freelancer. Describe the project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=IoT%20sensor%20data%20project">Get a quote</a> <a class="btn ghost" href="/en/solutions/custom-ai-tools.html">Custom AI tools</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>OPC Foundation. <em>OPC Unified Architecture, Part 4: Services</em>, sections 7.22.2 (DataChangeFilter) and 3.1.2 (Deadband). <a href="https://reference.opcfoundation.org/specs/OPC-10000-4/7.22.2">reference.opcfoundation.org/specs/OPC-10000-4/7.22.2</a>.</li>
+<li>OPC Foundation. <em>OPC Unified Architecture, Part 8: Data Access</em>, section 7.2 (PercentDeadband). <a href="https://reference.opcfoundation.org/specs/OPC-10000-8/7.2">reference.opcfoundation.org/specs/OPC-10000-8/7.2</a>.</li>
+<li>M. Miskowicz. &ldquo;Send-on-delta concept: an event-based data reporting strategy.&rdquo; <em>Sensors</em> 6(1), 2006, pp. 49&ndash;63. <a href="https://doi.org/10.3390/s6010049">doi:10.3390/s6010049</a>.</li>
+<li>K. J. &Aring;str&ouml;m and B. M. Bernhardsson. &ldquo;Comparison of Riemann and Lebesgue sampling for first order stochastic systems.&rdquo; <em>Proceedings of the 41st IEEE Conference on Decision and Control</em>, 2002. <a href="https://doi.org/10.1109/CDC.2002.1184824">doi:10.1109/CDC.2002.1184824</a>.</li>
+<li>Microsoft. &ldquo;Azure IoT Operations 2610 is now available: Scaling the foundation for Physical AI.&rdquo; Microsoft Community Hub, 17 November 2026. <a href="https://techcommunity.microsoft.com/blog/iotblog/azure-iot-operations-2610-is-now-available-scaling-the-foundation-for-physical-a/4572675">techcommunity.microsoft.com</a>.</li>
+</ol>
+<p class="meta">Code: <a href="/blog/code/send_on_delta.py">send_on_delta.py</a> (Python 3.12, NumPy, Matplotlib; about two minutes). Every number in Sections 6&ndash;9 is output of this script, except the ratios quoted in the text (for example 42% to 46%, 38%, 28%, 1.7 times, 8.5 times, ratios against \(\delta\), +13%, +51%, +145%), which are computed by hand from the tables.</p>
+<aside class="aff-box"><h3>Common IoT / AIoT parts</h3><p>Boards and sensors commonly used for prototyping: ESP32-S3 for small models, a temperature/humidity sensor and a Zigbee bridge for sensor networks.</p><ul><li><a href="https://s.shopee.vn/AUvJ7Ugukh" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 MINI Xiaozhi AI board &ndash; voice robot, 0.96&quot; OLED</a> <span class="price">₫105.000</span></li><li><a href="https://s.shopee.vn/3B8iO1zd11" rel="sponsored nofollow noopener" target="_blank">ESP32-S3 N16R8 Wi-Fi/Bluetooth 5.0, 16 MB flash + 8 MB PSRAM (AI/IoT dev board)</a> <span class="price">₫170.000</span></li><li><a href="https://s.shopee.vn/4qGwN7QQYU" rel="sponsored nofollow noopener" target="_blank">SHT40/SHT41/SHT45 temperature &amp; humidity sensor module</a> <span class="price">₫123.640</span></li><li><a href="https://s.shopee.vn/7fb7kNXg67" rel="sponsored nofollow noopener" target="_blank">SONOFF ZB Bridge-P &ndash; Zigbee 3.0 smart-home bridge</a> <span class="price">₫504.900</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

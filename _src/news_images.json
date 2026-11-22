@@ -286,5 +286,29 @@
    1200,
    800
   ]
+ },
+ "openai-gpt-6-2-astra-sol": {
+  "credit": "OpenAI",
+  "image_url": "https://cdn.openai.com/mdx-assets/e193aefe-5e58-431c-8cd2-adadac0c1496/44573edd-9653-49b3-ba07-7b3643545ef9.d3072be3.png",
+  "orig_size": [
+   3840,
+   2162
+  ]
+ },
+ "azure-iot-operations-2610": {
+  "credit": "Microsoft",
+  "image_url": "https://techcommunity.microsoft.com/t5/s/gxcuf89792/images/bS00NTcyNjc1LW1DQ0NDRw?revision=5",
+  "orig_size": [
+   5760,
+   3840
+  ]
+ },
+ "huawei-osta-o1-pro": {
+  "credit": "Huawei (Gizmochina)",
+  "image_url": "https://www.gizmochina.com/wp-content/uploads/2026/11/featured-1200x675-10.jpg",
+  "orig_size": [
+   1200,
+   675
+  ]
  }
 }

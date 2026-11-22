@@ -48,6 +48,8 @@ OVERRIDE = {
     "alibaba-qwen4-max": "https://assets.theedgemarkets.com/Photo_3_20261119173922_Alibaba.jpg",
     # Eurotech's news page does not answer scripted requests: fetch the release image directly.
     "eurotech-reliagate-15a-14": "https://www.eurotech.com/wp-content/uploads/2026/11/News_Family_Gateway15A-14-scaled.webp",
+    # GSMArena blocks scripted requests and its lead image carries a site watermark: use the official render published by Gizmochina.
+    "huawei-osta-o1-pro": "https://www.gizmochina.com/wp-content/uploads/2026/11/featured-1200x675-10.jpg",
 }
 # Images that must be shown whole (letterboxed) because captions/logos sit near the edge.
 LETTERBOX = {"tdk-microchip-robot-sensor-nodes", "edge0-145b-on-device-llm"}
@@ -64,6 +66,7 @@ CREDIT_OVERRIDE = {
     "alibaba-qwen4-max": "Alibaba (TheEdge)",
     "xiaomi-18-pro-global-launch": "Android Authority",
     "eurotech-reliagate-15a-14": "Eurotech",
+    "huawei-osta-o1-pro": "Huawei (Gizmochina)",
 }
 
 
