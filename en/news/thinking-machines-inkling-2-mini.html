@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thinking Machines releases Inkling 2 Mini with open weights: a 26.4B-parameter looped-transformer MoE, about 20 GB of memory, Apache 2.0 | Shopsmon</title>
+<meta name="description" content="According to Thinking Machines Lab (Nov 20, 2026), Inkling 2 Mini is an open-weights model smaller than Inkling 2 Small, small enough to run on a laptop…">
+<link rel="canonical" href="https://shopsmon.com/en/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Thinking Machines releases Inkling 2 Mini with open weights: a 26.4B-parameter looped-transformer MoE, about 20 GB of memory, Apache 2.0 | Shopsmon">
+<meta property="og:description" content="According to Thinking Machines Lab (Nov 20, 2026), Inkling 2 Mini is an open-weights model smaller than Inkling 2 Small, small enough to run on a laptop…">
+<meta property="og:url" content="https://shopsmon.com/en/news/thinking-machines-inkling-2-mini.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/news/thinking-machines-inkling-2-mini.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/">Blog</a><a href="/en/news/" class=active>News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/news/thinking-machines-inkling-2-mini.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post newspost">
+<p class="crumbs"><a href="/en/news/">News</a> &rsaquo; <a href="/en/news/#ai">AI & LLM</a></p>
+<span class="tag cat-ai">AI & LLM</span>
+<h1>Thinking Machines releases Inkling 2 Mini with open weights: a 26.4B-parameter looped-transformer MoE, about 20 GB of memory, Apache 2.0</h1>
+<p class="meta">2026-11-20 &middot; Source: <a href="https://thinkingmachines.ai/news/inkling-2-mini/" rel="noopener nofollow" target="_blank">Thinking Machines Lab</a></p>
+<figure class="cover"><img src="/assets/img/news/thinking-machines-inkling-2-mini.jpg" width="1200" height="630" alt="Thinking Machines releases Inkling 2 Mini with open weights: a 26.4B-parameter looped-transformer MoE, about 20 GB of memory, Apache 2.0"><figcaption>Image: Thinking Machines Lab / Hugging Face</figcaption></figure>
+<p class="standfirst">According to Thinking Machines Lab (Nov 20, 2026), Inkling 2 Mini is an open-weights model smaller than Inkling 2 Small, small enough to run on a laptop; the weights are on Hugging Face under the Apache 2.0 license and the model is also available on the company&rsquo;s Tinker platform for inference and fine-tuning. It is multimodal (text and image input, text output) with a context window of up to 1 million tokens, aimed at agents, tool use and coding. The architecture is a looped transformer: a 24-layer decoder with Mixture-of-Experts feed-forward layers (each token is routed to 8 of 128 experts), in which the 12 middle layers (layers 6 to 17) share weights and run three times for every token, equal to 48 layer applications; information passes between loop passes through a learned &ldquo;message&rdquo; mechanism. The model has 26.4B total parameters, 3.4B active, and 5.4B weight activations per token once looping is counted. Most weights are trained and deployed natively in NVFP4 and the last four layers in MXFP8, for a total memory footprint of about 20 GB; the company lists local setups of one NVIDIA DGX Spark, Apple silicon devices with 32 GB or more of memory, or GPUs with 32 GB or more of VRAM recommended, with support in SGLang, vLLM, Ollama, Unsloth, llama.cpp and other frameworks. According to Thinking Machines, the model leads open-weights models under 100B total parameters on DeepSWE v1.1 (48.2%) and Vals Index v2.2 (46.5%), and scores 77.9% on SWE-bench Pro v2 (Hard), 79.0% on BrowseComp, 85.3% on DeepSearchQA (both with context compaction) and 82.7% on MCP Atlas; the company notes that evaluation setups vary between models. It also lists limitations: the model is not the strongest small model for multi-turn chat or for instructions with many constraints (50.0% on MultiChallenge and 33.4% on ComplexConstraints v1.1, behind Qwen3.8-27B), and looping does not let the weights store more factual knowledge, so its AA-Omniscience score is in line with models of the same size. According to Stanford researchers (Hazy Research and the Scaling Intelligence Lab) who had early access, Inkling 2 Mini scored 0.703 on intelligence per joule running on a DGX Spark, versus 0.430 for Qwen3.6-35B-A3B, 0.159 for Gemma-4-26B-A4B and 0.036 for Qwen3.5-27B (the others ran at NVFP4 or INT4). A research checkpoint with a variable number of loop passes is released alongside: according to the company, its no-CoT time horizon rises from 16 seconds at one pass to 37 seconds at three, and its reasoning at five passes is less than half as long as at one pass (on average 1,661 versus 3,703 tokens on GPQA Diamond questions answered correctly at all five settings) while remaining legible. On training, Thinking Machines says it pruned two-thirds of the experts (from 384 to 128 per layer) partway through training, then distilled on 1 trillion tokens from a larger in-house Inkling model, followed by SFT and RL totalling 2.2 trillion tokens over 2,000 steps.</p>
+<p class="srcline">Source: <a href="https://thinkingmachines.ai/news/inkling-2-mini/" rel="noopener nofollow" target="_blank">Thinking Machines Lab</a></p>
+<aside class="aff-box"><h3>Further reading: books on LLM agents and ML systems</h3><p>Vietnamese-language books on LLM agents, Python and machine-learning systems.</p><ul><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">2-book combo (Vietnamese): AI Agent in practice &amp; Applied AI Agents</a> <span class="price">₫249.000</span></li><li><a href="https://s.shopee.vn/8fTlnamYq6" rel="sponsored nofollow noopener" target="_blank">3-book combo (Vietnamese): OpenClaw work automation, AI Agent in practice &amp; Applied AI Agents</a> <span class="price">₫184.030</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Designing Machine Learning Systems (Vietnamese edition)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Advanced Python programming (Vietnamese book)</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/7puXwtWBxq" rel="sponsored nofollow noopener" target="_blank">Setting up a 24/7 automated channel with AI assistants and AI agents (Vietnamese book)</a> <span class="price">₫179.000</span></li></ul></aside>
+<div class="cta-box"><h3 style="margin-top:0">Need an LLM chatbot or agent for your business?</h3><p>Describe your need briefly; you will get clarifying questions and a scoped proposal before any work starts.</p>
+<p><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Send a request</a> <a class="btn ghost" href="/en/solutions/llm-chatbot-agent.html">See the service</a></p></div>
+<h2>Related news</h2>
+<div class="newsgrid related"><a class="ncard" href="/en/news/google-gemini-4-neon.html"><img src="/assets/img/news/google-gemini-4-neon.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-18</span><h3>Google introduces Gemini 4 Neon: $3/$15 per million tokens, a 1M-token context, #3 on the Artificial Analysis Intelligence Index and #1 on its Coding Agent Index</h3></div></a><a class="ncard" href="/en/news/openai-gpt-6-2-astra-sol.html"><img src="/assets/img/news/openai-gpt-6-2-astra-sol.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-17</span><h3>OpenAI releases GPT-6.2 Astra and GPT-6.2 Sol: Astra at $8/$40 per million tokens (20% lower), a new high on Agents' Last Exam, with Sol keeping its $2/$10 price</h3></div></a><a class="ncard" href="/en/news/alibaba-qwen4-max.html"><img src="/assets/img/news/alibaba-qwen4-max.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-16</span><h3>Alibaba releases Qwen4-Max: a 2.4-trillion-parameter MoE with 71 billion active parameters per token, a 1M-token context and about 60% lower cost per task</h3></div></a></div>
+</article>
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>

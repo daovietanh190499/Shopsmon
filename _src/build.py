@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-22"
+TODAY = "2026-11-23"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="kalman-amr-fusion", date="2026-11-23", min=14, aff="iot",
+         og="/assets/img/blog/kalman-amr-fusion-cover.png",
+         tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},
+         title={"vi": "Bộ lọc Kalman cho vị trí robot tự hành: đo thật sự được lợi bao nhiêu, và khi nào cổng loại ngoại lai tự khoá chặt",
+                "en": "A Kalman filter for robot position: how much measuring really gains, and when an outlier gate locks itself out"},
+         summary={"vi": "Trên mô phỏng một chiều có seed cố định, bộ lọc Kalman khớp mô hình giảm RMSE vị trí 43,6 % so với đo thô và 36,8 % so với EWMA tốt nhất, RMSE vận tốc 8,8 lần so với hiệu hai lần đo; khai sai nhiễu mười lần làm RMSE vị trí tăng 15 % đến 35 % và NEES lệch tới 10 lần; cổng loại ngoại lai 99 % kẹt trong 4 đến 38 lần chạy trên 1.000, còn quy tắc đặt lại thì không lần nào.",
+                  "en": "In a fixed-seed one-dimensional simulation, a matched Kalman filter cuts position RMSE by 43.6 % against raw fixes and 36.8 % against the best EWMA, and velocity RMSE by 8.8 times against differencing two fixes; mis-specifying the noise by ten times raises position RMSE by 15 % to 35 % and skews NEES by up to 10 times; a 99 % outlier gate got stuck in 4 to 38 of 1,000 runs, a reset rule in none."},
+         seo_title={"vi": "Bộ lọc Kalman cho robot tự hành: độ lợi, nhiễu và cổng ngoại lai | Shopsmon",
+                    "en": "Kalman filter for robot position: gain, noise and outlier gate | Shopsmon"},
+         seo_desc={"vi": "Bộ lọc Kalman một chiều: độ lợi DARE, NEES/NIS, so với EWMA, khai sai nhiễu, ngoại lai và cổng chi bình phương, với mô phỏng NumPy seed cố định và mã nguồn.",
+                   "en": "One-dimensional Kalman filter: DARE gain, NEES/NIS, comparison with an EWMA, wrong noise assumptions, outliers and chi-square gating, with a fixed-seed NumPy simulation and source code."}),
     dict(slug="send-on-delta", date="2026-11-22", min=13, aff="iot",
          og="/assets/img/blog/send-on-delta-cover.png",
          tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},

@@ -310,5 +310,29 @@
    1200,
    675
   ]
+ },
+ "google-gemini-4-neon": {
+  "credit": "Google",
+  "image_url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini-4-neon__blog-header__sm.width-1300.png",
+  "orig_size": [
+   1300,
+   725
+  ]
+ },
+ "thinking-machines-inkling-2-mini": {
+  "credit": "Thinking Machines Lab / Hugging Face",
+  "image_url": "https://huggingface.co/blog/assets/inkling2mini/thumbnail.png",
+  "orig_size": [
+   1200,
+   648
+  ]
+ },
+ "nexcom-ndis-b364-amr-edge": {
+  "credit": "NEXCOM",
+  "image_url": "https://www.nexcom.com/UploadFiles/FCKeditor/image/Product_News/261112-IPS-NDiS-B364/duro-edge-computer-NDiS-B364-560.jpg",
+  "orig_size": [
+   560,
+   520
+  ]
  }
 }

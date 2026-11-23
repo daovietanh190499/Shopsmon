@@ -1,0 +1,131 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-23 &middot; IoT / AIoT &middot; ~14 phút đọc</p>
+<h1>Bộ lọc Kalman cho vị trí robot tự hành: đo thật sự được lợi bao nhiêu, và khi nào cổng loại ngoại lai tự khoá chặt</h1>
+<p class="meta">Robot tự hành nhận vị trí từ một nguồn nhiễu (định vị LiDAR, UWB, GNSS...) và cần cả vận tốc. Bài này dựng bộ lọc Kalman một chiều (mô hình vận tốc không đổi, gia tốc là nhiễu trắng), tính độ lợi ở trạng thái dừng bằng phương trình Riccati rời rạc rồi kiểm tra trên mô phỏng có seed cố định: bộ lọc khớp mô hình, so với đo thô và EWMA, khi khai sai nhiễu, khi có ngoại lai và khi vị trí thật nhảy 3 m. Mọi con số là đầu ra của một script; mô hình là mô phỏng, không phải dữ liệu từ một robot hay cảm biến cụ thể.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Máy tính biên đặt trên robot tự hành (AMR) thường phải đọc nhiều nguồn cùng lúc. Bản tin của NEXCOM về máy tính biên NDiS B364 (<a href="@@L@@/news/nexcom-ndis-b364-amr-edge.html">tin liên quan</a>) liệt kê các giao diện dành cho AMR: USB 3.2 cho camera 3D, LAN cho cảm biến LiDAR 3D, RS-422/485 để nối bộ điều khiển động cơ và hệ thống quản lý pin. Bài này không dùng dữ liệu hay đặc tính nào của sản phẩm đó. Nó chỉ xét một bài toán chung ở phía sau mọi nguồn như vậy: nhận một vị trí có nhiễu theo chu kỳ và ước lượng vị trí cùng vận tốc.</p>
+<p>Hai cách làm đơn giản đều có điểm yếu. Dùng thẳng vị trí đo thì giữ nguyên nhiễu, còn vận tốc suy ra từ hiệu hai lần đo có độ lệch chuẩn nhiễu \(\sqrt{2}\,r/\Delta t\) (4,24 m/s với số liệu dưới đây). Làm mượt bằng EWMA thì giảm nhiễu nhưng bị trễ khi robot chuyển động và không cho vận tốc. Bộ lọc Kalman (Kalman, 1960) kết hợp mô hình chuyển động với phép đo theo trọng số lấy từ hiệp phương sai. Bài này kiểm tra bốn câu hỏi cụ thể: (1) bộ lọc có tự nhất quán không, (2) nó hơn EWMA bao nhiêu, (3) sai bao nhiêu khi khai sai nhiễu, (4) điều gì xảy ra khi có ngoại lai và khi cổng loại ngoại lai bị đánh lừa.</p>
+
+<h2>2. Mô hình và bộ lọc</h2>
+<p>Trạng thái \(x=[p,\,v]^\top\) (vị trí, vận tốc), bước thời gian \(\Delta t\). Chuyển động và phép đo:</p>
+$$x_k = F x_{k-1} + w_k,\quad w_k\sim N(0,Q);\qquad z_k = H x_k + \nu_k,\quad \nu_k\sim N(0,R)$$
+<p>với</p>
+$$F=\begin{bmatrix}1&\Delta t\\0&1\end{bmatrix},\quad Q=q\begin{bmatrix}\Delta t^3/3&\Delta t^2/2\\\Delta t^2/2&\Delta t\end{bmatrix},\quad H=[1\;\,0],\quad R=r^2.$$
+<p>\(Q\) là hiệp phương sai của gia tốc nhiễu trắng với cường độ \(q\) (đơn vị (m/s²)²·s) tích phân qua một bước. Một chu kỳ của bộ lọc gồm dự báo và cập nhật:</p>
+$$\hat x^- = F\hat x,\quad P^- = FPF^\top + Q;\qquad S = HP^-H^\top + R,\quad K = P^-H^\top S^{-1},\quad \hat x = \hat x^- + K(z-H\hat x^-),\quad P=(I-KH)P^-.$$
+<p>Hai đại lượng kiểm tra tính nhất quán (Bar-Shalom và cộng sự, 2001): sai số chuẩn hoá của trạng thái \(\mathrm{NEES}_k=(x_k-\hat x_k)^\top P_k^{-1}(x_k-\hat x_k)\), kỳ vọng bằng 2 (số chiều) khi bộ lọc khớp mô hình, và bình phương sai lệch đổi mới chuẩn hoá \(\mathrm{NIS}_k=y_k^2/S_k\) với \(y_k=z_k-H\hat x^-\), kỳ vọng bằng 1 (một phép đo). Cổng loại ngoại lai bỏ cập nhật khi \(\mathrm{NIS}_k>\gamma\), trong đó \(\gamma\) là phân vị của \(\chi^2_1\): 6,635 (99 %) hoặc 10,828 (99,9 %).</p>
+<p>\(P^-\) không phụ thuộc vào dữ liệu, nên khi chạy lâu nó hội tụ về nghiệm \(P^-_\infty\) của phương trình Riccati rời rạc (DARE) và độ lợi hội tụ về \(K_\infty\) cố định. Bộ lọc độ lợi cố định dùng \(K_\infty\) này gọi là bộ lọc \(\alpha\)&ndash;\(\beta\) (Benedict và Bordner, 1962), với \(\alpha=K_1\) và \(\beta=K_2\Delta t\). Dưới đây là một bước của bộ lọc cho một lần chạy (script chạy vector hoá trên nhiều lần chạy, phép tính tương đương):</p>
+<pre><code class="language-python">def kf_step(x, P, z, F, Q, r, gate=None):
+    x = F @ x; P = F @ P @ F.T + Q                        # dự báo
+    S = P[0, 0] + r * r; y = z - x[0]
+    if gate is not None and y * y / S &gt; gate:             # cổng loại ngoại lai
+        return x, P, False
+    K = P[:, 0] / S
+    x = x + K * y; P = P - np.outer(K, P[0, :])           # cập nhật: (I - K H) P
+    return x, P, True</code></pre>
+
+<h2>3. Thiết lập</h2>
+<p>\(\Delta t=0{,}1\) s, \(q=0{,}5\) (m/s²)²·s, \(r=0{,}30\) m, 600 bước, seed 20261123. Trạng thái thật được mô phỏng từ chính mô hình trên (vị trí đầu \(N(0,1)\), vận tốc đầu \(N(1;\,0{,}25)\), khớp với tiên nghiệm của bộ lọc), nên bộ lọc khớp là tối ưu. Các giá trị trên là lựa chọn của bài, không lấy từ một robot nào. Đo ở bước \(k\) là \(z_k=p_k+N(0,r^2)\). Sai số RMSE tính trên các bước \(k\ge100\) (trạng thái dừng), trên 2.000 lần chạy trừ khi ghi khác. Với \(\Delta t\), \(q\), \(r\) này, DARE cho \(\alpha=0{,}3203\), \(\beta=0{,}06145\).</p>
+<figure><img src="/assets/img/blog/kalman-amr-trace.svg" alt="Hai đồ thị theo thời gian 20 giây: trên là vị trí thật (đen), các phép đo (chấm xám) và ước lượng Kalman (xanh); dưới là vận tốc thật, vận tốc suy ra từ hiệu hai lần đo (xám, dao động rất mạnh) và ước lượng Kalman bám sát vận tốc thật" width="620" height="504">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Một lần chạy: ước lượng Kalman bám vị trí và vận tốc thật, còn vận tốc suy ra từ hiệu hai lần đo dao động trong khoảng vượt xa trục vẽ (RMSE vận tốc trên 2.000 lần chạy: 4,24 m/s so với 0,48 m/s).</figcaption></figure>
+
+<h2>4. Thí nghiệm 1: bộ lọc khớp có khớp lý thuyết không?</h2>
+<p>Hiệp phương sai tiên nghiệm ở trạng thái dừng theo DARE là \(P_{11}=0{,}042410\), \(P_{12}=0{,}081367\), \(P_{22}=0{,}285613\); độ lợi \(K_\infty=(0{,}320295;\;0{,}614503)\) và độ lệch chuẩn hậu nghiệm 0,16978 m (vị trí), 0,48540 m/s (vận tốc). Độ lợi của bộ lọc ở bước 599 trùng \(K_\infty\) đến 6 chữ số thập phân. Hiệp phương sai sai số đo bằng Monte-Carlo (100 bước cuối, mọi lần chạy) là \(0{,}041752;\;0{,}079988;\;0{,}280987\), thấp hơn DARE 1,55 %, 1,69 % và 1,62 %. RMSE vị trí ở trạng thái dừng đo được 0,16913 m so với lý thuyết 0,16978 m.</p>
+<table>
+<thead><tr><th>Thống kê</th><th>Kỳ vọng</th><th>Mẫu chính (2.000 lần × 600 bước)</th><th>Kiểm tra độc lập (20.000 × 200)</th></tr></thead>
+<tbody>
+<tr><td>NEES trung bình</td><td>2</td><td>1,9832 ± 0,0040</td><td>2,0015 ± 0,0023</td></tr>
+<tr><td>NIS trung bình</td><td>1</td><td>0,9978 ± 0,0013</td><td>0,9999 ± 0,0007</td></tr>
+<tr><td>Tỉ lệ NIS &gt; phân vị 99 %</td><td>0,01</td><td>0,0099</td><td>&ndash;</td></tr>
+</tbody></table>
+<p>(± là sai số chuẩn tính trên trung bình từng lần chạy.) NEES của mẫu chính thấp hơn 2 khoảng 4 sai số chuẩn; một lần lấy mẫu độc lập lớn hơn cho 2,0015 ± 0,0023, phù hợp với 2, nên chênh lệch ở mẫu chính được xem là dao động lấy mẫu, nhưng đây là kết luận từ hai mẫu, không phải chứng minh.</p>
+
+<h2>5. Thí nghiệm 2: so với đo thô và EWMA</h2>
+<p>Hệ số \(\alpha\) của EWMA được chọn trên một bộ tinh chỉnh riêng 500 lần chạy (kết quả: \(\alpha=0{,}80\), RMSE tinh chỉnh 0,2668 m), rồi đánh giá trên 2.000 lần chạy giữ lại. Với EWMA và đo thô, vận tốc lấy bằng hiệu hai giá trị liên tiếp chia cho \(\Delta t\).</p>
+<table>
+<thead><tr><th>Phương pháp</th><th>RMSE vị trí (m)</th><th>RMSE vận tốc (m/s)</th></tr></thead>
+<tbody>
+<tr><td>Đo thô</td><td>0,2997</td><td>4,2424</td></tr>
+<tr><td>EWMA, \(\alpha=0{,}80\)</td><td>0,2677</td><td>3,0998</td></tr>
+<tr><td>Độ lợi cố định \(K_\infty\) (\(\alpha\)&ndash;\(\beta\))</td><td>0,1691</td><td>0,4834</td></tr>
+<tr><td>Kalman đầy đủ (độ lợi biến thiên)</td><td>0,1691</td><td>0,4834</td></tr>
+</tbody></table>
+<p>Bộ lọc Kalman giảm RMSE vị trí 43,6 % so với đo thô và 36,8 % so với EWMA tốt nhất, và giảm RMSE vận tốc 8,8 lần so với hiệu hai lần đo (6,4 lần so với hiệu hai giá trị EWMA). Sau bước 100, bộ lọc độ lợi cố định và bộ lọc đầy đủ chênh nhau tối đa \(4\times10^{-9}\) m (vị trí) và \(3\times10^{-8}\) m/s (vận tốc), nên có thể tính \(K_\infty\) một lần rồi chạy bộ lọc với khoảng bốn phép nhân mỗi bước trên vi điều khiển. Khác biệt nằm ở vài bước đầu: RMSE vị trí ở \(k=0,\dots,4\) là 0,295; 0,211; 0,182; 0,167; 0,162 m với bộ lọc đầy đủ và 0,715; 0,455; 0,272; 0,175; 0,170 m với độ lợi cố định khởi tạo từ cùng tiên nghiệm.</p>
+
+<h2>6. Thí nghiệm 3: khai sai nhiễu</h2>
+<p>Trong thực tế \(q\) và \(r\) không biết chính xác. Bộ lọc dưới đây giả định \(q\) và \(R\) nhân với các hệ số 0,1 đến 10 trên cùng dữ liệu của Mục 4.</p>
+<figure><img src="/assets/img/blog/kalman-amr-mismatch.svg" alt="Bản đồ nhiệt 5 nhân 5: trục ngang R giả định chia R thật, trục dọc q giả định chia q thật, màu và số trong ô là tỉ số RMSE vị trí so với bộ lọc khớp; đường chéo bằng 1,00; góc trên bên phải (q nhỏ, R lớn) có giá trị 2,94" width="520" height="440">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Tỉ số RMSE vị trí so với bộ lọc khớp (0,1691 m) khi bộ lọc khai sai \(q\) và \(R\).</figcaption></figure>
+<table>
+<thead><tr><th>\(q\) giả định / thật</th><th>\(R\) ×0,1</th><th>×0,3</th><th>×1</th><th>×3</th><th>×10</th></tr></thead>
+<tbody>
+<tr><td>×0,1</td><td>1,000</td><td>1,064</td><td>1,351</td><td>1,900</td><td>2,940</td></tr>
+<tr><td>×0,3</td><td>1,043</td><td>1,000</td><td>1,078</td><td>1,351</td><td>1,971</td></tr>
+<tr><td>×1</td><td>1,146</td><td>1,050</td><td>1,000</td><td>1,064</td><td>1,351</td></tr>
+<tr><td>×3</td><td>1,260</td><td>1,146</td><td>1,043</td><td>1,000</td><td>1,078</td></tr>
+<tr><td>×10</td><td>1,390</td><td>1,272</td><td>1,146</td><td>1,050</td><td>1,000</td></tr>
+</tbody></table>
+<p>Tỉ số RMSE vị trí chỉ phụ thuộc vào tỉ lệ \(q/R\) giả định (các ô trên đường chéo đều bằng 1,000, vì độ lợi chỉ phụ thuộc \(q/R\)), và bất đối xứng: giả định \(q/R\) nhỏ hơn 100 lần (làm mượt quá mức) cho 2,94, còn lớn hơn 100 lần cho 1,39. Vận tốc thì ngược chiều: tỉ số RMSE vận tốc lớn nhất là 2,892 ở \(q\)×10, \(R\)×0,1 (bộ lọc phản ứng quá mạnh với nhiễu đo), còn ở \(q\)×0,1, \(R\)×10 là 1,580. Vì vậy chọn thiên về \(q\) lớn giúp vị trí nhưng làm vận tốc nhiễu hơn.</p>
+<p>Tỉ số RMSE không cho biết bộ lọc có tự đánh giá đúng độ tin cậy hay không. NEES trung bình (tính với hiệp phương sai do chính bộ lọc báo, \(k\ge100\), nhất quán khi bằng 2):</p>
+<table>
+<thead><tr><th>\(q\) giả định / thật</th><th>\(R\) ×0,1</th><th>×0,3</th><th>×1</th><th>×3</th><th>×10</th></tr></thead>
+<tbody>
+<tr><td>×0,1</td><td>19,86</td><td>12,98</td><td>10,65</td><td>10,01</td><td>9,82</td></tr>
+<tr><td>×0,3</td><td>13,64</td><td>6,62</td><td>4,22</td><td>3,55</td><td>3,33</td></tr>
+<tr><td>×1</td><td>11,62</td><td>4,45</td><td>1,99</td><td>1,30</td><td>1,06</td></tr>
+<tr><td>×3</td><td>11,21</td><td>3,87</td><td>1,36</td><td>0,66</td><td>0,42</td></tr>
+<tr><td>×10</td><td>11,23</td><td>3,73</td><td>1,16</td><td>0,44</td><td>0,20</td></tr>
+</tbody></table>
+<p>Trên đường chéo RMSE bằng nhau nhưng NEES là 19,86; 6,62; 1,99; 0,66; 0,20, gần bằng 2 chia cho hệ số nhân (20, 6,7, 2, 0,67, 0,2): khai nhiễu nhỏ thì bộ lọc tự báo quá tự tin, khai nhiễu lớn thì quá dè dặt, dù vị trí ước lượng giống hệt nhau. Do đó RMSE và NEES trả lời hai câu hỏi khác nhau (cả hai cần trạng thái thật; NIS thì chỉ cần dữ liệu đo và hiệp phương sai của bộ lọc, nhưng bài không đo NIS khi khai sai nhiễu).</p>
+
+<h2>7. Thí nghiệm 4: ngoại lai và cổng loại</h2>
+<p>Với xác suất \(\varepsilon\), một phép đo bị cộng thêm \(N(0,(10r)^2)\), tức độ lệch chuẩn 3 m (ví dụ nhận nhầm đặc trưng trong định vị). Bốn bộ lọc chạy trên cùng dữ liệu (1.000 lần chạy): không cổng; cổng 99 %; cổng 99,9 %; cổng 99 % kèm quy tắc đặt lại (sau 5 lần bị loại liên tiếp, đặt vị trí bằng phép đo hiện tại và \(P_{11}=R\)).</p>
+<figure><img src="/assets/img/blog/kalman-amr-outliers.svg" alt="Hai đồ thị theo tỉ lệ ngoại lai từ 0 đến 10 phần trăm: trái là RMSE vị trí trung vị theo từng lần chạy của bốn bộ lọc, bộ lọc không cổng tăng từ 0,17 lên 0,50 m còn ba bộ lọc có cổng ở mức 0,17 đến 0,20 m; phải là số lần chạy trong 1.000 có RMSE trên 1 m, bộ lọc cổng 99 phần trăm không đặt lại lên tới 38" width="700" height="350">
+<figcaption>Hình 3 (nhãn hình bằng tiếng Anh). Trái: RMSE vị trí trung vị theo từng lần chạy. Phải: số lần chạy (trong 1.000) bị khoá chặt, đo bằng RMSE trên 1 m.</figcaption></figure>
+<table>
+<thead><tr><th>RMSE vị trí (m), mọi lần chạy</th><th>\(\varepsilon\)=0</th><th>0,5 %</th><th>1 %</th><th>2 %</th><th>5 %</th><th>10 %</th></tr></thead>
+<tbody>
+<tr><td>Không cổng</td><td>0,1702</td><td>0,2020</td><td>0,2268</td><td>0,2742</td><td>0,3776</td><td>0,5089</td></tr>
+<tr><td>Cổng 99 %</td><td>0,2701</td><td>2,9438</td><td>0,5722</td><td>4,9111</td><td>10,7554</td><td>12,5568</td></tr>
+<tr><td>Cổng 99,9 %</td><td>0,1714</td><td>0,1719</td><td>0,1729</td><td>0,1976</td><td>1,1880</td><td>0,2914</td></tr>
+<tr><td>Cổng 99 % + đặt lại</td><td>0,1797</td><td>0,1800</td><td>0,1817</td><td>0,1839</td><td>0,1917</td><td>0,2064</td></tr>
+<tr><td colspan="7"><em>Số lần chạy (trong 1.000) có RMSE từng lần chạy trên 1 m</em></td></tr>
+<tr><td>Không cổng</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>Cổng 99 %</td><td>4</td><td>8</td><td>6</td><td>9</td><td>15</td><td>38</td></tr>
+<tr><td>Cổng 99,9 %</td><td>0</td><td>0</td><td>0</td><td>1</td><td>4</td><td>7</td></tr>
+<tr><td>Cổng 99 % + đặt lại</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</tbody></table>
+<p>Không cổng thì RMSE tăng đều, từ 0,1702 lên 0,5089 m (gấp 3,0 lần) khi 10 % phép đo là ngoại lai. Cổng 99 % không đặt lại trông tệ hơn nhiều theo RMSE trung bình (đến 12,56 m), nhưng trung vị theo từng lần chạy của nó chỉ 0,1776 đến 0,1979 m, tốt hơn bộ lọc không cổng (0,1699 đến 0,5036 m): RMSE tổng thể bị chi phối bởi một số ít lần chạy bị kẹt (4 lần trong 1.000 ngay cả khi dữ liệu sạch, tăng lên 38 ở \(\varepsilon=10\) %). Cổng 99,9 % ít bị kẹt hơn (0 đến 7 lần) và đặt lại thì không lần nào. Cổng 99 % loại 1,15 % phép đo tốt khi dữ liệu sạch (kỳ vọng 1 %, tăng lên 2,30 % ở \(\varepsilon=10\) %) và chỉ 75 % phép đo ngoại lai, vì ngoại lai tạo ra bằng nhiễu \(N(0,3^2)\) nên nhiều điểm có độ lệch nhỏ; cổng 99,9 % loại 0,11 % phép đo tốt và khoảng 68 đến 70 % ngoại lai. Ở \(\varepsilon=0\), quy tắc đặt lại có giá: RMSE 0,1797 m so với 0,1702 m (cao hơn 5,6 %), do 1,15 % phép đo tốt vẫn bị loại.</p>
+<p>Vì sao cổng 99 % bị kẹt? Trên dữ liệu sạch (một lần lấy mẫu nhiễu khác), 4 lần chạy bị kẹt, với chuỗi bị loại liên tiếp dài 305, 58, 47 và 76 bước (mỗi bước 0,1 s) và sai số vận tốc ở đầu chuỗi +1,99; &minus;2,14; &minus;1,96; +2,18 m/s. Một ước lượng thô giải thích: khi vận tốc ước lượng sai \(e_v\) và các phép đo bị loại, hiệu đổi mới tăng gần như tuyến tính theo \(e_v t\), còn độ lệch chuẩn dự báo ban đầu tăng theo \(\sqrt{P_{22}}\,t\); nếu \(|e_v|>\sqrt{\gamma P_{22}}=\sqrt{6{,}635\times0{,}2856}=1{,}377\) m/s thì phép đo tiếp theo vẫn bị loại cho đến khi phần \(q t^3/3\) của \(P_{11}\) đủ lớn. Cả bốn lần chạy kẹt đều có sai số vận tốc vượt 1,377 m/s ở đầu chuỗi, phù hợp với ước lượng này; bài không kiểm tra giải thích đó ngoài bốn lần chạy này.</p>
+<p>Thử thêm một kịch bản khác: ở bước 300 vị trí thật nhảy +3 m (10 \(r\)) trên dữ liệu sạch (1.000 lần chạy). Không cổng, sai số xuống dưới \(3r=0{,}9\) m sau 2 bước kể từ cú nhảy (trung vị) và 100 % lần chạy hồi phục. Cổng 99 % không đặt lại: trung vị 14 bước, 99,3 % hồi phục trong 100 bước (10 s), 99,8 % trong 300 bước và loại 9,2 % số phép đo trong 300 bước sau cú nhảy. Cổng 99 % kèm đặt lại sau 5 lần: trung vị 4 bước, 100 % hồi phục trong 100 bước.</p>
+
+<h2>8. Hạn chế</h2>
+<ul>
+<li>Mô phỏng một chiều, trạng thái thật sinh từ chính mô hình của bộ lọc, nhiễu Gauss độc lập. Robot thật có quỹ đạo không giống nhiễu trắng gia tốc, phép đo có độ trễ, thiên lệch, tương quan thời gian và mô hình phi tuyến (quay, trượt bánh); không điều nào trong số đó được đo ở đây.</li>
+<li>Giá trị \(q=0{,}5\), \(r=0{,}30\) m, \(\Delta t=0{,}1\) s do bài chọn; các tỉ lệ phần trăm trong bảng phụ thuộc chúng. Ngoại lai mô hình hoá bằng nhiễu Gauss rộng, không phải lỗi định vị thực.</li>
+<li>Cổng loại ngoại lai chỉ xét phép đo vô hướng và hai ngưỡng \(\chi^2\); không thử ước lượng bền vững (Huber, Student-t) hay nhiều giả thuyết.</li>
+<li>Giải thích hiện tượng khoá chặt ở Mục 7 chỉ kiểm tra trên bốn lần chạy.</li>
+</ul>
+
+<h2>9. Kết luận thực hành</h2>
+<ol>
+<li>Giải DARE một lần (SciPy hoặc tính ngoại tuyến) và đưa \(K_\infty\) vào vi điều khiển: sau 100 bước nó trùng bộ lọc đầy đủ đến \(10^{-8}\). Phần đầu quá trình cần độ lợi biến thiên hoặc khởi tạo tốt: RMSE vị trí ở bước đầu là 0,715 m so với 0,295 m.</li>
+<li>Chỉ tỉ lệ \(q/R\) quyết định độ lợi. Khai sai \(q/R\) mười lần thì RMSE vị trí tăng 15 % (khai lớn) hoặc 35 % (khai nhỏ); trong thí nghiệm này thiên về \(q\) lớn rẻ hơn đối với vị trí nhưng nhiễu vận tốc cao hơn.</li>
+<li>Kiểm tra NEES/NIS thay vì chỉ RMSE (NIS không cần trạng thái thật nên dùng được trên robot thật): hai bộ lọc cùng RMSE có thể báo độ tin cậy sai 10 lần.</li>
+<li>Nếu dùng cổng \(\chi^2\), dùng ngưỡng nghiêm (99,9 %) và quy tắc đặt lại sau vài phép đo liên tiếp bị loại: cổng 99 % không đặt lại bị kẹt trong 4 đến 38 lần chạy trên 1.000 tuỳ tỉ lệ ngoại lai, kể cả trên dữ liệu sạch.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần ước lượng trạng thái, hợp nhất cảm biến hoặc một nguyên mẫu robot / AIoT?</strong><br>
+Tôi nhận việc này theo hình thức freelance. Mô tả dự án trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=D%E1%BB%B1%20%C3%A1n%20h%E1%BB%A3p%20nh%E1%BA%A5t%20c%E1%BA%A3m%20bi%E1%BA%BFn%20%2F%20robot">Nhận báo giá</a> <a class="btn ghost" href="@@L@@/solutions/custom-ai-tools.html">Công cụ AI theo yêu cầu</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>R. E. Kalman. &ldquo;A New Approach to Linear Filtering and Prediction Problems.&rdquo; <em>Journal of Basic Engineering</em> 82(1), 1960, tr. 35&ndash;45. <a href="https://doi.org/10.1115/1.3662552">doi:10.1115/1.3662552</a>.</li>
+<li>T. R. Benedict và G. W. Bordner. &ldquo;Synthesis of an optimal set of radar track-while-scan smoothing equations.&rdquo; <em>IRE Transactions on Automatic Control</em> 7(4), 1962, tr. 27&ndash;32. <a href="https://doi.org/10.1109/TAC.1962.1105477">doi:10.1109/TAC.1962.1105477</a>.</li>
+<li>Y. Bar-Shalom, X. R. Li và T. Kirubarajan. <em>Estimation with Applications to Tracking and Navigation</em>. Wiley, 2001. <a href="https://doi.org/10.1002/0471221279">doi:10.1002/0471221279</a>.</li>
+<li>NEXCOM. &ldquo;Automate Away with the NDiS B364 Duro Edge Computer.&rdquo; 20/11/2026. <a href="https://www.nexcom.com/news/Detail/ndis-b364-automate">nexcom.com</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/kalman_amr_fusion.py">kalman_amr_fusion.py</a> (Python 3.12, NumPy, SciPy, Matplotlib; khoảng 70 giây). Mọi con số ở Mục 4&ndash;7 là đầu ra của script này, trừ các tỉ lệ được nêu trong văn bản (43,6 %, 36,8 %, 8,8 lần, 6,4 lần, 5,6 %, 3,0 lần, \(\sqrt{6{,}635\times0{,}2856}\)), được tính từ các bảng.</p>
+</article>

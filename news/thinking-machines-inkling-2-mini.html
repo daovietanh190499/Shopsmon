@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thinking Machines mở trọng số Inkling 2 Mini: mô hình MoE 26,4 tỷ tham số dạng looped transformer, bộ nhớ khoảng 20 GB, giấy phép Apache 2.0 | Shopsmon</title>
+<meta name="description" content="Theo Thinking Machines Lab (20/11/2026), Inkling 2 Mini là mô hình mở trọng số nhỏ hơn Inkling 2 Small, đủ nhỏ để chạy trên laptop; trọng số có trên…">
+<link rel="canonical" href="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/news/thinking-machines-inkling-2-mini.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Thinking Machines mở trọng số Inkling 2 Mini: mô hình MoE 26,4 tỷ tham số dạng looped transformer, bộ nhớ khoảng 20 GB, giấy phép Apache 2.0 | Shopsmon">
+<meta property="og:description" content="Theo Thinking Machines Lab (20/11/2026), Inkling 2 Mini là mô hình mở trọng số nhỏ hơn Inkling 2 Small, đủ nhỏ để chạy trên laptop; trọng số có trên…">
+<meta property="og:url" content="https://shopsmon.com/news/thinking-machines-inkling-2-mini.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/news/thinking-machines-inkling-2-mini.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/">Blog</a><a href="/news/" class=active>Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/news/thinking-machines-inkling-2-mini.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post newspost">
+<p class="crumbs"><a href="/news/">Tin tức</a> &rsaquo; <a href="/news/#ai">AI & LLM</a></p>
+<span class="tag cat-ai">AI & LLM</span>
+<h1>Thinking Machines mở trọng số Inkling 2 Mini: mô hình MoE 26,4 tỷ tham số dạng looped transformer, bộ nhớ khoảng 20 GB, giấy phép Apache 2.0</h1>
+<p class="meta">2026-11-20 &middot; Nguồn: <a href="https://thinkingmachines.ai/news/inkling-2-mini/" rel="noopener nofollow" target="_blank">Thinking Machines Lab</a></p>
+<figure class="cover"><img src="/assets/img/news/thinking-machines-inkling-2-mini.jpg" width="1200" height="630" alt="Thinking Machines mở trọng số Inkling 2 Mini: mô hình MoE 26,4 tỷ tham số dạng looped transformer, bộ nhớ khoảng 20 GB, giấy phép Apache 2.0"><figcaption>Ảnh: Thinking Machines Lab / Hugging Face</figcaption></figure>
+<p class="standfirst">Theo Thinking Machines Lab (20/11/2026), Inkling 2 Mini là mô hình mở trọng số nhỏ hơn Inkling 2 Small, đủ nhỏ để chạy trên laptop; trọng số có trên Hugging Face theo giấy phép Apache 2.0 và mô hình cũng có trên nền tảng Tinker của hãng để suy luận và tinh chỉnh. Mô hình đa phương thức (nhận văn bản và ảnh, xuất văn bản), cửa sổ ngữ cảnh tới 1 triệu token, nhắm tới agent, gọi công cụ và lập trình. Kiến trúc là looped transformer: 24 lớp decoder với feed-forward Mixture-of-Experts (mỗi token chọn 8 trong 128 chuyên gia), trong đó 12 lớp giữa (lớp 6 đến 17) dùng chung trọng số và chạy ba lần cho mỗi token, tương đương 48 lần áp dụng lớp; thông tin truyền giữa các lượt lặp qua cơ chế “message” học được. Mô hình có 26,4 tỷ tham số, 3,4 tỷ tham số kích hoạt và 5,4 tỷ trọng số được kích hoạt mỗi token khi tính cả vòng lặp. Phần lớn trọng số được huấn luyện và triển khai nguyên bản ở NVFP4, bốn lớp cuối ở MXFP8, tổng bộ nhớ khoảng 20 GB; hãng nêu các cấu hình chạy cục bộ gồm một NVIDIA DGX Spark, máy Apple silicon từ 32 GB bộ nhớ trở lên hoặc GPU nên có từ 32 GB VRAM, với hỗ trợ SGLang, vLLM, Ollama, Unsloth, llama.cpp và nhiều khung khác. Theo Thinking Machines, mô hình dẫn đầu các mô hình mở trọng số dưới 100 tỷ tham số trên DeepSWE v1.1 (48,2%) và Vals Index v2.2 (46,5%), đồng thời đạt 77,9% trên SWE-bench Pro v2 (Hard), 79,0% trên BrowseComp, 85,3% trên DeepSearchQA (hai bài này có bước nén ngữ cảnh) và 82,7% trên MCP Atlas; hãng ghi chú cách thiết lập đánh giá khác nhau giữa các mô hình. Hãng cũng nêu hạn chế: mô hình không phải mạnh nhất cho hội thoại nhiều lượt hay chỉ dẫn nhiều ràng buộc (50,0% trên MultiChallenge, 33,4% trên ComplexConstraints v1.1, thấp hơn Qwen3.8-27B), và vòng lặp không giúp trọng số chứa thêm kiến thức thực tế nên điểm AA-Omniscience ngang các mô hình cùng cỡ. Theo các nhà nghiên cứu Stanford (Hazy Research và Scaling Intelligence Lab) được tiếp cận sớm, chỉ số trí tuệ trên mỗi joule của Inkling 2 Mini chạy trên DGX Spark là 0,703, so với 0,430 của Qwen3.6-35B-A3B, 0,159 của Gemma-4-26B-A4B và 0,036 của Qwen3.5-27B (các mô hình kia chạy ở NVFP4 hoặc INT4). Kèm theo là một checkpoint nghiên cứu có số lượt lặp thay đổi: theo hãng, thời gian tác vụ không cần chuỗi suy luận (no-CoT time horizon) tăng từ 16 giây ở một lượt lên 37 giây ở ba lượt, và chuỗi suy luận ở năm lượt ngắn hơn một nửa so với một lượt (trung bình 1.661 so với 3.703 token trên các câu GPQA Diamond được trả lời đúng ở cả năm mức) mà vẫn đọc được. Về huấn luyện, Thinking Machines cho biết đã cắt hai phần ba số chuyên gia (từ 384 xuống 128 mỗi lớp) giữa quá trình huấn luyện, sau đó chưng cất trên 1 nghìn tỷ token từ một mô hình Inkling lớn hơn của hãng, rồi SFT và RL tổng cộng 2,2 nghìn tỷ token qua 2.000 bước.</p>
+<p class="srcline">Nguồn: <a href="https://thinkingmachines.ai/news/inkling-2-mini/" rel="noopener nofollow" target="_blank">Thinking Machines Lab</a></p>
+<aside class="aff-box"><h3>Đọc thêm: sách về agent LLM và hệ thống ML</h3><p>Sách tiếng Việt về agent LLM, Python và hệ thống học máy.</p><ul><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫249.000</span></li><li><a href="https://s.shopee.vn/8fTlnamYq6" rel="sponsored nofollow noopener" target="_blank">Combo 3 sách: OpenClaw tự động hoá công việc, AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫184.030</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Đường vào lập trình Python nâng cao</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/7puXwtWBxq" rel="sponsored nofollow noopener" target="_blank">Thiết lập cỗ máy xây kênh tự động 24/24 từ trợ lý AI và AI Agent</a> <span class="price">₫179.000</span></li></ul></aside>
+<div class="cta-box"><h3 style="margin-top:0">Cần chatbot hoặc agent LLM cho doanh nghiệp?</h3><p>Mô tả ngắn yêu cầu của bạn; bạn sẽ nhận câu hỏi làm rõ và đề xuất phạm vi trước khi bắt đầu.</p>
+<p><a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Project%20inquiry%20-%20Shopsmon">Gửi yêu cầu</a> <a class="btn ghost" href="/solutions/llm-chatbot-agent.html">Xem dịch vụ</a></p></div>
+<h2>Tin liên quan</h2>
+<div class="newsgrid related"><a class="ncard" href="/news/google-gemini-4-neon.html"><img src="/assets/img/news/google-gemini-4-neon.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-18</span><h3>Google ra mắt Gemini 4 Neon: giá 3/15 USD mỗi triệu token, ngữ cảnh 1 triệu token, hạng 3 trên Artificial Analysis Intelligence Index và hạng 1 trên Coding Agent Index</h3></div></a><a class="ncard" href="/news/openai-gpt-6-2-astra-sol.html"><img src="/assets/img/news/openai-gpt-6-2-astra-sol.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-17</span><h3>OpenAI ra mắt GPT-6.2 Astra và GPT-6.2 Sol: Astra giá 8/40 USD mỗi triệu token (giảm 20%), kết quả cao nhất trên Agents' Last Exam, Sol giữ giá 2/10 USD</h3></div></a><a class="ncard" href="/news/alibaba-qwen4-max.html"><img src="/assets/img/news/alibaba-qwen4-max.jpg" width="1200" height="630" loading="lazy" alt=""><div class="nbody"><span class="tag">AI & LLM &middot; 2026-11-16</span><h3>Alibaba ra mắt Qwen4-Max: mô hình MoE 2,4 nghìn tỷ tham số, 71 tỷ tham số hoạt động mỗi token, ngữ cảnh 1 triệu token, chi phí mỗi tác vụ giảm khoảng 60%</h3></div></a></div>
+</article>
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+
+</body>
+</html>

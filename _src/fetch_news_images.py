@@ -50,6 +50,10 @@ OVERRIDE = {
     "eurotech-reliagate-15a-14": "https://www.eurotech.com/wp-content/uploads/2026/11/News_Family_Gateway15A-14-scaled.webp",
     # GSMArena blocks scripted requests and its lead image carries a site watermark: use the official render published by Gizmochina.
     "huawei-osta-o1-pro": "https://www.gizmochina.com/wp-content/uploads/2026/11/featured-1200x675-10.jpg",
+    # The lab's own og:image is only the black logo on white: use the official release banner on Hugging Face (Thinking Machines Lab x Hugging Face).
+    "thinking-machines-inkling-2-mini": "https://huggingface.co/blog/assets/inkling2mini/thumbnail.png",
+    # NEXCOM's page image (og) is only the site logo (220x40): use the product/AMR picture published in the release body.
+    "nexcom-ndis-b364-amr-edge": "https://www.nexcom.com/UploadFiles/FCKeditor/image/Product_News/261112-IPS-NDiS-B364/duro-edge-computer-NDiS-B364-560.jpg",
 }
 # Images that must be shown whole (letterboxed) because captions/logos sit near the edge.
 LETTERBOX = {"tdk-microchip-robot-sensor-nodes", "edge0-145b-on-device-llm"}
@@ -67,6 +71,8 @@ CREDIT_OVERRIDE = {
     "xiaomi-18-pro-global-launch": "Android Authority",
     "eurotech-reliagate-15a-14": "Eurotech",
     "huawei-osta-o1-pro": "Huawei (Gizmochina)",
+    "thinking-machines-inkling-2-mini": "Thinking Machines Lab / Hugging Face",
+    "nexcom-ndis-b364-amr-edge": "NEXCOM",
 }
 
 

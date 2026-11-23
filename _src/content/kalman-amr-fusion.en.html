@@ -1,0 +1,131 @@
+<article class="post">
+<p class="meta"><a href="@@L@@/blog/">&larr; Blog</a> &middot; 2026-11-23 &middot; IoT / AIoT &middot; ~14 min read</p>
+<h1>A Kalman filter for robot position: how much measuring really gains, and when an outlier gate locks itself out</h1>
+<p class="meta">An autonomous mobile robot gets its position from a noisy source (LiDAR localisation, UWB, GNSS...) and needs velocity as well. This post builds a one-dimensional Kalman filter (constant-velocity model, white-noise acceleration), computes its steady-state gain from the discrete Riccati equation and tests it in fixed-seed simulation: a matched filter against raw fixes and an EWMA, wrong noise assumptions, outliers, and a 3 m jump of the true position. Every number is the output of one script; the model is a simulation, not data from a particular robot or sensor.</p>
+
+<h2>1. Background</h2>
+<p>An edge computer on an autonomous mobile robot (AMR) usually reads several sources at once. NEXCOM&rsquo;s announcement of its NDiS B364 edge computer (<a href="@@L@@/news/nexcom-ndis-b364-amr-edge.html">related news</a>) lists AMR-oriented interfaces: USB 3.2 for 3D cameras, LAN for 3D LiDAR sensors, and RS-422/485 for motor drivers and the battery management system. This post uses no data or specification from that product. It looks only at the generic problem behind any such source: receiving a noisy position at a fixed rate and estimating position and velocity.</p>
+<p>Two simple approaches both have weaknesses. Using the measured position directly keeps its noise, and velocity derived from the difference of two fixes has a noise standard deviation of \(\sqrt{2}\,r/\Delta t\) (4.24 m/s with the numbers below). Smoothing with an EWMA reduces noise but lags when the robot moves and provides no velocity. The Kalman filter (Kalman, 1960) combines a motion model with the measurement, weighted by covariances. This post tests four concrete questions: (1) is the filter self-consistent, (2) how much better is it than an EWMA, (3) how much does it lose when the noise is mis-specified, (4) what happens with outliers and when the outlier gate is fooled.</p>
+
+<h2>2. Model and filter</h2>
+<p>State \(x=[p,\,v]^\top\) (position, velocity), time step \(\Delta t\). Motion and measurement:</p>
+$$x_k = F x_{k-1} + w_k,\quad w_k\sim N(0,Q);\qquad z_k = H x_k + \nu_k,\quad \nu_k\sim N(0,R)$$
+<p>with</p>
+$$F=\begin{bmatrix}1&\Delta t\\0&1\end{bmatrix},\quad Q=q\begin{bmatrix}\Delta t^3/3&\Delta t^2/2\\\Delta t^2/2&\Delta t\end{bmatrix},\quad H=[1\;\,0],\quad R=r^2.$$
+<p>\(Q\) is the covariance of white-noise acceleration of intensity \(q\) (units (m/s²)²·s) integrated over one step. One filter cycle is a prediction and an update:</p>
+$$\hat x^- = F\hat x,\quad P^- = FPF^\top + Q;\qquad S = HP^-H^\top + R,\quad K = P^-H^\top S^{-1},\quad \hat x = \hat x^- + K(z-H\hat x^-),\quad P=(I-KH)P^-.$$
+<p>Two quantities check consistency (Bar-Shalom et al., 2001): the normalised estimation error squared of the state, \(\mathrm{NEES}_k=(x_k-\hat x_k)^\top P_k^{-1}(x_k-\hat x_k)\), expected to equal 2 (the dimension) when the filter matches the model, and the normalised innovation squared \(\mathrm{NIS}_k=y_k^2/S_k\) with \(y_k=z_k-H\hat x^-\), expected to equal 1 (one measurement). An outlier gate skips the update when \(\mathrm{NIS}_k>\gamma\), where \(\gamma\) is a quantile of \(\chi^2_1\): 6.635 (99 %) or 10.828 (99.9 %).</p>
+<p>\(P^-\) does not depend on the data, so over time it converges to the solution \(P^-_\infty\) of the discrete algebraic Riccati equation (DARE) and the gain converges to a fixed \(K_\infty\). A fixed-gain filter using this \(K_\infty\) is an \(\alpha\)&ndash;\(\beta\) filter (Benedict and Bordner, 1962), with \(\alpha=K_1\) and \(\beta=K_2\Delta t\). One filter step for a single run is below (the script is vectorised over runs; the arithmetic is equivalent):</p>
+<pre><code class="language-python">def kf_step(x, P, z, F, Q, r, gate=None):
+    x = F @ x; P = F @ P @ F.T + Q                        # predict
+    S = P[0, 0] + r * r; y = z - x[0]
+    if gate is not None and y * y / S &gt; gate:             # outlier gate
+        return x, P, False
+    K = P[:, 0] / S
+    x = x + K * y; P = P - np.outer(K, P[0, :])           # update: (I - K H) P
+    return x, P, True</code></pre>
+
+<h2>3. Setup</h2>
+<p>\(\Delta t=0.1\) s, \(q=0.5\) (m/s²)²·s, \(r=0.30\) m, 600 steps, seed 20261123. The true state is simulated from the same model (initial position \(N(0,1)\), initial velocity \(N(1,\,0.25)\), matching the filter&rsquo;s prior), so the matched filter is optimal. These values are choices of this post, not taken from a robot. The measurement at step \(k\) is \(z_k=p_k+N(0,r^2)\). RMSE is computed over steps \(k\ge100\) (steady state), over 2,000 runs unless noted. For this \(\Delta t\), \(q\), \(r\), the DARE gives \(\alpha=0.3203\), \(\beta=0.06145\).</p>
+<figure><img src="/assets/img/blog/kalman-amr-trace.svg" alt="Two plots over 20 seconds: top is true position (black), measurements (grey dots) and the Kalman estimate (blue); bottom is true velocity, velocity from differencing two fixes (grey, oscillating very strongly) and the Kalman estimate following the true velocity closely" width="620" height="504">
+<figcaption>Figure 1. One run: the Kalman estimate follows the true position and velocity, while velocity from differencing two fixes oscillates far beyond the plotted range (velocity RMSE over 2,000 runs: 4.24 m/s versus 0.48 m/s).</figcaption></figure>
+
+<h2>4. Experiment 1: does the matched filter agree with theory?</h2>
+<p>The steady-state prior covariance from the DARE is \(P_{11}=0.042410\), \(P_{12}=0.081367\), \(P_{22}=0.285613\); the gain is \(K_\infty=(0.320295,\;0.614503)\) and the posterior standard deviations are 0.16978 m (position) and 0.48540 m/s (velocity). The filter&rsquo;s gain at step 599 equals \(K_\infty\) to six decimals. The Monte-Carlo error covariance (last 100 steps, all runs) is \(0.041752,\;0.079988,\;0.280987\), which is 1.55 %, 1.69 % and 1.62 % below the DARE values. Steady-state position RMSE measured 0.16913 m against a theoretical 0.16978 m.</p>
+<table>
+<thead><tr><th>Statistic</th><th>Expected</th><th>Main sample (2,000 runs × 600 steps)</th><th>Independent check (20,000 × 200)</th></tr></thead>
+<tbody>
+<tr><td>Mean NEES</td><td>2</td><td>1.9832 ± 0.0040</td><td>2.0015 ± 0.0023</td></tr>
+<tr><td>Mean NIS</td><td>1</td><td>0.9978 ± 0.0013</td><td>0.9999 ± 0.0007</td></tr>
+<tr><td>Share of NIS &gt; 99 % quantile</td><td>0.01</td><td>0.0099</td><td>&ndash;</td></tr>
+</tbody></table>
+<p>(± is the standard error over per-run means.) The main-sample NEES is about 4 standard errors below 2; a larger independent sample gives 2.0015 ± 0.0023, consistent with 2, so the gap in the main sample is treated as sampling variation, but this conclusion rests on two samples and is not a proof.</p>
+
+<h2>5. Experiment 2: against raw fixes and an EWMA</h2>
+<p>The EWMA coefficient \(\alpha\) was chosen on a separate tuning set of 500 runs (result: \(\alpha=0.80\), tuning RMSE 0.2668 m) and then evaluated on 2,000 held-out runs. For the EWMA and the raw fixes, velocity is the difference of two consecutive values divided by \(\Delta t\).</p>
+<table>
+<thead><tr><th>Method</th><th>Position RMSE (m)</th><th>Velocity RMSE (m/s)</th></tr></thead>
+<tbody>
+<tr><td>Raw fixes</td><td>0.2997</td><td>4.2424</td></tr>
+<tr><td>EWMA, \(\alpha=0.80\)</td><td>0.2677</td><td>3.0998</td></tr>
+<tr><td>Fixed gain \(K_\infty\) (\(\alpha\)&ndash;\(\beta\))</td><td>0.1691</td><td>0.4834</td></tr>
+<tr><td>Full Kalman filter (time-varying gain)</td><td>0.1691</td><td>0.4834</td></tr>
+</tbody></table>
+<p>The Kalman filter reduces position RMSE by 43.6 % against raw fixes and by 36.8 % against the best EWMA, and velocity RMSE by 8.8 times against differencing two fixes (6.4 times against differencing two EWMA values). After step 100 the fixed-gain and full filters differ by at most \(4\times10^{-9}\) m (position) and \(3\times10^{-8}\) m/s (velocity), so \(K_\infty\) can be computed once and the filter run with about four multiplications per step on a microcontroller. The difference is in the first few steps: position RMSE at \(k=0,\dots,4\) is 0.295, 0.211, 0.182, 0.167, 0.162 m for the full filter and 0.715, 0.455, 0.272, 0.175, 0.170 m for the fixed gain started from the same prior.</p>
+
+<h2>6. Experiment 3: wrong noise assumptions</h2>
+<p>In practice \(q\) and \(r\) are not known exactly. The filters below assume \(q\) and \(R\) multiplied by factors from 0.1 to 10, on the same data as Section 4.</p>
+<figure><img src="/assets/img/blog/kalman-amr-mismatch.svg" alt="A 5 by 5 heat map: horizontal axis assumed R over true R, vertical axis assumed q over true q, colour and number in each cell are the position RMSE ratio against the matched filter; the diagonal is 1.00; the top-right corner (small q, large R) is 2.94" width="520" height="440">
+<figcaption>Figure 2. Position RMSE ratio against the matched filter (0.1691 m) when the filter mis-specifies \(q\) and \(R\).</figcaption></figure>
+<table>
+<thead><tr><th>assumed / true \(q\)</th><th>\(R\) ×0.1</th><th>×0.3</th><th>×1</th><th>×3</th><th>×10</th></tr></thead>
+<tbody>
+<tr><td>×0.1</td><td>1.000</td><td>1.064</td><td>1.351</td><td>1.900</td><td>2.940</td></tr>
+<tr><td>×0.3</td><td>1.043</td><td>1.000</td><td>1.078</td><td>1.351</td><td>1.971</td></tr>
+<tr><td>×1</td><td>1.146</td><td>1.050</td><td>1.000</td><td>1.064</td><td>1.351</td></tr>
+<tr><td>×3</td><td>1.260</td><td>1.146</td><td>1.043</td><td>1.000</td><td>1.078</td></tr>
+<tr><td>×10</td><td>1.390</td><td>1.272</td><td>1.146</td><td>1.050</td><td>1.000</td></tr>
+</tbody></table>
+<p>The position RMSE ratio depends only on the assumed ratio \(q/R\) (all diagonal cells are 1.000, because the gain depends only on \(q/R\)), and it is asymmetric: assuming \(q/R\) 100 times too small (over-smoothing) gives 2.94, while 100 times too large gives 1.39. Velocity goes the other way: the largest velocity RMSE ratio is 2.892 at \(q\)×10, \(R\)×0.1 (the filter reacts too strongly to measurement noise), versus 1.580 at \(q\)×0.1, \(R\)×10. Leaning towards a large \(q\) therefore helps position but makes velocity noisier.</p>
+<p>The RMSE ratio does not say whether the filter reports its own uncertainty correctly. Mean NEES (using the filter&rsquo;s own covariance, \(k\ge100\), consistent when equal to 2):</p>
+<table>
+<thead><tr><th>assumed / true \(q\)</th><th>\(R\) ×0.1</th><th>×0.3</th><th>×1</th><th>×3</th><th>×10</th></tr></thead>
+<tbody>
+<tr><td>×0.1</td><td>19.86</td><td>12.98</td><td>10.65</td><td>10.01</td><td>9.82</td></tr>
+<tr><td>×0.3</td><td>13.64</td><td>6.62</td><td>4.22</td><td>3.55</td><td>3.33</td></tr>
+<tr><td>×1</td><td>11.62</td><td>4.45</td><td>1.99</td><td>1.30</td><td>1.06</td></tr>
+<tr><td>×3</td><td>11.21</td><td>3.87</td><td>1.36</td><td>0.66</td><td>0.42</td></tr>
+<tr><td>×10</td><td>11.23</td><td>3.73</td><td>1.16</td><td>0.44</td><td>0.20</td></tr>
+</tbody></table>
+<p>On the diagonal the RMSE is identical but the NEES is 19.86, 6.62, 1.99, 0.66, 0.20, close to 2 divided by the multiplier (20, 6.7, 2, 0.67, 0.2): a filter told the noise is small reports itself as overconfident, one told it is large is overly cautious, although the estimated positions are identical. RMSE and NEES therefore answer different questions (both need the true state; NIS needs only the measurements and the filter covariance, but this post does not measure NIS under mis-specified noise).</p>
+
+<h2>7. Experiment 4: outliers and gating</h2>
+<p>With probability \(\varepsilon\), a measurement gets extra \(N(0,(10r)^2)\) noise, a standard deviation of 3 m (for example a wrong feature match in localisation). Four filters run on the same data (1,000 runs): no gate; a 99 % gate; a 99.9 % gate; and a 99 % gate with a reset rule (after 5 consecutive rejections, set the position to the current measurement and \(P_{11}=R\)).</p>
+<figure><img src="/assets/img/blog/kalman-amr-outliers.svg" alt="Two plots against outlier share from 0 to 10 percent: left is the median per-run position RMSE of four filters, the ungated filter rising from 0.17 to 0.50 m while the three gated filters stay between 0.17 and 0.20 m; right is the number of runs out of 1,000 with RMSE above 1 m, reaching 38 for the 99 percent gate without reset" width="700" height="350">
+<figcaption>Figure 3. Left: median per-run position RMSE. Right: number of runs (of 1,000) that got stuck, measured as RMSE above 1 m.</figcaption></figure>
+<table>
+<thead><tr><th>Position RMSE (m), all runs</th><th>\(\varepsilon\)=0</th><th>0.5 %</th><th>1 %</th><th>2 %</th><th>5 %</th><th>10 %</th></tr></thead>
+<tbody>
+<tr><td>No gate</td><td>0.1702</td><td>0.2020</td><td>0.2268</td><td>0.2742</td><td>0.3776</td><td>0.5089</td></tr>
+<tr><td>99 % gate</td><td>0.2701</td><td>2.9438</td><td>0.5722</td><td>4.9111</td><td>10.7554</td><td>12.5568</td></tr>
+<tr><td>99.9 % gate</td><td>0.1714</td><td>0.1719</td><td>0.1729</td><td>0.1976</td><td>1.1880</td><td>0.2914</td></tr>
+<tr><td>99 % gate + reset</td><td>0.1797</td><td>0.1800</td><td>0.1817</td><td>0.1839</td><td>0.1917</td><td>0.2064</td></tr>
+<tr><td colspan="7"><em>Number of runs (of 1,000) whose per-run RMSE exceeds 1 m</em></td></tr>
+<tr><td>No gate</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>99 % gate</td><td>4</td><td>8</td><td>6</td><td>9</td><td>15</td><td>38</td></tr>
+<tr><td>99.9 % gate</td><td>0</td><td>0</td><td>0</td><td>1</td><td>4</td><td>7</td></tr>
+<tr><td>99 % gate + reset</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</tbody></table>
+<p>Without a gate the RMSE rises steadily, from 0.1702 to 0.5089 m (3.0 times) when 10 % of the measurements are outliers. The 99 % gate without a reset looks much worse in mean RMSE (up to 12.56 m), yet its per-run median is only 0.1776 to 0.1979 m, better than the ungated filter (0.1699 to 0.5036 m): the overall RMSE is dominated by a few stuck runs (4 of 1,000 even on clean data, rising to 38 at \(\varepsilon=10\) %). The 99.9 % gate gets stuck less (0 to 7 runs) and the reset rule never. The 99 % gate rejects 1.15 % of good measurements on clean data (1 % expected, rising to 2.30 % at \(\varepsilon=10\) %) and only about 75 % of the outlier measurements, because outliers are made with \(N(0,3^2)\) noise so many have a small deviation; the 99.9 % gate rejects 0.11 % of good measurements and roughly 68 to 70 % of outliers. At \(\varepsilon=0\) the reset rule has a cost: RMSE 0.1797 m versus 0.1702 m (5.6 % higher), because 1.15 % of good measurements are still rejected.</p>
+<p>Why does the 99 % gate get stuck? On clean data (a different noise draw), 4 runs got stuck, with consecutive-rejection streaks of 305, 58, 47 and 76 steps (0.1 s each) and velocity errors at the start of the streak of +1.99, &minus;2.14, &minus;1.96 and +2.18 m/s. A rough argument: when the estimated velocity is wrong by \(e_v\) and measurements are rejected, the innovation grows roughly like \(e_v t\) while the predicted standard deviation initially grows like \(\sqrt{P_{22}}\,t\); if \(|e_v|>\sqrt{\gamma P_{22}}=\sqrt{6.635\times0.2856}=1.377\) m/s, the next measurements keep being rejected until the \(q t^3/3\) part of \(P_{11}\) becomes large enough. All four stuck runs had a velocity error above 1.377 m/s at the start of the streak, consistent with this estimate; the post does not test the explanation beyond these four runs.</p>
+<p>One more scenario: at step 300 the true position jumps by +3 m (10 \(r\)) on clean data (1,000 runs). With no gate the error drops below \(3r=0.9\) m 2 steps after the jump (median) and 100 % of runs recover. The 99 % gate without a reset: median 14 steps, 99.3 % recover within 100 steps (10 s), 99.8 % within 300 steps, and it rejects 9.2 % of the measurements in the 300 steps after the jump. The 99 % gate with a reset after 5 rejections: median 4 steps, 100 % recover within 100 steps.</p>
+
+<h2>8. Limitations</h2>
+<ul>
+<li>A one-dimensional simulation whose truth is drawn from the filter&rsquo;s own model, with independent Gaussian noise. A real robot has trajectories unlike white-noise acceleration, measurements with delay, bias and temporal correlation, and nonlinear models (turning, wheel slip); none of that is measured here.</li>
+<li>The values \(q=0.5\), \(r=0.30\) m, \(\Delta t=0.1\) s are this post&rsquo;s choice; the percentages in the tables depend on them. Outliers are modelled as wide Gaussian noise, not as real localisation faults.</li>
+<li>The outlier gate covers only a scalar measurement and two \(\chi^2\) thresholds; robust estimation (Huber, Student-t) and multiple hypotheses were not tried.</li>
+<li>The explanation of the lock-out in Section 7 is checked on four runs only.</li>
+</ul>
+
+<h2>9. Practical conclusions</h2>
+<ol>
+<li>Solve the DARE once (SciPy or offline) and put \(K_\infty\) on the microcontroller: after 100 steps it matches the full filter to \(10^{-8}\). The start needs a time-varying gain or a good initialisation: position RMSE at the first step is 0.715 m versus 0.295 m.</li>
+<li>Only the ratio \(q/R\) sets the gain. Mis-specifying \(q/R\) by a factor of ten raises position RMSE by 15 % (too large) or 35 % (too small); in this experiment leaning towards a larger \(q\) is cheaper for position but makes velocity noisier.</li>
+<li>Check NEES/NIS rather than RMSE alone (NIS needs no true state, so it works on a real robot): two filters with identical RMSE can report their confidence wrong by a factor of 10.</li>
+<li>If you use a \(\chi^2\) gate, use a strict threshold (99.9 %) and a reset rule after a few consecutive rejections: a 99 % gate without a reset got stuck in 4 to 38 runs per 1,000 depending on the outlier share, including on clean data.</li>
+</ol>
+
+<div class="cta-box"><strong>Need state estimation, sensor fusion or a robot / AIoT prototype?</strong><br>
+I take this work as a freelancer. Describe the project in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:@@EMAIL@@?subject=Sensor%20fusion%20%2F%20robot%20project">Get a quote</a> <a class="btn ghost" href="@@L@@/solutions/custom-ai-tools.html">Custom AI tools</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>R. E. Kalman. &ldquo;A New Approach to Linear Filtering and Prediction Problems.&rdquo; <em>Journal of Basic Engineering</em> 82(1), 1960, pp. 35&ndash;45. <a href="https://doi.org/10.1115/1.3662552">doi:10.1115/1.3662552</a>.</li>
+<li>T. R. Benedict and G. W. Bordner. &ldquo;Synthesis of an optimal set of radar track-while-scan smoothing equations.&rdquo; <em>IRE Transactions on Automatic Control</em> 7(4), 1962, pp. 27&ndash;32. <a href="https://doi.org/10.1109/TAC.1962.1105477">doi:10.1109/TAC.1962.1105477</a>.</li>
+<li>Y. Bar-Shalom, X. R. Li and T. Kirubarajan. <em>Estimation with Applications to Tracking and Navigation</em>. Wiley, 2001. <a href="https://doi.org/10.1002/0471221279">doi:10.1002/0471221279</a>.</li>
+<li>NEXCOM. &ldquo;Automate Away with the NDiS B364 Duro Edge Computer.&rdquo; Nov 20, 2026. <a href="https://www.nexcom.com/news/Detail/ndis-b364-automate">nexcom.com</a>.</li>
+</ol>
+<p class="meta">Source code: <a href="/blog/code/kalman_amr_fusion.py">kalman_amr_fusion.py</a> (Python 3.12, NumPy, SciPy, Matplotlib; about 70 seconds). Every number in Sections 4&ndash;7 is output of this script, except the ratios quoted in the text (43.6 %, 36.8 %, 8.8 times, 6.4 times, 5.6 %, 3.0 times, \(\sqrt{6.635\times0.2856}\)), which are computed from the tables.</p>
+</article>
