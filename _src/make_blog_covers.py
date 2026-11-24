@@ -20,6 +20,7 @@ CARDS = {
     "mqtt-qos-loss": ("MQTT QoS 0, 1, 2 on a lossy link", "Closed forms, simulation, burst loss  |  NumPy", "#10b981"),
     "send-on-delta": ("Send-on-delta: messages vs error", "Deadband, random walk, EWMA, heartbeat  |  NumPy", "#f59e0b"),
     "kalman-amr-fusion": ("Kalman filter for robot position", "DARE gain, NEES/NIS, outlier gating  |  NumPy, SciPy", "#06b6d4"),
+    "shadow-auto-approve": ("How long to trust an auto-approver", "Rule of three, exact coverage, peeking  |  NumPy, SciPy", "#8b5cf6"),
     "pnp-ransac": ("PnP and RANSAC", "Camera pose from matches with outliers  |  DLT, Gauss-Newton, NumPy", "#f43f5e"),
 }
 ONLY = set(__import__("sys").argv[1:])

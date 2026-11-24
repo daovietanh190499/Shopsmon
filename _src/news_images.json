@@ -334,5 +334,29 @@
    560,
    520
   ]
+ },
+ "anthropic-claude-ship": {
+  "credit": "Anthropic",
+  "image_url": "https://claude.com/resources/articles/introducing-claude-ship/opengraph-image/og",
+  "orig_size": [
+   2400,
+   1260
+  ]
+ },
+ "ezurio-gw16168-ara240-m2-ai": {
+  "credit": "Ezurio",
+  "image_url": "https://d2g2p0i8cc2bmh.cloudfront.net/2026-10/GW16168-render.png",
+  "orig_size": [
+   1800,
+   1800
+  ]
+ },
+ "sharp-aquos-sense11": {
+  "credit": "Sharp",
+  "image_url": "https://global.sharp/corporate/news/images/261117-b.png",
+  "orig_size": [
+   1165,
+   773
+  ]
  }
 }

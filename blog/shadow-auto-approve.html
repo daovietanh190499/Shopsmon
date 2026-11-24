@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chạy thử bao lâu để tin bộ tự phê duyệt: quy tắc ba, Clopper-Pearson và peeking | Shopsmon</title>
+<meta name="description" content="Cận trên nhị thức sau 0 lỗi: quy tắc ba, Clopper-Pearson, Wilson, Jeffreys và Wald; số lượt cần thiết, độ phủ chính xác và hiệu ứng nhìn dữ liệu liên tục, với mô phỏng seed cố định và mã nguồn.">
+<link rel="canonical" href="https://shopsmon.com/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/shadow-auto-approve.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Chạy thử bao lâu để tin bộ tự phê duyệt: quy tắc ba, Clopper-Pearson và peeking | Shopsmon">
+<meta property="og:description" content="Cận trên nhị thức sau 0 lỗi: quy tắc ba, Clopper-Pearson, Wilson, Jeffreys và Wald; số lượt cần thiết, độ phủ chính xác và hiệu ứng nhìn dữ liệu liên tục, với mô phỏng seed cố định và mã nguồn.">
+<meta property="og:url" content="https://shopsmon.com/blog/shadow-auto-approve.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/shadow-auto-approve-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/">Trang chủ</a><a href="/services.html">Dịch vụ</a><a href="/portfolio.html">Portfolio</a><a href="/products/">Sản phẩm</a><a href="/blog/" class=active>Blog</a><a href="/news/">Tin tức</a><a href="/contact.html">Liên hệ</a></nav><span class="langsw" role="group" aria-label="Language"><span>VI</span><a href="/en/blog/shadow-auto-approve.html" hreflang="en" lang="en" onclick="try{localStorage.setItem('lang','en')}catch(e){}">EN</a></span><button type="button" class="ctrl" id="themeBtn" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/blog/">&larr; Blog</a> &middot; 2026-11-24 &middot; Dữ liệu / LLM agent &middot; ~13 phút đọc</p>
+<h1>Bao nhiêu lượt chạy thử là đủ để tin một bộ tự phê duyệt? Không có lỗi nào chưa phải là hết rủi ro</h1>
+<p class="meta">Một bộ tự phê duyệt (agent duyệt thay đổi mã, bộ lọc, quy tắc tự động...) thường được chạy ở chế độ quan sát trước: nó đánh dấu &ldquo;sẽ duyệt&rdquo; còn người vẫn quyết định, rồi người gán nhãn từng trường hợp. Bài này xét câu hỏi thống kê phía sau: sau \(n\) trường hợp có nhãn và \(k\) lần duyệt sai, dữ liệu chứng minh được gì về tỉ lệ duyệt sai \(p\)? Bài so sánh bốn cận trên (Clopper&ndash;Pearson, Wilson, Jeffreys, Wald) bằng phép tính chính xác, tính số lượt cần thiết, rồi mô phỏng có seed cố định hiệu ứng nhìn dữ liệu liên tục (peeking). Mọi con số là đầu ra của một script, trên dữ liệu mô phỏng hoặc tính chính xác từ phân phối nhị thức.</p>
+
+<h2>1. Bối cảnh</h2>
+<p>Tin Anthropic ra mắt Claude Ship (<a href="/news/anthropic-claude-ship.html">tin liên quan</a>) nêu rằng Claude Approvals áp dụng chính sách phê duyệt do nhóm viết và được khuyến nghị bật ở chế độ chỉ quan sát trước khi đặt branch protection yêu cầu kết quả xanh của nó. Bài này xét bài toán chung của mọi giai đoạn chạy bóng (shadow): bộ tự động đưa ra \(n\) quyết định &ldquo;sẽ duyệt&rdquo;, người gán nhãn mỗi quyết định là ổn hay có lỗi chặn (blocking defect). Cần kết luận gì khi mọi nhãn đều &ldquo;ổn&rdquo;, và cần chờ bao lâu?</p>
+<p>Hai thói quen dễ dẫn tới kết luận sai. Thứ nhất, coi &ldquo;0 lỗi trong 30 lượt&rdquo; là &ldquo;tỉ lệ lỗi bằng 0&rdquo;. Thứ hai, theo dõi dữ liệu mỗi lần có nhãn mới và chốt &ldquo;đạt&rdquo; ngay khi cận trên chạm ngưỡng. Bài kiểm tra cả hai bằng số.</p>
+
+<h2>2. Mô hình và các cận trên</h2>
+<p>Giả sử các trường hợp độc lập và cùng tỉ lệ duyệt sai \(p\) (tỉ lệ trường hợp được bộ tự động duyệt mà người xác định là có lỗi chặn). Số lần duyệt sai \(X\sim\mathrm{Binomial}(n,p)\). Muốn một cận trên một phía \(u(k,n)\) sao cho \(\Pr[p\le u(X,n)]\ge 1-\alpha\) với \(\alpha=0{,}05\). Bốn cách phổ biến:</p>
+<ul>
+<li><strong>Clopper&ndash;Pearson (chính xác)</strong>: \(u\) là nghiệm của \(\Pr[X\le k;\,n,u]=\alpha\), tương đương \(u=F^{-1}_{\mathrm{Beta}(k+1,\,n-k)}(1-\alpha)\). Bảo đảm độ phủ \(\ge 1-\alpha\) với mọi \(p\), nhưng thường phủ dư vì \(X\) rời rạc.</li>
+<li><strong>Wilson</strong>: giải \((\hat p-p)^2=z^2p(1-p)/n\) với \(z=\Phi^{-1}(1-\alpha)=1{,}6449\) và lấy nghiệm lớn: \(u=\dfrac{\hat p+z^2/2n+z\sqrt{\hat p(1-\hat p)/n+z^2/4n^2}}{1+z^2/n}\). Khi \(k=0\): \(u=z^2/(n+z^2)\).</li>
+<li><strong>Jeffreys</strong>: phân vị của Beta\((k+\tfrac12,\,n-k+\tfrac12)\).</li>
+<li><strong>Wald</strong>: \(u=\hat p+z\sqrt{\hat p(1-\hat p)/n}\), với \(\hat p=k/n\).</li>
+</ul>
+<p>Với \(k=0\), Clopper&ndash;Pearson cho \((1-u)^n=\alpha\), tức \(u=1-\alpha^{1/n}\). Vì \(\ln(1-u)\approx -u\), ta có xấp xỉ \(u\approx -\ln\alpha/n=2{,}9957/n\approx 3/n\): đây là &ldquo;quy tắc ba&rdquo; (Hanley và Lippman-Hand, 1983). Wald cho \(u=0\) khi \(k=0\), tức khẳng định chắc chắn rằng \(p=0\).</p>
+<p>Một chứng chỉ &ldquo;\(p\le p_0\) với độ tin cậy 95 %&rdquo; được cấp khi \(u(k,n)\le p_0\). Với Clopper&ndash;Pearson, điều này tương đương \(\Pr[X\le k;\,n,p_0]\le\alpha\), nên số lượt tối thiểu cho mỗi \(k\) tìm được bằng tìm kiếm nhị phân trên hàm phân phối nhị thức:</p>
+<pre><code class="language-python">from scipy.stats import beta, binom
+
+def ub_cp(k, n, a=0.05):                 # cận trên Clopper-Pearson một phía
+    return 1.0 if k &gt;= n else beta.ppf(1 - a, k + 1, n - k)
+
+def min_n(p0, k, a=0.05):                # n nhỏ nhất để ub_cp(k, n) &lt;= p0
+    lo = hi = max(k, 1)
+    while binom.cdf(k, hi, p0) &gt; a:
+        lo, hi = hi, hi * 2
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if binom.cdf(k, mid, p0) &lt;= a: hi = mid
+        else: lo = mid + 1
+    return lo</code></pre>
+
+<h2>3. Thiết lập</h2>
+<p>Mục 4 và 5 là phép tính chính xác (không ngẫu nhiên), có một đối chiếu Monte-Carlo 400.000 mẫu (seed 20261124). Mục 6 mô phỏng 20.000 chuỗi, mỗi chuỗi tối đa \(N=2000\) trường hợp có nhãn, dùng chung số ngẫu nhiên cho mọi tỉ lệ \(p\); ngưỡng mục tiêu \(p_0=2\) %, \(\alpha=0{,}05\) một phía. Các giá trị \(p_0\), \(N\), số lần nhìn là lựa chọn của bài, không lấy từ một quy trình thật.</p>
+<figure><img src="/assets/img/blog/saa-bounds.svg" alt="Hai đồ thị: trái là cận trên 95 phần trăm của p sau khi không có lỗi nào theo số trường hợp n trên thang log; ba phương pháp Clopper-Pearson, Wilson và Jeffreys gần như song song với đường 3 chia n, còn Wald bằng 0 nên không vẽ được; phải là độ phủ chính xác khi p bằng 1 phần trăm theo n từ 20 đến 1000: Clopper-Pearson luôn từ 95 phần trăm trở lên, Wilson và Jeffreys có lúc rơi xuống dưới 95 với các vết răng cưa, Wald thấp nhất" width="760" height="296">
+<figcaption>Hình 1 (nhãn hình bằng tiếng Anh). Trái: cận trên sau 0 lỗi (Wald bằng 0 nên không xuất hiện trên thang log). Phải: độ phủ chính xác khi \(p=1\) %; đường nét đứt là 95 %.</figcaption></figure>
+
+<h2>4. Thí nghiệm 1: cận trên và số lượt cần thiết</h2>
+<p>Cận trên 95 % của \(p\) sau 0 lỗi trong \(n\) trường hợp:</p>
+<table>
+<thead><tr><th>\(n\)</th><th>Clopper&ndash;Pearson</th><th>\(3/n\)</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>10</td><td>25,887 %</td><td>30,000 %</td><td>21,294 %</td><td>17,077 %</td><td>0 %</td></tr>
+<tr><td>30</td><td>9,503 %</td><td>10,000 %</td><td>8,272 %</td><td>6,152 %</td><td>0 %</td></tr>
+<tr><td>100</td><td>2,951 %</td><td>3,000 %</td><td>2,634 %</td><td>1,898 %</td><td>0 %</td></tr>
+<tr><td>300</td><td>0,994 %</td><td>1,000 %</td><td>0,894 %</td><td>0,638 %</td><td>0 %</td></tr>
+<tr><td>1.000</td><td>0,299 %</td><td>0,300 %</td><td>0,270 %</td><td>0,192 %</td><td>0 %</td></tr>
+</tbody></table>
+<p>Quy tắc ba sát Clopper&ndash;Pearson từ khoảng \(n=30\) trở đi (9,503 % so với 10 %), còn ở \(n=10\) nó lệch 4,1 điểm phần trăm (25,887 % so với 30 %). Khi có lỗi, cận tăng nhanh. Với \(n=100\):</p>
+<table>
+<thead><tr><th>\(k\)</th><th>\(\hat p\)</th><th>Clopper&ndash;Pearson</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0 %</td><td>2,95 %</td><td>2,63 %</td><td>1,90 %</td><td>0,00 %</td></tr>
+<tr><td>1</td><td>1 %</td><td>4,66 %</td><td>4,36 %</td><td>3,84 %</td><td>2,64 %</td></tr>
+<tr><td>2</td><td>2 %</td><td>6,16 %</td><td>5,86 %</td><td>5,42 %</td><td>4,30 %</td></tr>
+<tr><td>3</td><td>3 %</td><td>7,57 %</td><td>7,27 %</td><td>6,88 %</td><td>5,81 %</td></tr>
+<tr><td>5</td><td>5 %</td><td>10,23 %</td><td>9,92 %</td><td>9,58 %</td><td>8,58 %</td></tr>
+</tbody></table>
+<p>Số lượt tối thiểu để cận trên Clopper&ndash;Pearson 95 % không vượt \(p_0\) khi quan sát \(k\) lần duyệt sai:</p>
+<table>
+<thead><tr><th>\(p_0\)</th><th>\(k=0\)</th><th>\(k=1\)</th><th>\(k=2\)</th><th>\(k=5\)</th><th>\(3/p_0\)</th></tr></thead>
+<tbody>
+<tr><td>5 %</td><td>59</td><td>93</td><td>124</td><td>208</td><td>60</td></tr>
+<tr><td>2 %</td><td>149</td><td>236</td><td>313</td><td>523</td><td>150</td></tr>
+<tr><td>1 %</td><td>299</td><td>473</td><td>628</td><td>1.049</td><td>300</td></tr>
+<tr><td>0,5 %</td><td>598</td><td>947</td><td>1.258</td><td>2.100</td><td>600</td></tr>
+<tr><td>0,1 %</td><td>2.995</td><td>4.742</td><td>6.294</td><td>10.511</td><td>3.000</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/saa-sample-size.svg" alt="Đồ thị log-log số trường hợp cần có nhãn theo ngưỡng mục tiêu p0 từ 0,1 đến 10 phần trăm cho k bằng 0, 1, 2 và 5 lần duyệt sai; bốn đường thẳng song song, đường k bằng 0 trùng đường 3 chia p0" width="560" height="367">
+<figcaption>Hình 2 (nhãn hình bằng tiếng Anh). Số trường hợp cần có nhãn để chứng nhận \(p\le p_0\) ở độ tin cậy 95 %.</figcaption></figure>
+<p>Với \(k=0\), số lượt cần là \(\lceil\ln\alpha/\ln(1-p_0)\rceil\) (59, 149, 299, 598, 2.995), sát \(3/p_0\). Một lần duyệt sai nhân số lượt cần lên khoảng 1,58 lần ở mọi \(p_0\) trong bảng (473/299, 236/149, 947/598...); hai lần duyệt sai nhân lên 2,10 và năm lần nhân lên 3,51 (ở \(p_0=1\) %, tính từ bảng). Việc chứng minh \(p\le 0{,}1\) % cần gần 3.000 trường hợp có nhãn dù không có lỗi nào.</p>
+<p>Chờ ít trường hợp cũng có xác suất cao thấy &ldquo;sạch&rdquo; ngay cả khi bộ tự động chưa tốt: \(\Pr[k=0]\) với \(n=100\) là 36,60 % khi \(p=1\) %, 13,26 % khi \(p=2\) % và 4,76 % khi \(p=3\) % (kiểm tra Monte-Carlo ở \(p=1\) %: 36,71 %). Nói cách khác, 100 trường hợp sạch hoàn toàn phù hợp với tỉ lệ duyệt sai 1 %.</p>
+
+<h2>5. Thí nghiệm 2: độ phủ chính xác của bốn cận</h2>
+<p>Độ phủ chính xác là \(\sum_k \Pr[X=k]\cdot\mathbf 1[u(k,n)\ge p]\), tính trực tiếp từ phân phối nhị thức. Mục tiêu là \(\ge 95\) %:</p>
+<table>
+<thead><tr><th>\(p\)</th><th>\(n\)</th><th>Clopper&ndash;Pearson</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>0,5 %</td><td>50</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>22,17 %</td></tr>
+<tr><td>0,5 %</td><td>100</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>39,42 %</td></tr>
+<tr><td>0,5 %</td><td>300</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>77,77 %</td></tr>
+<tr><td>0,5 %</td><td>1.000</td><td>95,99 %</td><td>95,99 %</td><td>95,99 %</td><td>87,60 %</td></tr>
+<tr><td>1 %</td><td>50</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>39,50 %</td></tr>
+<tr><td>1 %</td><td>100</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>63,40 %</td></tr>
+<tr><td>1 %</td><td>300</td><td>95,10 %</td><td>95,10 %</td><td>95,10 %</td><td>80,24 %</td></tr>
+<tr><td>1 %</td><td>1.000</td><td>97,13 %</td><td>97,13 %</td><td>93,39 %</td><td>93,39 %</td></tr>
+<tr><td>2 %</td><td>50</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>63,58 %</td></tr>
+<tr><td>2 %</td><td>100</td><td>100,00 %</td><td>100,00 %</td><td>86,74 %</td><td>86,74 %</td></tr>
+<tr><td>2 %</td><td>300</td><td>98,34 %</td><td>93,98 %</td><td>93,98 %</td><td>85,15 %</td></tr>
+<tr><td>2 %</td><td>1.000</td><td>96,24 %</td><td>96,24 %</td><td>93,58 %</td><td>93,58 %</td></tr>
+<tr><td>5 %</td><td>50</td><td>100,00 %</td><td>100,00 %</td><td>92,31 %</td><td>92,31 %</td></tr>
+<tr><td>5 %</td><td>100</td><td>96,29 %</td><td>96,29 %</td><td>96,29 %</td><td>88,17 %</td></tr>
+<tr><td>5 %</td><td>300</td><td>96,59 %</td><td>96,59 %</td><td>93,50 %</td><td>93,50 %</td></tr>
+<tr><td>5 %</td><td>1.000</td><td>95,67 %</td><td>95,67 %</td><td>95,67 %</td><td>94,02 %</td></tr>
+</tbody></table>
+<p>Trong 16 ô này, Clopper&ndash;Pearson không ô nào dưới 95 % (thấp nhất 95,10 %), như lý thuyết bảo đảm; Wilson thấp nhất 93,98 % (\(p=2\) %, \(n=300\)) và Jeffreys 86,74 % (\(p=2\) %, \(n=100\)); Wald tụt xuống 22,17 % ở \(p=0{,}5\) %, \(n=50\) và không ô nào đạt 95 % (cao nhất 94,02 %). Nguyên nhân của Wald là ca không lỗi: ở \(p=1\) %, \(n=100\), xác suất 0 lỗi là 36,60 % và khi đó cận Wald bằng 0, nên độ phủ chỉ 63,40 % (100 − 36,60 = 63,40). Với Clopper&ndash;Pearson, độ phủ 100 % trong nhiều ô nghĩa là cận quá rộng chứ không phải quá chặt: đó là giá của việc bảo đảm cho mọi \(p\).</p>
+<p>Trên đồ thị độ phủ theo \(n\) (Hình 1, phải), độ phủ của Jeffreys và Wald dao động răng cưa theo \(n\). Ở \(p=1\) %, trên 491 giá trị \(n\) từ 20 đến 1.000 (bước 2), Clopper&ndash;Pearson không giá trị nào dưới 95 % (thấp nhất 95,02 % tại \(n=628\)); Wilson dưới 95 % ở 14,1 % số giá trị (thấp nhất 93,24 %); Jeffreys ở 43,8 % (thấp nhất 85,48 %); Wald ở 100 %. Wald hồi phục chậm: các đáy cục bộ là 74,55 % ở \(n=266\), 80,91 % ở \(n=434\) và 86,47 % ở \(n=868\). Đối chiếu Monte-Carlo ở \(p=1\) %, \(n=1.000\): 97,13 %, 97,13 %, 93,42 %, 93,42 % (Clopper&ndash;Pearson, Wilson, Jeffreys, Wald), khớp phép tính chính xác trong 0,03 điểm phần trăm.</p>
+
+<h2>6. Thí nghiệm 3: nhìn dữ liệu liên tục (peeking)</h2>
+<p>Cận Clopper&ndash;Pearson có độ phủ 95 % cho <em>một</em> lần xem ở một \(n\) đã định trước. Nếu xem sau mỗi trường hợp và chốt &ldquo;đạt&rdquo; ngay khi \(u(k_n,n)\le p_0\), xác suất cấp chứng chỉ sai cao hơn nhiều (Armitage, McPherson và Rowe, 1969, đã tính cho dữ liệu nhị thức). Ở đây chứng chỉ ở bước \(n\) được cấp khi \(k_n\le K(n)\), với \(K(n)\) là \(k\) lớn nhất thoả \(\Pr[X\le k;\,n,p_0]\le\alpha\). Với \(p_0=2\) %: chứng chỉ chỉ có thể cấp từ \(n=149\) (khi \(k=0\)); \(K(100)\) không tồn tại, \(K(1000)=12\) và \(K(2000)=29\) (tối đa 29 lần duyệt sai trong 2.000, tức 1,45 %). Bốn chiến lược trên cùng một dữ liệu mô phỏng:</p>
+<ul>
+<li><strong>Một lần xem</strong> ở \(n=2000\);</li>
+<li><strong>Xem sau mỗi trường hợp</strong> (\(n=1,\dots,2000\)), chốt ngay khi đạt;</li>
+<li><strong>20 lần xem</strong> ở \(n=100,200,\dots,2000\), mỗi lần ở mức \(\alpha\) (không hiệu chỉnh);</li>
+<li><strong>20 lần xem</strong>, mỗi lần ở mức \(\alpha/20\) (hiệu chỉnh kiểu Bonferroni: \(K(2000)=23\) thay vì 29).</li>
+</ul>
+<figure><img src="/assets/img/blog/saa-peeking.svg" alt="Đồ thị xác suất cấp chứng chỉ sai (tỉ lệ thật p từ 2 đến 5 phần trăm, mục tiêu 2 phần trăm) cho bốn chiến lược; ở p bằng 2 phần trăm xem liên tục là 21,7 phần trăm, 20 lần xem không hiệu chỉnh 15,2 phần trăm, một lần xem 4,3 phần trăm, 20 lần xem hiệu chỉnh 1,1 phần trăm; đường nét đứt ở 5 phần trăm; cả bốn đường giảm về gần 0 khi p từ 3 phần trăm trở lên" width="600" height="371">
+<figcaption>Hình 3 (nhãn hình bằng tiếng Anh). Xác suất cấp chứng chỉ &ldquo;\(p\le 2\) %&rdquo; trong 2.000 trường hợp khi tỉ lệ thật từ 2 % trở lên (chứng chỉ sai); nét đứt: 5 %.</figcaption></figure>
+<table>
+<thead><tr><th>\(p\) thật</th><th>Một lần xem (mô phỏng)</th><th>Một lần xem (chính xác)</th><th>Xem mỗi trường hợp</th><th>20 lần, \(\alpha\)</th><th>20 lần, \(\alpha/20\)</th></tr></thead>
+<tbody>
+<tr><td>0,25 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td></tr>
+<tr><td>0,5 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td><td>100,00 %</td></tr>
+<tr><td>1 %</td><td>97,97 %</td><td>97,87 %</td><td>99,29 %</td><td>98,97 %</td><td>82,89 %</td></tr>
+<tr><td><strong>2 %</strong></td><td><strong>4,27 %</strong></td><td>4,17 %</td><td><strong>21,73 %</strong></td><td><strong>15,15 %</strong></td><td><strong>1,09 %</strong></td></tr>
+<tr><td>3 %</td><td>0,00 %</td><td>0,00 %</td><td>1,94 %</td><td>0,61 %</td><td>0,01 %</td></tr>
+<tr><td>4 %</td><td>0,00 %</td><td>0,00 %</td><td>0,29 %</td><td>0,04 %</td><td>0,00 %</td></tr>
+<tr><td>5 %</td><td>0,00 %</td><td>0,00 %</td><td>0,06 %</td><td>0,01 %</td><td>0,00 %</td></tr>
+</tbody></table>
+<p>Các hàng từ 2 % trở lên là chứng chỉ sai (tỉ lệ thật không thấp hơn mục tiêu). Ở đúng \(p=p_0=2\) %, một lần xem cấp chứng chỉ sai 4,27 % (chính xác 4,17 %, trong dao động mô phỏng \(\pm\)0,14 điểm phần trăm), đúng cam kết \(\le 5\) %; xem sau mỗi trường hợp cấp sai 21,73 %, gấp khoảng 4,3 lần mức cam kết; 20 lần xem không hiệu chỉnh cấp sai 15,15 %. Hiệu chỉnh \(\alpha/20\) giữ lỗi ở 1,09 % nhưng làm giảm khả năng chứng nhận một bộ tự động thực sự tốt: ở \(p=1\) % chỉ 82,89 % chuỗi nhận được chứng chỉ trong 2.000 trường hợp, so với 97,97 % cho một lần xem và 99,29 % khi xem liên tục (mức cao nhất này đi kèm 21,73 % chứng chỉ sai ở \(p=2\) %).</p>
+<p>Khi bộ tự động tốt, thời gian chờ ngắn hơn nhiều nếu được phép dừng sớm. Số trường hợp trung vị tại thời điểm cấp chứng chỉ (trong các chuỗi được cấp): ở \(p=0{,}25\) % là 149 (xem liên tục) so với 500 (20 lần xem hiệu chỉnh); ở \(0{,}5\) % là 236 so với 600; ở 1 % là 386 so với 1.100, trong khi một lần xem cố định cần 2.000. Nghĩa là dừng sớm có ích, nhưng chỉ hợp lệ nếu quy tắc dừng và mức \(\alpha\) từng lần xem được định trước và hiệu chỉnh.</p>
+
+<h2>7. Hạn chế</h2>
+<ul>
+<li>Giả thiết các trường hợp độc lập và cùng \(p\). Thay đổi thật có độ rủi ro khác nhau, trôi theo thời gian, và nhiều thay đổi liên quan (cùng tác giả, cùng tệp) nên không độc lập; không điều nào được đo ở đây.</li>
+<li>\(p\) đo theo nhãn của người, mà người cũng bỏ sót lỗi: lỗi không bị phát hiện được tính là &ldquo;ổn&rdquo;. Chứng chỉ chỉ nói về tỉ lệ so với nhãn, không về chất lượng thật, và không xét mức độ nghiêm trọng của từng lỗi.</li>
+<li>Chạy bóng không chứa phản hồi: khi bộ tự động chạy thật, tác giả và người duyệt có thể đổi cách làm, nên \(p\) lúc đó có thể khác \(p\) đo được ở chế độ quan sát.</li>
+<li>Chỉ xét cận một phía 95 %, một ngưỡng \(p_0=2\) % cho phần mô phỏng, \(N=2000\) và 20 lần xem cách đều; chưa thử các lịch xem hay quy tắc chi tiêu \(\alpha\) khác (Pocock, O'Brien&ndash;Fleming), cũng chưa thử các phương pháp dùng được ở mọi thời điểm.</li>
+<li>Mọi số liệu ở Mục 6 là mô phỏng 20.000 chuỗi mỗi tỉ lệ; sai số chuẩn lấy mẫu khoảng 0,15 điểm phần trăm ở mức 5 % và 0,29 điểm ở mức 21,7 %.</li>
+</ul>
+
+<h2>8. Kết luận thực hành</h2>
+<ol>
+<li>Không có lỗi nào chưa phải là hết rủi ro: sau \(n\) trường hợp sạch, cận trên 95 % là khoảng \(3/n\). Để chứng nhận \(p\le 1\) % cần 299 trường hợp có nhãn (2 %: 149; 0,5 %: 598; 0,1 %: 2.995).</li>
+<li>Mỗi lỗi quan sát được làm tăng số trường hợp cần có: ở \(p_0=1\) % là 473, 628 và 1.049 cho \(k=1\), 2 và 5, so với 299 khi \(k=0\) (gấp 1,58, 2,10 và 3,51 lần).</li>
+<li>Không dùng cận Wald cho tỉ lệ nhỏ: ở \(p=1\) %, \(n=100\) độ phủ chỉ 63,40 % và sau 0 lỗi nó khẳng định \(p=0\). Clopper&ndash;Pearson giữ độ phủ \(\ge 95\) % trong mọi ô đã thử; Wilson thấp nhất 93,98 %.</li>
+<li>Định trước cỡ mẫu hoặc lịch xem và chia \(\alpha\) cho từng lần xem. Xem liên tục rồi chốt khi cận chạm ngưỡng cấp chứng chỉ sai 21,73 % ở \(p=p_0\) (mục tiêu 5 %); chia \(\alpha\) cho 20 lần xem giữ ở 1,09 % với giá là khả năng chứng nhận một bộ tốt giảm (82,89 % so với 97,97 % ở \(p=1\) %).</li>
+<li>Chọn \(p_0\) từ chi phí của một lần duyệt sai trước khi chạy, rồi tính số lượt cần: nếu số lượt đó lớn hơn lượng thay đổi thực tế có thể quan sát được thì không thể đạt chứng chỉ ở mức đó.</li>
+</ol>
+
+<div class="cta-box"><strong>Cần thiết kế quy trình đánh giá cho agent, bộ lọc hoặc mô hình trước khi đưa vào chạy thật?</strong><br>
+Tôi nhận việc này theo hình thức freelance. Mô tả bài toán trong vài câu, tôi sẽ trả lời bằng các câu hỏi và báo giá trọn gói theo phạm vi.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=%C4%90%C3%A1nh%20gi%C3%A1%20agent%20%2F%20quy%20tr%C3%ACnh%20t%E1%BB%B1%20ph%C3%AA%20duy%E1%BB%87t">Nhận báo giá</a> <a class="btn ghost" href="/solutions/llm-chatbot-agent.html">Chatbot và agent LLM</a></div>
+
+<h2>Tài liệu tham khảo</h2>
+<ol class="refs">
+<li>C. J. Clopper và E. S. Pearson. &ldquo;The use of confidence or fiducial limits illustrated in the case of the binomial.&rdquo; <em>Biometrika</em> 26(4), 1934, tr. 404&ndash;413. <a href="https://doi.org/10.1093/biomet/26.4.404">doi:10.1093/biomet/26.4.404</a>.</li>
+<li>E. B. Wilson. &ldquo;Probable inference, the law of succession, and statistical inference.&rdquo; <em>Journal of the American Statistical Association</em> 22(158), 1927, tr. 209&ndash;212. <a href="https://doi.org/10.1080/01621459.1927.10502953">doi:10.1080/01621459.1927.10502953</a>.</li>
+<li>L. D. Brown, T. T. Cai và A. DasGupta. &ldquo;Interval estimation for a binomial proportion.&rdquo; <em>Statistical Science</em> 16(2), 2001, tr. 101&ndash;133. <a href="https://doi.org/10.1214/ss/1009213286">doi:10.1214/ss/1009213286</a>.</li>
+<li>J. A. Hanley và A. Lippman-Hand. &ldquo;If nothing goes wrong, is everything all right? Interpreting zero numerators.&rdquo; <em>JAMA</em> 249(13), 1983, tr. 1743&ndash;1745. <a href="https://doi.org/10.1001/jama.1983.03330370053031">doi:10.1001/jama.1983.03330370053031</a>.</li>
+<li>P. Armitage, C. K. McPherson và B. C. Rowe. &ldquo;Repeated significance tests on accumulating data.&rdquo; <em>Journal of the Royal Statistical Society, Series A</em> 132(2), 1969, tr. 235&ndash;244. <a href="https://doi.org/10.2307/2343787">doi:10.2307/2343787</a>.</li>
+<li>Anthropic. &ldquo;Introducing Claude Ship.&rdquo; 23/11/2026. <a href="https://claude.com/resources/articles/introducing-claude-ship">claude.com</a>.</li>
+</ol>
+<p class="meta">Mã nguồn: <a href="/blog/code/shadow_auto_approve.py">shadow_auto_approve.py</a> (Python 3.12, NumPy, SciPy, Matplotlib; khoảng 30 giây). Mọi con số ở Mục 4&ndash;6 là đầu ra của script này, trừ các tỉ lệ được nêu trong văn bản (1,58; 2,10; 3,51 lần; 4,3 lần; 4,1 điểm phần trăm; sai số chuẩn 0,15 và 0,29), được tính từ các bảng.</p>
+<aside class="aff-box"><h3>Đọc thêm: sách về agent LLM và hệ thống ML</h3><p>Sách tiếng Việt về agent LLM, Python và hệ thống học máy.</p><ul><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">Combo 2 sách: AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫249.000</span></li><li><a href="https://s.shopee.vn/8fTlnamYq6" rel="sponsored nofollow noopener" target="_blank">Combo 3 sách: OpenClaw tự động hoá công việc, AI Agent thực chiến &amp; AI Agent ứng dụng</a> <span class="price">₫184.030</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Thiết kế hệ thống học máy (Designing Machine Learning Systems, bản tiếng Việt)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Đường vào lập trình Python nâng cao</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/7puXwtWBxq" rel="sponsored nofollow noopener" target="_blank">Thiết lập cỗ máy xây kênh tự động 24/24 từ trợ lý AI và AI Agent</a> <span class="price">₫179.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; kỹ thuật 3D &middot; <a href="/privacy.html">Chính sách bảo mật</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Một số liên kết sản phẩm có thể mang lại hoa hồng cho Shopsmon.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>

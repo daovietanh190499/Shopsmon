@@ -54,6 +54,10 @@ OVERRIDE = {
     "thinking-machines-inkling-2-mini": "https://huggingface.co/blog/assets/inkling2mini/thumbnail.png",
     # NEXCOM's page image (og) is only the site logo (220x40): use the product/AMR picture published in the release body.
     "nexcom-ndis-b364-amr-edge": "https://www.nexcom.com/UploadFiles/FCKeditor/image/Product_News/261112-IPS-NDiS-B364/duro-edge-computer-NDiS-B364-560.jpg",
+    # Ezurio's page og:image is only a generic placeholder: use the GW16168 product render from the same product page.
+    "ezurio-gw16168-ara240-m2-ai": "https://d2g2p0i8cc2bmh.cloudfront.net/2026-10/GW16168-render.png",
+    # Official illustration from the article's own og:image (URL has no file extension).
+    "anthropic-claude-ship": "https://claude.com/resources/articles/introducing-claude-ship/opengraph-image/og",
 }
 # Images that must be shown whole (letterboxed) because captions/logos sit near the edge.
 LETTERBOX = {"tdk-microchip-robot-sensor-nodes", "edge0-145b-on-device-llm"}

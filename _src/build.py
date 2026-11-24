@@ -15,7 +15,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CONTENT = os.path.join(os.path.dirname(__file__), "content")
 SITE = "https://shopsmon.com"
 EMAIL = "agent.distributed.virtual@gmail.com"
-TODAY = "2026-11-23"
+TODAY = "2026-11-24"
 LANGS = ("vi", "en")
 
 PAGES = []  # canonical (vi) paths, each has an /en/ twin
@@ -32,6 +32,17 @@ NAV = [
 
 # Blog post registry (newest first). Body: content/<slug>.<lang>.html
 POSTS = [
+    dict(slug="shadow-auto-approve", date="2026-11-24", min=13, aff="agents",
+         og="/assets/img/blog/shadow-auto-approve-cover.png",
+         tag={"vi": "Dữ liệu / LLM agent", "en": "Data / LLM agents"},
+         title={"vi": "Bao nhiêu lượt chạy thử là đủ để tin một bộ tự phê duyệt? Không có lỗi nào chưa phải là hết rủi ro",
+                "en": "How many trial runs are enough to trust an auto-approver? Zero failures is not zero risk"},
+         summary={"vi": "Sau 0 lỗi trong n trường hợp, cận trên 95 % của tỉ lệ duyệt sai chỉ còn khoảng 3/n: cần 299 trường hợp có nhãn để chứng nhận 1 % và 2.995 để chứng nhận 0,1 %. Cận Wald chỉ phủ 63,40 % ở p = 1 %, n = 100, và nhìn dữ liệu sau mỗi trường hợp cấp chứng chỉ sai 21,73 % thay vì tối đa 5 %; chia mức alpha cho 20 lần xem giữ ở 1,09 %.",
+                  "en": "After 0 failures in n cases, the 95 % upper bound on the wrong-approval rate is only about 3/n: certifying 1 % takes 299 labelled cases and 0.1 % takes 2,995. The Wald bound covers only 63.40 % at p = 1 %, n = 100, and looking after every case issues a wrong certificate 21.73 % of the time instead of at most 5 %; dividing alpha over 20 looks holds it at 1.09 %."},
+         seo_title={"vi": "Chạy thử bao lâu để tin bộ tự phê duyệt: quy tắc ba, Clopper-Pearson và peeking | Shopsmon",
+                    "en": "How long to shadow-test an auto-approver: rule of three, Clopper-Pearson and peeking | Shopsmon"},
+         seo_desc={"vi": "Cận trên nhị thức sau 0 lỗi: quy tắc ba, Clopper-Pearson, Wilson, Jeffreys và Wald; số lượt cần thiết, độ phủ chính xác và hiệu ứng nhìn dữ liệu liên tục, với mô phỏng seed cố định và mã nguồn.",
+                   "en": "Binomial upper bounds after zero failures: rule of three, Clopper-Pearson, Wilson, Jeffreys and Wald; required sample sizes, exact coverage and the effect of continuous peeking, with a fixed-seed simulation and source code."}),
     dict(slug="kalman-amr-fusion", date="2026-11-23", min=14, aff="iot",
          og="/assets/img/blog/kalman-amr-fusion-cover.png",
          tag={"vi": "IoT / AIoT", "en": "IoT / AIoT"},

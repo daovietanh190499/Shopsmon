@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How long to shadow-test an auto-approver: rule of three, Clopper-Pearson and peeking | Shopsmon</title>
+<meta name="description" content="Binomial upper bounds after zero failures: rule of three, Clopper-Pearson, Wilson, Jeffreys and Wald; required sample sizes, exact coverage and the effect of continuous peeking, with a fixed-seed simulation and source code.">
+<link rel="canonical" href="https://shopsmon.com/en/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="vi" href="https://shopsmon.com/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="en" href="https://shopsmon.com/en/blog/shadow-auto-approve.html">
+<link rel="alternate" hreflang="x-default" href="https://shopsmon.com/blog/shadow-auto-approve.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shopsmon">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="How long to shadow-test an auto-approver: rule of three, Clopper-Pearson and peeking | Shopsmon">
+<meta property="og:description" content="Binomial upper bounds after zero failures: rule of three, Clopper-Pearson, Wilson, Jeffreys and Wald; required sample sizes, exact coverage and the effect of continuous peeking, with a fixed-seed simulation and source code.">
+<meta property="og:url" content="https://shopsmon.com/en/blog/shadow-auto-approve.html">
+<meta property="og:image" content="https://shopsmon.com/assets/img/blog/shadow-auto-approve-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>
+(function(){var d=document.documentElement;try{var th=localStorage.getItem('theme');if(th==='dark'||th==='light')d.setAttribute('data-theme',th);
+var pref=localStorage.getItem('lang');if(pref&&pref!==d.lang){var a=document.querySelector('link[rel=alternate][hreflang='+pref+']');if(a){location.replace(new URL(a.href).pathname+location.search+location.hash);}}}catch(e){}})();
+</script>
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+<a class="logo" href="/en/">shops<span>mon</span></a>
+<div class="right"><nav><a href="/en/">Home</a><a href="/en/services.html">Services</a><a href="/en/portfolio.html">Portfolio</a><a href="/en/products/">Products</a><a href="/en/blog/" class=active>Blog</a><a href="/en/news/">News</a><a href="/en/contact.html">Contact</a></nav><span class="langsw" role="group" aria-label="Language"><a href="/blog/shadow-auto-approve.html" hreflang="vi" lang="vi" onclick="try{localStorage.setItem('lang','vi')}catch(e){}">VI</a><span>EN</span></span><button type="button" class="ctrl" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">&#9790;</button></div>
+</div></header>
+<main>
+<article class="post">
+<p class="meta"><a href="/en/blog/">&larr; Blog</a> &middot; 2026-11-24 &middot; Data / LLM agents &middot; ~13 min read</p>
+<h1>How many trial runs are enough to trust an auto-approver? Zero failures is not zero risk</h1>
+<p class="meta">An auto-approver (an agent that approves code changes, a filter, an automatic rule...) is usually run in observe-only mode first: it flags &ldquo;would approve&rdquo; while a human still decides, and a person then labels each case. This post looks at the statistics behind that step: after \(n\) labelled cases and \(k\) wrong approvals, what do the data prove about the wrong-approval rate \(p\)? It compares four upper bounds (Clopper&ndash;Pearson, Wilson, Jeffreys, Wald) with exact calculations, works out the number of cases needed, and then simulates, with a fixed seed, the effect of watching the data continuously (peeking). Every number is the output of one script, on simulated data or computed exactly from the binomial distribution.</p>
+
+<h2>1. Context</h2>
+<p>The news item on Anthropic launching Claude Ship (<a href="/en/news/anthropic-claude-ship.html">related news</a>) says that Claude Approvals applies an approval policy written by the team and is recommended to run in observe-only mode before branch protection is set to require its green result. This post considers the general problem of any shadow phase: the automation issues \(n\) &ldquo;would approve&rdquo; decisions, and a person labels each one as fine or as having a blocking defect. What can be concluded when every label is &ldquo;fine&rdquo;, and how long is it necessary to wait?</p>
+<p>Two habits easily lead to wrong conclusions. First, reading &ldquo;0 failures in 30 cases&rdquo; as &ldquo;the failure rate is 0&rdquo;. Second, watching the data every time a new label arrives and declaring &ldquo;pass&rdquo; as soon as the upper bound touches the threshold. This post tests both with numbers.</p>
+
+<h2>2. Model and upper bounds</h2>
+<p>Assume the cases are independent with the same wrong-approval rate \(p\) (the share of cases approved by the automation that a person determines to have a blocking defect). The number of wrong approvals is \(X\sim\mathrm{Binomial}(n,p)\). We want a one-sided upper bound \(u(k,n)\) such that \(\Pr[p\le u(X,n)]\ge 1-\alpha\) with \(\alpha=0.05\). Four common choices:</p>
+<ul>
+<li><strong>Clopper&ndash;Pearson (exact)</strong>: \(u\) solves \(\Pr[X\le k;\,n,u]=\alpha\), equivalently \(u=F^{-1}_{\mathrm{Beta}(k+1,\,n-k)}(1-\alpha)\). It guarantees coverage \(\ge 1-\alpha\) for every \(p\), but is usually conservative because \(X\) is discrete.</li>
+<li><strong>Wilson</strong>: solve \((\hat p-p)^2=z^2p(1-p)/n\) with \(z=\Phi^{-1}(1-\alpha)=1.6449\) and take the larger root: \(u=\dfrac{\hat p+z^2/2n+z\sqrt{\hat p(1-\hat p)/n+z^2/4n^2}}{1+z^2/n}\). For \(k=0\): \(u=z^2/(n+z^2)\).</li>
+<li><strong>Jeffreys</strong>: a quantile of Beta\((k+\tfrac12,\,n-k+\tfrac12)\).</li>
+<li><strong>Wald</strong>: \(u=\hat p+z\sqrt{\hat p(1-\hat p)/n}\), with \(\hat p=k/n\).</li>
+</ul>
+<p>For \(k=0\), Clopper&ndash;Pearson gives \((1-u)^n=\alpha\), i.e. \(u=1-\alpha^{1/n}\). Since \(\ln(1-u)\approx -u\), we get the approximation \(u\approx -\ln\alpha/n=2.9957/n\approx 3/n\): the &ldquo;rule of three&rdquo; (Hanley and Lippman-Hand, 1983). Wald gives \(u=0\) when \(k=0\), i.e. it asserts with certainty that \(p=0\).</p>
+<p>A certificate &ldquo;\(p\le p_0\) at 95 % confidence&rdquo; is issued when \(u(k,n)\le p_0\). For Clopper&ndash;Pearson this is equivalent to \(\Pr[X\le k;\,n,p_0]\le\alpha\), so the minimum number of cases for each \(k\) can be found by binary search on the binomial distribution function:</p>
+<pre><code class="language-python">from scipy.stats import beta, binom
+
+def ub_cp(k, n, a=0.05):                 # one-sided Clopper-Pearson upper bound
+    return 1.0 if k &gt;= n else beta.ppf(1 - a, k + 1, n - k)
+
+def min_n(p0, k, a=0.05):                # smallest n with ub_cp(k, n) &lt;= p0
+    lo = hi = max(k, 1)
+    while binom.cdf(k, hi, p0) &gt; a:
+        lo, hi = hi, hi * 2
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if binom.cdf(k, mid, p0) &lt;= a: hi = mid
+        else: lo = mid + 1
+    return lo</code></pre>
+
+<h2>3. Setup</h2>
+<p>Sections 4 and 5 are exact calculations (not random), with one 400,000-sample Monte-Carlo cross-check (seed 20261124). Section 6 simulates 20,000 runs, each with at most \(N=2000\) labelled cases, using common random numbers across all rates \(p\); the target threshold is \(p_0=2\) %, \(\alpha=0.05\) one-sided. The values of \(p_0\), \(N\) and the number of looks are choices made for this post, not taken from a real process.</p>
+<figure><img src="/assets/img/blog/saa-bounds.svg" alt="Two charts: left, the 95 percent upper bound on p after zero failures against the number of cases n on a log scale; the three methods Clopper-Pearson, Wilson and Jeffreys run almost parallel to the 3 over n line, while Wald equals 0 and cannot be drawn; right, the exact coverage at p equal to 1 percent for n from 20 to 1000: Clopper-Pearson is always at or above 95 percent, Wilson and Jeffreys sometimes fall below 95 with sawtooth dips, and Wald is lowest" width="760" height="296">
+<figcaption>Figure 1. Left: upper bound after 0 failures (Wald equals 0, so it does not appear on the log scale). Right: exact coverage at \(p=1\) %; the dashed line is 95 %.</figcaption></figure>
+
+<h2>4. Experiment 1: upper bounds and required sample size</h2>
+<p>The 95 % upper bound on \(p\) after 0 failures in \(n\) cases:</p>
+<table>
+<thead><tr><th>\(n\)</th><th>Clopper&ndash;Pearson</th><th>\(3/n\)</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>10</td><td>25.887 %</td><td>30.000 %</td><td>21.294 %</td><td>17.077 %</td><td>0 %</td></tr>
+<tr><td>30</td><td>9.503 %</td><td>10.000 %</td><td>8.272 %</td><td>6.152 %</td><td>0 %</td></tr>
+<tr><td>100</td><td>2.951 %</td><td>3.000 %</td><td>2.634 %</td><td>1.898 %</td><td>0 %</td></tr>
+<tr><td>300</td><td>0.994 %</td><td>1.000 %</td><td>0.894 %</td><td>0.638 %</td><td>0 %</td></tr>
+<tr><td>1,000</td><td>0.299 %</td><td>0.300 %</td><td>0.270 %</td><td>0.192 %</td><td>0 %</td></tr>
+</tbody></table>
+<p>The rule of three is close to Clopper&ndash;Pearson from about \(n=30\) on (9.503 % against 10 %), while at \(n=10\) it is off by 4.1 percentage points (25.887 % against 30 %). When failures occur, the bound rises quickly. With \(n=100\):</p>
+<table>
+<thead><tr><th>\(k\)</th><th>\(\hat p\)</th><th>Clopper&ndash;Pearson</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0 %</td><td>2.95 %</td><td>2.63 %</td><td>1.90 %</td><td>0.00 %</td></tr>
+<tr><td>1</td><td>1 %</td><td>4.66 %</td><td>4.36 %</td><td>3.84 %</td><td>2.64 %</td></tr>
+<tr><td>2</td><td>2 %</td><td>6.16 %</td><td>5.86 %</td><td>5.42 %</td><td>4.30 %</td></tr>
+<tr><td>3</td><td>3 %</td><td>7.57 %</td><td>7.27 %</td><td>6.88 %</td><td>5.81 %</td></tr>
+<tr><td>5</td><td>5 %</td><td>10.23 %</td><td>9.92 %</td><td>9.58 %</td><td>8.58 %</td></tr>
+</tbody></table>
+<p>The minimum number of cases for the 95 % Clopper&ndash;Pearson upper bound not to exceed \(p_0\) when \(k\) wrong approvals are observed:</p>
+<table>
+<thead><tr><th>\(p_0\)</th><th>\(k=0\)</th><th>\(k=1\)</th><th>\(k=2\)</th><th>\(k=5\)</th><th>\(3/p_0\)</th></tr></thead>
+<tbody>
+<tr><td>5 %</td><td>59</td><td>93</td><td>124</td><td>208</td><td>60</td></tr>
+<tr><td>2 %</td><td>149</td><td>236</td><td>313</td><td>523</td><td>150</td></tr>
+<tr><td>1 %</td><td>299</td><td>473</td><td>628</td><td>1,049</td><td>300</td></tr>
+<tr><td>0.5 %</td><td>598</td><td>947</td><td>1,258</td><td>2,100</td><td>600</td></tr>
+<tr><td>0.1 %</td><td>2,995</td><td>4,742</td><td>6,294</td><td>10,511</td><td>3,000</td></tr>
+</tbody></table>
+<figure><img src="/assets/img/blog/saa-sample-size.svg" alt="Log-log chart of the number of labelled cases needed against the target threshold p0 from 0.1 to 10 percent for k equal to 0, 1, 2 and 5 wrong approvals; four parallel straight lines, with the k equal to 0 line coinciding with 3 over p0" width="560" height="367">
+<figcaption>Figure 2. Number of labelled cases needed to certify \(p\le p_0\) at 95 % confidence.</figcaption></figure>
+<p>For \(k=0\), the number of cases needed is \(\lceil\ln\alpha/\ln(1-p_0)\rceil\) (59, 149, 299, 598, 2,995), close to \(3/p_0\). One wrong approval multiplies the number of cases needed by about 1.58 at every \(p_0\) in the table (473/299, 236/149, 947/598...); two wrong approvals multiply it by 2.10 and five by 3.51 (at \(p_0=1\) %, computed from the table). Proving \(p\le 0.1\) % takes almost 3,000 labelled cases even with no failures at all.</p>
+<p>Waiting for few cases also has a high probability of showing a &ldquo;clean&rdquo; record even when the automation is not good: \(\Pr[k=0]\) with \(n=100\) is 36.60 % when \(p=1\) %, 13.26 % when \(p=2\) % and 4.76 % when \(p=3\) % (Monte-Carlo check at \(p=1\) %: 36.71 %). In other words, 100 perfectly clean cases are consistent with a wrong-approval rate of 1 %.</p>
+
+<h2>5. Experiment 2: exact coverage of the four bounds</h2>
+<p>Exact coverage is \(\sum_k \Pr[X=k]\cdot\mathbf 1[u(k,n)\ge p]\), computed directly from the binomial distribution. The target is \(\ge 95\) %:</p>
+<table>
+<thead><tr><th>\(p\)</th><th>\(n\)</th><th>Clopper&ndash;Pearson</th><th>Wilson</th><th>Jeffreys</th><th>Wald</th></tr></thead>
+<tbody>
+<tr><td>0.5 %</td><td>50</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>22.17 %</td></tr>
+<tr><td>0.5 %</td><td>100</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>39.42 %</td></tr>
+<tr><td>0.5 %</td><td>300</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>77.77 %</td></tr>
+<tr><td>0.5 %</td><td>1,000</td><td>95.99 %</td><td>95.99 %</td><td>95.99 %</td><td>87.60 %</td></tr>
+<tr><td>1 %</td><td>50</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>39.50 %</td></tr>
+<tr><td>1 %</td><td>100</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>63.40 %</td></tr>
+<tr><td>1 %</td><td>300</td><td>95.10 %</td><td>95.10 %</td><td>95.10 %</td><td>80.24 %</td></tr>
+<tr><td>1 %</td><td>1,000</td><td>97.13 %</td><td>97.13 %</td><td>93.39 %</td><td>93.39 %</td></tr>
+<tr><td>2 %</td><td>50</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>63.58 %</td></tr>
+<tr><td>2 %</td><td>100</td><td>100.00 %</td><td>100.00 %</td><td>86.74 %</td><td>86.74 %</td></tr>
+<tr><td>2 %</td><td>300</td><td>98.34 %</td><td>93.98 %</td><td>93.98 %</td><td>85.15 %</td></tr>
+<tr><td>2 %</td><td>1,000</td><td>96.24 %</td><td>96.24 %</td><td>93.58 %</td><td>93.58 %</td></tr>
+<tr><td>5 %</td><td>50</td><td>100.00 %</td><td>100.00 %</td><td>92.31 %</td><td>92.31 %</td></tr>
+<tr><td>5 %</td><td>100</td><td>96.29 %</td><td>96.29 %</td><td>96.29 %</td><td>88.17 %</td></tr>
+<tr><td>5 %</td><td>300</td><td>96.59 %</td><td>96.59 %</td><td>93.50 %</td><td>93.50 %</td></tr>
+<tr><td>5 %</td><td>1,000</td><td>95.67 %</td><td>95.67 %</td><td>95.67 %</td><td>94.02 %</td></tr>
+</tbody></table>
+<p>Across these 16 cells, Clopper&ndash;Pearson is never below 95 % (lowest 95.10 %), as theory guarantees; Wilson's lowest is 93.98 % (\(p=2\) %, \(n=300\)) and Jeffreys' is 86.74 % (\(p=2\) %, \(n=100\)); Wald falls to 22.17 % at \(p=0.5\) %, \(n=50\) and reaches 95 % in no cell (highest 94.02 %). The cause for Wald is the zero-failure case: at \(p=1\) %, \(n=100\), the probability of 0 failures is 36.60 %, and then the Wald bound equals 0, so coverage is only 63.40 % (100 &minus; 36.60 = 63.40). For Clopper&ndash;Pearson, 100 % coverage in many cells means the bound is too wide rather than too tight: that is the price of the guarantee for every \(p\).</p>
+<p>In the coverage-against-\(n\) plot (Figure 1, right), the coverage of Jeffreys and Wald oscillates in a sawtooth pattern with \(n\). At \(p=1\) %, over the 491 values of \(n\) from 20 to 1,000 (step 2), Clopper&ndash;Pearson is below 95 % for none of them (lowest 95.02 % at \(n=628\)); Wilson is below 95 % for 14.1 % of the values (lowest 93.24 %); Jeffreys for 43.8 % (lowest 85.48 %); Wald for 100 %. Wald recovers slowly: its local minima are 74.55 % at \(n=266\), 80.91 % at \(n=434\) and 86.47 % at \(n=868\). The Monte-Carlo check at \(p=1\) %, \(n=1{,}000\): 97.13 %, 97.13 %, 93.42 %, 93.42 % (Clopper&ndash;Pearson, Wilson, Jeffreys, Wald), matching the exact calculation to within 0.03 percentage points.</p>
+
+<h2>6. Experiment 3: watching the data continuously (peeking)</h2>
+<p>The Clopper&ndash;Pearson bound has 95 % coverage for <em>one</em> look at a pre-set \(n\). If one looks after every case and declares &ldquo;pass&rdquo; as soon as \(u(k_n,n)\le p_0\), the probability of issuing a wrong certificate is much higher (Armitage, McPherson and Rowe, 1969, computed this for binomial data). Here a certificate at step \(n\) is issued when \(k_n\le K(n)\), where \(K(n)\) is the largest \(k\) with \(\Pr[X\le k;\,n,p_0]\le\alpha\). For \(p_0=2\) %: a certificate can only be issued from \(n=149\) on (when \(k=0\)); \(K(100)\) does not exist, \(K(1000)=12\) and \(K(2000)=29\) (at most 29 wrong approvals in 2,000, i.e. 1.45 %). Four strategies on the same simulated data:</p>
+<ul>
+<li><strong>One look</strong> at \(n=2000\);</li>
+<li><strong>Look after every case</strong> (\(n=1,\dots,2000\)), stop as soon as it passes;</li>
+<li><strong>20 looks</strong> at \(n=100,200,\dots,2000\), each at level \(\alpha\) (no correction);</li>
+<li><strong>20 looks</strong>, each at level \(\alpha/20\) (Bonferroni-style correction: \(K(2000)=23\) instead of 29).</li>
+</ul>
+<figure><img src="/assets/img/blog/saa-peeking.svg" alt="Chart of the probability of issuing a wrong certificate (true rate p from 2 to 5 percent, target 2 percent) for four strategies; at p equal to 2 percent continuous looking gives 21.7 percent, 20 uncorrected looks 15.2 percent, one look 4.3 percent, 20 corrected looks 1.1 percent; a dashed line at 5 percent; all four curves fall to nearly 0 from p equal to 3 percent" width="600" height="371">
+<figcaption>Figure 3. Probability of issuing a &ldquo;\(p\le 2\) %&rdquo; certificate within 2,000 cases when the true rate is 2 % or higher (a wrong certificate); dashed line: 5 %.</figcaption></figure>
+<table>
+<thead><tr><th>true \(p\)</th><th>One look (simulated)</th><th>One look (exact)</th><th>Look at every case</th><th>20 looks, \(\alpha\)</th><th>20 looks, \(\alpha/20\)</th></tr></thead>
+<tbody>
+<tr><td>0.25 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td></tr>
+<tr><td>0.5 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td><td>100.00 %</td></tr>
+<tr><td>1 %</td><td>97.97 %</td><td>97.87 %</td><td>99.29 %</td><td>98.97 %</td><td>82.89 %</td></tr>
+<tr><td><strong>2 %</strong></td><td><strong>4.27 %</strong></td><td>4.17 %</td><td><strong>21.73 %</strong></td><td><strong>15.15 %</strong></td><td><strong>1.09 %</strong></td></tr>
+<tr><td>3 %</td><td>0.00 %</td><td>0.00 %</td><td>1.94 %</td><td>0.61 %</td><td>0.01 %</td></tr>
+<tr><td>4 %</td><td>0.00 %</td><td>0.00 %</td><td>0.29 %</td><td>0.04 %</td><td>0.00 %</td></tr>
+<tr><td>5 %</td><td>0.00 %</td><td>0.00 %</td><td>0.06 %</td><td>0.01 %</td><td>0.00 %</td></tr>
+</tbody></table>
+<p>Rows from 2 % upward are wrong certificates (the true rate is not below the target). At exactly \(p=p_0=2\) %, one look issues a wrong certificate 4.27 % of the time (exact 4.17 %, within the simulation noise of \(\pm\)0.14 percentage points), meeting the \(\le 5\) % guarantee; looking after every case issues a wrong one 21.73 % of the time, about 4.3 times the guaranteed level; 20 uncorrected looks issue a wrong one 15.15 % of the time. The \(\alpha/20\) correction holds the error at 1.09 % but lowers the ability to certify an automation that really is good: at \(p=1\) % only 82.89 % of runs obtain a certificate within 2,000 cases, against 97.97 % for one look and 99.29 % for continuous looking (this highest figure comes with 21.73 % wrong certificates at \(p=2\) %).</p>
+<p>When the automation is good, the wait is much shorter if early stopping is allowed. The median number of cases at the time of certification (among the runs that certify): at \(p=0.25\) % it is 149 (continuous looking) against 500 (20 corrected looks); at 0.5 % it is 236 against 600; at 1 % it is 386 against 1,100, while a single fixed look needs 2,000. So stopping early helps, but is valid only if the stopping rule and the per-look \(\alpha\) are set in advance and corrected.</p>
+
+<h2>7. Limitations</h2>
+<ul>
+<li>The cases are assumed independent with the same \(p\). Real changes differ in risk, drift over time, and many are related (same author, same files) and so are not independent; none of this is measured here.</li>
+<li>\(p\) is measured against human labels, and people also miss defects: an undetected defect counts as &ldquo;fine&rdquo;. A certificate speaks only about the rate relative to the labels, not about true quality, and it does not consider the severity of each defect.</li>
+<li>Shadow mode contains no feedback: once the automation runs for real, authors and reviewers may change their behaviour, so \(p\) then can differ from the \(p\) measured in observe-only mode.</li>
+<li>Only the one-sided 95 % bound is considered, with one threshold \(p_0=2\) % in the simulation, \(N=2000\) and 20 evenly spaced looks; other look schedules and \(\alpha\)-spending rules (Pocock, O'Brien&ndash;Fleming) were not tried, nor were methods valid at any time.</li>
+<li>All numbers in Section 6 are simulations of 20,000 runs per rate; the standard sampling error is about 0.15 percentage points at 5 % and 0.29 points at 21.7 %.</li>
+</ul>
+
+<h2>8. Practical conclusions</h2>
+<ol>
+<li>Zero failures is not zero risk: after \(n\) clean cases, the 95 % upper bound is about \(3/n\). Certifying \(p\le 1\) % takes 299 labelled cases (2 %: 149; 0.5 %: 598; 0.1 %: 2,995).</li>
+<li>Each observed failure increases the number of cases needed: at \(p_0=1\) % it is 473, 628 and 1,049 for \(k=1\), 2 and 5, against 299 for \(k=0\) (1.58, 2.10 and 3.51 times as many).</li>
+<li>Do not use the Wald bound for small rates: at \(p=1\) %, \(n=100\) its coverage is only 63.40 %, and after 0 failures it asserts \(p=0\). Clopper&ndash;Pearson kept coverage \(\ge 95\) % in every cell tried; Wilson's lowest was 93.98 %.</li>
+<li>Fix the sample size or the look schedule in advance and divide \(\alpha\) among the looks. Looking continuously and stopping when the bound touches the threshold issues a wrong certificate 21.73 % of the time at \(p=p_0\) (target 5 %); dividing \(\alpha\) over 20 looks holds it at 1.09 %, at the cost of a lower chance of certifying a good automation (82.89 % against 97.97 % at \(p=1\) %).</li>
+<li>Choose \(p_0\) from the cost of one wrong approval before running, then compute the number of cases needed: if that number is larger than the volume of real changes that can be observed, a certificate at that level cannot be reached.</li>
+</ol>
+
+<div class="cta-box"><strong>Need to design an evaluation process for an agent, a filter or a model before it goes live?</strong><br>
+I take this work as a freelancer. Describe the problem in a few sentences and I will reply with questions and a fixed-scope quote.<br><br>
+<a class="btn primary" href="mailto:agent.distributed.virtual@gmail.com?subject=Agent%20evaluation%20%2F%20auto-approval%20process">Get a quote</a> <a class="btn ghost" href="/en/solutions/llm-chatbot-agent.html">LLM chatbots and agents</a></div>
+
+<h2>References</h2>
+<ol class="refs">
+<li>C. J. Clopper and E. S. Pearson. &ldquo;The use of confidence or fiducial limits illustrated in the case of the binomial.&rdquo; <em>Biometrika</em> 26(4), 1934, pp. 404&ndash;413. <a href="https://doi.org/10.1093/biomet/26.4.404">doi:10.1093/biomet/26.4.404</a>.</li>
+<li>E. B. Wilson. &ldquo;Probable inference, the law of succession, and statistical inference.&rdquo; <em>Journal of the American Statistical Association</em> 22(158), 1927, pp. 209&ndash;212. <a href="https://doi.org/10.1080/01621459.1927.10502953">doi:10.1080/01621459.1927.10502953</a>.</li>
+<li>L. D. Brown, T. T. Cai and A. DasGupta. &ldquo;Interval estimation for a binomial proportion.&rdquo; <em>Statistical Science</em> 16(2), 2001, pp. 101&ndash;133. <a href="https://doi.org/10.1214/ss/1009213286">doi:10.1214/ss/1009213286</a>.</li>
+<li>J. A. Hanley and A. Lippman-Hand. &ldquo;If nothing goes wrong, is everything all right? Interpreting zero numerators.&rdquo; <em>JAMA</em> 249(13), 1983, pp. 1743&ndash;1745. <a href="https://doi.org/10.1001/jama.1983.03330370053031">doi:10.1001/jama.1983.03330370053031</a>.</li>
+<li>P. Armitage, C. K. McPherson and B. C. Rowe. &ldquo;Repeated significance tests on accumulating data.&rdquo; <em>Journal of the Royal Statistical Society, Series A</em> 132(2), 1969, pp. 235&ndash;244. <a href="https://doi.org/10.2307/2343787">doi:10.2307/2343787</a>.</li>
+<li>Anthropic. &ldquo;Introducing Claude Ship.&rdquo; 23 Nov 2026. <a href="https://claude.com/resources/articles/introducing-claude-ship">claude.com</a>.</li>
+</ol>
+<p class="meta">Source code: <a href="/blog/code/shadow_auto_approve.py">shadow_auto_approve.py</a> (Python 3.12, NumPy, SciPy, Matplotlib; about 30 seconds). Every number in Sections 4&ndash;6 is output of this script, except the ratios stated in the text (1.58; 2.10; 3.51 times; 4.3 times; 4.1 percentage points; standard errors 0.15 and 0.29), which are computed from the tables.</p>
+<aside class="aff-box"><h3>Further reading: books on LLM agents and ML systems</h3><p>Vietnamese-language books on LLM agents, Python and machine-learning systems.</p><ul><li><a href="https://s.shopee.vn/LoX19EmMH" rel="sponsored nofollow noopener" target="_blank">2-book combo (Vietnamese): AI Agent in practice &amp; Applied AI Agents</a> <span class="price">₫249.000</span></li><li><a href="https://s.shopee.vn/8fTlnamYq6" rel="sponsored nofollow noopener" target="_blank">3-book combo (Vietnamese): OpenClaw work automation, AI Agent in practice &amp; Applied AI Agents</a> <span class="price">₫184.030</span></li><li><a href="https://s.shopee.vn/LoX0mfWy1" rel="sponsored nofollow noopener" target="_blank">Designing Machine Learning Systems (Vietnamese edition)</a> <span class="price">₫371.250</span></li><li><a href="https://s.shopee.vn/8fTew5J4vr" rel="sponsored nofollow noopener" target="_blank">Advanced Python programming (Vietnamese book)</a> <span class="price">₫289.000</span></li><li><a href="https://s.shopee.vn/7puXwtWBxq" rel="sponsored nofollow noopener" target="_blank">Setting up a 24/7 automated channel with AI assistants and AI agents (Vietnamese book)</a> <span class="price">₫179.000</span></li></ul></aside></article>
+
+</main>
+<footer class="site"><div class="wrap">
+<div>&copy; 2026 Shopsmon &middot; Freelance AI &amp; 3D engineering &middot; <a href="/en/privacy.html">Privacy Policy</a></div>
+<div><a href="https://www.facebook.com/profile.php?id=61596328016181" rel="noopener" target="_blank">Facebook</a> &middot; <a href="mailto:agent.distributed.virtual@gmail.com">agent.distributed.virtual@gmail.com</a></div>
+<div class="fine">Some product links may earn Shopsmon a commission.</div>
+</div></footer>
+<script>
+(function(){var d=document.documentElement,b=document.getElementById('themeBtn');
+function sync(){b.innerHTML=d.getAttribute('data-theme')==='dark'?'&#9728;':'&#9790;';}
+sync();b.addEventListener('click',function(){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}sync();});})();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.addEventListener('load',function(){
+  renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b)});}
+});
+</script>
+</body>
+</html>
